@@ -6,10 +6,12 @@ import (
 	"unicode/utf8"
 )
 
+type XlogLine map[string]string
+
 // Parse parses the given xlog line into a map
-func Parse(line string) (map[string]string, *XlogParseError) {
+func Parse(line string) (XlogLine, *XlogParseError) {
 	line = strings.TrimSpace(line)
-	res := make(map[string]string)
+	res := XlogLine(make(map[string]string))
 
 	startIndex := 0
 	lineByteLen := len(line)

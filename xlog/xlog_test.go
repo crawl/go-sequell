@@ -27,7 +27,7 @@ func TestXlogParseSingleField(t *testing.T) {
 
 func TestXlogParseFull(t *testing.T) {
 	line := "v=0.15-a0:vlong=0.15-a0-1506-g1b030bc:lv=0.1:tiles=1:name=Atomikkrab:race=Demonspawn:cls=Fighter:char=DsFi:xl=2:sk=Fighting:sklev=3:title=Skirmisher:place=D::$:br=D:lvl=0:absdepth=1:hp=19:mhp=24:mmhp=24:str=16:int=9:dex=12:ac=6:ev=6:sh=8:start=20140514224835S:dur=66:turn=69:aut=803:kills=3:gold=8:goldfound=8:goldspent=0:sc=8:ktyp=leaving:dam=-9999:sdam=0:tdam=0:end=20140514224942S:map=eino_arrival_water_star:tmsg=got out of the dungeon alive:vmsg=got out of the dungeon alive."
-	expectedMap := map[string]string{
+	expectedMap := XlogLine{
 		"v":         "0.15-a0",
 		"vlong":     "0.15-a0-1506-g1b030bc",
 		"lv":        "0.1",
