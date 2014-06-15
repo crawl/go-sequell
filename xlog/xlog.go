@@ -2,12 +2,9 @@ package xlog
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 	"unicode/utf8"
 )
-
-var xlogSeparator = regexp.MustCompile(":(?:[^:]|$)")
 
 // Parse parses the given xlog line into a map
 func Parse(line string) (map[string]string, *XlogParseError) {
