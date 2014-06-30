@@ -1,6 +1,9 @@
 package version
 
-import "regexp"
+import (
+	"math/big"
+	"regexp"
+)
 
 var canonicalVersionRegex = regexp.MustCompile(`(\d+\.\d+)`)
 var fullVersionRegex = regexp.MustCompile(`^(\d+\.\d+)($|[^\d.])`)
@@ -18,4 +21,8 @@ func MajorVersion(ver string) string {
 // FullVersion expands a short version in the form X.Y to X.Y.0
 func FullVersion(ver string) string {
 	return fullVersionRegex.ReplaceAllString(ver, "$1.0$2")
+}
+
+func VersionNumericId(ver string) big.Int {
+	// TODO
 }

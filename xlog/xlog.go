@@ -8,10 +8,18 @@ import (
 
 type XlogLine map[string]string
 
+func (x XlogLine) Clone() XlogLine {
+	res := make(XlogLine)
+	for key, value := range x {
+		res[key] = value
+	}
+	return res
+}
+
 // Parse parses the given xlog line into a map
 func Parse(line string) (XlogLine, *XlogParseError) {
 	line = strings.TrimSpace(line)
-	res := XlogLine(make(map[string]string))
+	res := make(XlogLine)
 
 	startIndex := 0
 	lineByteLen := len(line)
