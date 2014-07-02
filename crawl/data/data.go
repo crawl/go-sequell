@@ -38,3 +38,11 @@ func StringArray(key string) []string {
 func Uniques() []string {
 	return StringArray("uniques")
 }
+
+func StringSliceSet(slice []string) map[string]bool {
+	res := make(map[string]bool)
+	for _, val := range slice {
+		res[val] = true
+	}
+	return res
+}
