@@ -1,7 +1,9 @@
 package xlogtools
 
 import (
+	"github.com/greensnark/go-sequell/crawl/killer"
 	"github.com/greensnark/go-sequell/crawl/place"
+	"github.com/greensnark/go-sequell/crawl/unique"
 	"github.com/greensnark/go-sequell/crawl/version"
 	"github.com/greensnark/go-sequell/xlog"
 	"strings"

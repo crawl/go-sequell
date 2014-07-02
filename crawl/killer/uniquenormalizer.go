@@ -26,7 +26,7 @@ func (u uniqueNormalizer) NormalizeKiller(killer, killerName string) (string, er
 			}
 		} else {
 			if unique.MaybePanLord(properName, rec) {
-				return unique.GenericPanLordName
+				return unique.GenericPanLordName()
 			}
 		}
 	}

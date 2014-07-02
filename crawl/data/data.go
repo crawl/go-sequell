@@ -1,32 +1,42 @@
 package data
 
 import (
+	"fmt"
 	"github.com/greensnark/go-sequell/resource"
 	"sync"
 )
 
 var mutex = &sync.Mutex{}
-var data interface{}
+var data map[interface{}]interface{}
 
-func Data() interface{} {
+func Data() map[interface{}]interface{} {
 	mutex.Lock()
 	defer mutex.Unlock()
 	if data == nil {
-		var err error
-		data, err = resource.ResourceYaml("config/crawl-data.yml")
+		tmp, err := resource.ResourceYaml("config/crawl-data.yml")
 		if err != nil {
 			panic(err)
+		}
+
+		var ok bool
+		data, ok = tmp.(map[interface{}]interface{})
+		if !ok {
+			panic(fmt.Sprintf("unexpected data: %v", tmp))
 		}
 	}
 	return data
 }
 
-func StringArray(key string) []string {
-	t, ok := Data().(map[interface{}]interface{})
-	if !ok {
-		return []string{}
+func String(key string) string {
+	s, ok := Data()[key].(string)
+	if ok {
+		return s
 	}
+	return ""
+}
 
+func StringArray(key string) []string {
+	t := Data()
 	arr := t[key].([]interface{})
 	res := make([]string, len(arr))
 	for i, v := range arr {
@@ -37,6 +47,10 @@ func StringArray(key string) []string {
 
 func Uniques() []string {
 	return StringArray("uniques")
+}
+
+func Orcs() []string {
+	return StringArray("orcs")
 }
 
 func StringSliceSet(slice []string) map[string]bool {
