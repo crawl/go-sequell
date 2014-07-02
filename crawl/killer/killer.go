@@ -2,12 +2,13 @@ package killer
 
 import (
 	"github.com/greensnark/go-sequell/stringnorm"
+	"github.com/greensnark/go-sequell/xlog"
 	"regexp"
 )
 
-func NormalizeKiller(killer, killerName string) string {
+func NormalizeKiller(killer string, rec xlog.Xlog) string {
 	for _, norm := range normalizers {
-		killer, err := norm.NormalizeKiller(killer, killerName)
+		killer, err := norm.NormalizeKiller(killer, rec)
 		if err != nil {
 			return killer
 		}
@@ -16,7 +17,7 @@ func NormalizeKiller(killer, killerName string) string {
 }
 
 type killerNormalizer interface {
-	NormalizeKiller(killer string, killerName string) (string, error)
+	NormalizeKiller(killer string, rec xlog.Xlog) (string, error)
 }
 
 var normalizers = []killerNormalizer{
@@ -32,7 +33,7 @@ var normalizers = []killerNormalizer{
 
 type simpleKillerNormalizer stringnorm.Normalizer
 
-func (n simpleKillerNormalizer) NormalizeKiller(killer, killerName string) (string, error) {
+func (n simpleKillerNormalizer) NormalizeKiller(killer string, rec xlog.Xlog) (string, error) {
 	return stringnorm.Normalizer(n).Normalize(killer)
 }
 

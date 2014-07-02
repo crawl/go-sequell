@@ -18,11 +18,15 @@ func (u uniqueNormalizer) NormalizeKiller(killer, killerName string) (string, er
 		properName := reProperName.FindString(killer)
 		titleMatch := reNameWithTitle.FindStringSubmatch(killer)
 		if titleMatch != nil {
-			if unique.IsUnique(properName) {
+			if unique.IsUnique(properName, rec) {
 				killer = properName
 			} else {
 				// Orcs
 				killer = grammar.Article(titleMatch[1])
+			}
+		} else {
+			if unique.MaybePanLord(properName, rec) {
+				return unique.GenericPanLordName
 			}
 		}
 	}

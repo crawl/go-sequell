@@ -15,14 +15,14 @@ const (
 	Milestone
 )
 
-func Type(line xlog.XlogLine) XlogType {
+func Type(line xlog.Xlog) XlogType {
 	if _, ok := line["type"]; ok {
 		return Milestone
 	}
 	return Log
 }
 
-func Normalize(log xlog.XlogLine) xlog.XlogLine {
+func Normalize(log xlog.Xlog) xlog.Xlog {
 	if Type(log) == Milestone {
 		return NormalizeMilestone(log)
 	} else {
@@ -84,6 +84,6 @@ func NormalizeMapName(mapname string) string {
 	return strings.Replace(mapname, ",", ";", -1)
 }
 
-func NormalizeMilestone(mile xlog.XlogLine) xlog.XlogLine {
+func NormalizeMilestone(mile xlog.Xlog) xlog.Xlog {
 	return NormalizeLog(mile)
 }

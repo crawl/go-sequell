@@ -6,20 +6,29 @@ import (
 	"unicode/utf8"
 )
 
-type XlogLine map[string]string
+type Xlog map[string]string
 
-func (x XlogLine) Clone() XlogLine {
-	res := make(XlogLine)
+func (x Xlog) Clone() Xlog {
+	res := make(Xlog)
 	for key, value := range x {
 		res[key] = value
 	}
 	return res
 }
 
+func (x Xlog) Get(name string) string {
+	return x[name]
+}
+
+func (x Xlog) Contains(key string) bool {
+	_, exists := x[key]
+	return exists
+}
+
 // Parse parses the given xlog line into a map
-func Parse(line string) (XlogLine, *XlogParseError) {
+func Parse(line string) (Xlog, *XlogParseError) {
 	line = strings.TrimSpace(line)
-	res := make(XlogLine)
+	res := make(Xlog)
 
 	startIndex := 0
 	lineByteLen := len(line)
