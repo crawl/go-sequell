@@ -18,6 +18,6 @@ func Article(thing string) string {
 	return thing
 }
 
-func IsVowel(r rune) {
+func IsVowel(r rune) bool {
 	return r == 'a' || r == 'e' || r == 'i' || r == 'o' || r == 'u'
 }

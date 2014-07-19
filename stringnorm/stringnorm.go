@@ -17,12 +17,12 @@ type Normalizer interface {
 	Normalize(text string) (string, error)
 }
 
-func Normalize(text string, normalizers []Normalizer) string {
+func Normalize(text string, normalizers []Normalizer) (string, error) {
 	for _, norm := range normalizers {
 		text, err := norm.Normalize(text)
 		if err != nil {
 			if err == ErrNormalizeComplete {
-				return text
+				return text, nil
 			}
 			return text, err
 		}

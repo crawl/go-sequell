@@ -3,12 +3,12 @@ package killer
 import (
 	"github.com/greensnark/go-sequell/stringnorm"
 	"github.com/greensnark/go-sequell/xlog"
-	"regexp"
 )
 
 func NormalizeKiller(killer string, rec xlog.Xlog) string {
+	var err error
 	for _, norm := range normalizers {
-		killer, err := norm.NormalizeKiller(killer, rec)
+		killer, err = norm.NormalizeKiller(killer, rec)
 		if err != nil {
 			return killer
 		}
@@ -28,15 +28,17 @@ var normalizers = []killerNormalizer{
 	reNorm(`^an? \w+ (draconian.*)`, "a $1"),
 	reNorm(`^an? .* \(((?:glowing )?shapeshifter)\)$`, "a $1"),
 	reNorm(`^the .* shaped (.*)$`, "the $1"),
-	uniqueNormalizer{},
+	&uniqueNormalizer{},
 }
 
-type simpleKillerNormalizer stringnorm.Normalizer
+type simpleKillerNormalizer struct {
+	norm stringnorm.Normalizer
+}
 
-func (n simpleKillerNormalizer) NormalizeKiller(killer string, rec xlog.Xlog) (string, error) {
-	return stringnorm.Normalizer(n).Normalize(killer)
+func (n *simpleKillerNormalizer) NormalizeKiller(killer string, rec xlog.Xlog) (string, error) {
+	return n.norm.Normalize(killer)
 }
 
 func reNorm(re, repl string) killerNormalizer {
-	return simpleKillerNormalizer(stringnorm.StaticRegexpNormalizer(re, repl))
+	return &simpleKillerNormalizer{stringnorm.StaticRegexpNormalizer(re, repl)}
 }
