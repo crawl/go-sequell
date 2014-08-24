@@ -1,12 +1,14 @@
 package xlogtools
 
 import (
+	"strings"
+
 	"github.com/greensnark/go-sequell/crawl/killer"
 	"github.com/greensnark/go-sequell/crawl/place"
 	"github.com/greensnark/go-sequell/crawl/unique"
 	"github.com/greensnark/go-sequell/crawl/version"
+	"github.com/greensnark/go-sequell/text"
 	"github.com/greensnark/go-sequell/xlog"
-	"strings"
 )
 
 type XlogType int
@@ -58,28 +60,19 @@ func NormalizeLog(log xlog.XlogLine) xlog.XlogLine {
 
 	milestone := Type(log) == Milestone
 	if milestone {
-		log["oplace"] = FirstNotEmpty(log["oplace"], log["place"])
+		log["oplace"] = text.FirstNotEmpty(log["oplace"], log["place"])
 	}
 
 	if !milestone {
-		log["vmsg"] = FirstNotEmpty(log["vsmg"], log["tmsg"])
+		log["vmsg"] = text.FirstNotEmpty(log["vsmg"], log["tmsg"])
 		log["map"] = NormalizeMapName(log["map"])
 		log["killermap"] = NormalizeMapName(log["killermap"])
-		log["ikiller"] = FirstNotEmpty(log["ikiller"], log["killer"])
+		log["ikiller"] = text.FirstNotEmpty(log["ikiller"], log["killer"])
 		log["ckiller"] =
 			killer.NormalizeKiller(
-				FirstNotEmpty(log["killer"], log["ktyp"]), log["killer"])
+				text.FirstNotEmpty(log["killer"], log["ktyp"]), log["killer"])
 	}
 	return log
-}
-
-func FirstNotEmpty(choices ...string) string {
-	for _, val := range choices {
-		if val != "" {
-			return val
-		}
-	}
-	return ""
 }
 
 func NormalizeMapName(mapname string) string {

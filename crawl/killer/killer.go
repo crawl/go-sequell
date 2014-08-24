@@ -40,5 +40,5 @@ func (n *simpleKillerNormalizer) NormalizeKiller(killer string, rec xlog.Xlog) (
 }
 
 func reNorm(re, repl string) killerNormalizer {
-	return &simpleKillerNormalizer{stringnorm.StaticRegexpNormalizer(re, repl)}
+	return &simpleKillerNormalizer{stringnorm.StaticReg(re, repl)}
 }

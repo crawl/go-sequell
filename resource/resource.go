@@ -9,8 +9,17 @@ import (
 
 var Root = root()
 
+func firstSet(vars ...string) string {
+	for _, value := range vars {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
 func root() string {
-	root := os.Getenv("HENZELL_ROOT")
+	root := firstSet(os.Getenv("SEQUELL_ROOT"), os.Getenv("HENZELL_ROOT"))
 	if root != "" {
 		return root
 	}

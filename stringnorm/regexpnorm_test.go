@@ -15,7 +15,7 @@ var reReplCases = []struct {
 
 func TestRegexpNormalizer(t *testing.T) {
 	for _, replCase := range reReplCases {
-		norm := StaticRegexpNormalizer(replCase.regex, replCase.repl)
+		norm := StaticReg(replCase.regex, replCase.repl)
 		res, _ := norm.Normalize(replCase.input)
 		if res != replCase.expected {
 			t.Errorf("Expected %s =~ s/%s/%s/ == %s, but got %s", replCase.input, replCase.regex, replCase.repl, replCase.expected, res)
