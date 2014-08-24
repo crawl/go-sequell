@@ -88,12 +88,16 @@ func FindSeparator(s string) int {
 		if sep == -1 {
 			return -1
 		}
-		nextSep := strings.IndexRune(s[sep+1:], sepRune)
-		if nextSep != 0 {
+		var nextSep bool
+		for _, c := range s[sep+1:] {
+			nextSep = c == sepRune
+			break
+		}
+		if !nextSep {
 			return sep + offset
 		}
 		offset += sep + 2
-		s = s[offset:]
+		s = s[sep+2:]
 	}
 }
 

@@ -25,8 +25,17 @@ func TestXlogParseSingleField(t *testing.T) {
 	}
 }
 
+func TestNormalizeValue(t *testing.T) {
+	val := "x::::y"
+	res := NormalizeValue(val)
+	expected := "x::y"
+	if res != expected {
+		t.Errorf("NormalizeValue(%#v) == %#v, expected %#v", val, res, expected)
+	}
+}
+
 func TestXlogParseFull(t *testing.T) {
-	line := "v=0.15-a0:vlong=0.15-a0-1506-g1b030bc:lv=0.1:tiles=1:name=Atomikkrab:race=Demonspawn:cls=Fighter:char=DsFi:xl=2:sk=Fighting:sklev=3:title=Skirmisher:place=D::$:br=D:lvl=0:absdepth=1:hp=19:mhp=24:mmhp=24:str=16:int=9:dex=12:ac=6:ev=6:sh=8:start=20140514224835S:dur=66:turn=69:aut=803:kills=3:gold=8:goldfound=8:goldspent=0:sc=8:ktyp=leaving:dam=-9999:sdam=0:tdam=0:end=20140514224942S:map=eino_arrival_water_star:tmsg=got out of the dungeon alive:vmsg=got out of the dungeon alive."
+	line := "v=0.15-a0:vlong=0.15-a0-1506-g1b030bc:lv=0.1:tiles=1:name=Atomikkrab:race=Demonspawn:cls=Fighter:char=DsFi:xl=2:sk=Fighting:sklev=3:title=Skirmisher:place=D::::$:br=D:lvl=0:absdepth=1:hp=19:mhp=24:mmhp=24:str=16:int=9:dex=12:ac=6:ev=6:sh=8:start=20140514224835S:dur=66:turn=69:aut=803:kills=3:gold=8:goldfound=8:goldspent=0:sc=8:ktyp=leaving:dam=-9999:sdam=0:tdam=0:end=20140514224942S:map=eino_arrival_water_star:tmsg=got out of the dungeon alive:vmsg=got out of the dungeon alive."
 	expectedMap := Xlog{
 		"v":         "0.15-a0",
 		"vlong":     "0.15-a0-1506-g1b030bc",
@@ -40,7 +49,7 @@ func TestXlogParseFull(t *testing.T) {
 		"sk":        "Fighting",
 		"sklev":     "3",
 		"title":     "Skirmisher",
-		"place":     "D:$",
+		"place":     "D::$",
 		"br":        "D",
 		"lvl":       "0",
 		"absdepth":  "1",
