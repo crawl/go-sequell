@@ -5,6 +5,24 @@ import (
 	"testing"
 )
 
+var qualSplitTests = [][]string{
+	{"", "", "", ""},
+	{"a", "a", "", ""},
+	{"a0", "a", "0", ""},
+	{"a0-263", "a", "0", "263"},
+	{"pow2-263", "pow", "2", "263"},
+}
+
+func TestSplitQualifier(t *testing.T) {
+	for _, qualSplitTest := range qualSplitTests {
+		prefix, major, minor := SplitQualifierPrefixMajorMinor(qualSplitTest[0])
+		if prefix != qualSplitTest[1] || major != qualSplitTest[2] ||
+			minor != qualSplitTest[3] {
+			t.Errorf("SplitQualifierPrefixMajorMinor(%#v) = %#v,%#v,%#v, expected %#v\n", qualSplitTest[0], prefix, major, minor, qualSplitTest[1:])
+		}
+	}
+}
+
 func TestMajorVersion(t *testing.T) {
 	if MajorVersion("1.22.15") != "1.22" {
 		t.Errorf("expected major version of 1.22.15 to be 1.22")
@@ -28,12 +46,12 @@ func TestFullVersion(t *testing.T) {
 }
 
 var versionNumericIds = [][]string{
-	{"0.1.7", "1007000998001"},
-	{"0.8.0-a0", "8000000097000"},
-	{"0.8.0-rc1", "8000000114001"},
-	{"0.9.0", "9000000998001"},
-	{"0.9", "9000000998001"},
-	{"0.10.4", "10004000998001"},
+	{"0.1.7", "100799999999"},
+	{"0.8.0-a0", "800001000000"},
+	{"0.8.0-rc1", "800018010000"},
+	{"0.9.0", "900099999999"},
+	{"0.9", "900099999999"},
+	{"0.10.4", "1000499999999"},
 }
 
 func TestVersionNumericId(t *testing.T) {

@@ -65,18 +65,18 @@ func SplitVersionQualifier(ver string) (string, string) {
 	}
 }
 
-var rQualifierPrefixIndex = regexp.MustCompile(`^([a-z]+)([0-9]*)`)
+var rQualifierPrefixMajorMinor = regexp.MustCompile(`^([a-z]+)([0-9]*)(?:-(\d+))?`)
 
-func SplitQualifierPrefixIndex(qual string) (string, string) {
-	match := rQualifierPrefixIndex.FindStringSubmatch(qual)
+func SplitQualifierPrefixMajorMinor(qual string) (string, string, string) {
+	match := rQualifierPrefixMajorMinor.FindStringSubmatch(qual)
 	if match == nil {
-		return qual, ""
+		return qual, "", ""
 	}
-	return match[1], match[2]
+	return match[1], match[2], match[3]
 }
 
 func SplitDottedVersion(ver string) []string {
-	return text.RightPadSlice(strings.Split(ver, "."), 4, "0")
+	return text.RightPadSlice(strings.Split(ver, "."), 3, "0")
 }
 
 func VersionNumericId(ver string) uint64 {
@@ -86,25 +86,30 @@ func VersionNumericId(ver string) uint64 {
 }
 
 func versionNumberize(versionParts []string) uint64 {
-	var base uint64 = 1000000
+	var base uint64 = 1e8
 	var sum uint64 = 0
 	for i := len(versionParts) - 1; i >= 0; i-- {
 		sum += uint64(text.ParseInt(versionParts[i], 0)) * base
-		base *= 1000
+		base *= 1e3
 	}
 	return sum
 }
 
 func versionQualifierNumberize(qualifier string) uint64 {
 	if qualifier == "" {
-		return 999 * 999
+		return 1e8 - 1
 	}
 
-	prefix, index := SplitQualifierPrefixIndex(qualifier)
+	prefix, major, minor := SplitQualifierPrefixMajorMinor(qualifier)
 
-	return alphaPrefixNumberize(prefix) + uint64(text.ParseInt(index, 0))
+	return alphaPrefixNumberize(prefix)*1e6 +
+		uint64(text.ParseInt(major, 0))*1e4 +
+		uint64(text.ParseInt(minor, 0))
 }
 
 func alphaPrefixNumberize(prefix string) uint64 {
-	return 1000 * uint64(prefix[0])
+	if prefix == "" {
+		return 0
+	}
+	return uint64(prefix[0] - 'a' + 1)
 }

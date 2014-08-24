@@ -56,6 +56,10 @@ func NormalizeLog(log xlog.Xlog) (xlog.Xlog, error) {
 	}
 	log["vnum"] = strconv.FormatUint(version.VersionNumericId(log["v"]), 10)
 	log["cvnum"] = strconv.FormatUint(version.VersionNumericId(log["cv"]), 10)
+	if vlong, ok := log["vlong"]; ok {
+		log["vlongnum"] =
+			strconv.FormatUint(version.VersionNumericId(vlong), 10)
+	}
 	log["tiles"] = NormalizeBool(log["tiles"])
 	if log["ntv"] == "" {
 		log["ntv"] = "0"
