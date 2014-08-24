@@ -25,8 +25,19 @@ func (x Xlog) Contains(key string) bool {
 	return exists
 }
 
+func (x Xlog) String() string {
+	result := ""
+	for key, value := range x {
+		if len(result) > 0 {
+			result += ":"
+		}
+		result += key + "=" + strings.Replace(value, ":", "::", -1)
+	}
+	return result
+}
+
 // Parse parses the given xlog line into a map
-func Parse(line string) (Xlog, *XlogParseError) {
+func Parse(line string) (Xlog, error) {
 	line = strings.TrimSpace(line)
 	res := make(Xlog)
 

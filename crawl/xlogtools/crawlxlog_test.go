@@ -5,17 +5,47 @@ import (
 	"testing"
 )
 
-var alphaLog xlog.XlogLine = xlog.XlogLine{
-	"v":     "0.10-a0",
-	"alpha": "y",
+var normXlogTest = [][]xlog.Xlog{
+	{
+		xlog.Xlog{
+			"src":       "cao",
+			"v":         "0.10-a0",
+			"alpha":     "y",
+			"sk":        "Translocation",
+			"gold":      "-10",
+			"type":      "unique",
+			"milestone": "pacified Sigmund",
+			"start":     "20140001123755S",
+		},
+		xlog.Xlog{
+			"v":         "0.10.0-a0",
+			"cv":        "0.10-a",
+			"sk":        "Translocations",
+			"gold":      "0",
+			"goldfound": "0",
+			"goldspent": "0",
+			"verb":      "uniq.pac",
+			"noun":      "Sigmund",
+			"rstart":    "20140001123755S",
+			"start":     "20140101123755",
+		},
+	},
 }
 
-func TestNormalizeLogVersions(t *testing.T) {
-	res := NormalizeLog(alphaLog.Clone())
-	if res["cv"] != "0.10-a" {
-		t.Errorf("Expected CV to be 0.10-a for %v, but was %s", alphaLog, res["cv"])
-	}
-	if res["v"] != "0.10.0-a0" {
-		t.Errorf("Expected V to be 0.10.0-a0 for %v, but was %s", alphaLog, res["v"])
+func TestNormalizeLog(t *testing.T) {
+	for _, test := range normXlogTest {
+		log, expected := test[0], test[1]
+		normalized, err := NormalizeLog(log.Clone())
+		if err != nil {
+			t.Errorf("NormalizeLog(%v) failed: %v\n", log, err)
+			continue
+		}
+
+		for key, expectedValue := range expected {
+			actual := normalized[key]
+			if actual != expectedValue {
+				t.Errorf("NormalizeLog(%#v): original: %#v, expected: %#v, actual: %#v\n", key, log[key], expectedValue, actual)
+			}
+		}
 	}
 }

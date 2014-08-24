@@ -1,7 +1,7 @@
 package version
 
 import (
-	"math/big"
+	"strconv"
 	"testing"
 )
 
@@ -52,7 +52,7 @@ func BenchmarkCachingVersionNumericId(b *testing.B) {
 	benchmarkVersionNumericId(b, CachingVersionNumericId)
 }
 
-func benchmarkVersionNumericId(b *testing.B, impl func(string) *big.Int) {
+func benchmarkVersionNumericId(b *testing.B, impl func(string) uint64) {
 	for i := 0; i < b.N; i++ {
 		for _, versionStrId := range versionNumericIds {
 			impl(versionStrId[0])
@@ -60,10 +60,10 @@ func benchmarkVersionNumericId(b *testing.B, impl func(string) *big.Int) {
 	}
 }
 
-func testVersionId(t *testing.T, impl func(string) *big.Int) {
+func testVersionId(t *testing.T, impl func(string) uint64) {
 	for _, versionStrId := range versionNumericIds {
 		ver, id := versionStrId[0], versionStrId[1]
-		res := impl(ver).String()
+		res := strconv.FormatUint(impl(ver), 10)
 		if res != id {
 			t.Errorf("VersionNumericId(%s) == %s, expected %s\n",
 				ver, res, id)

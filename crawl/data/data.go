@@ -2,8 +2,10 @@ package data
 
 import (
 	"fmt"
-	"github.com/greensnark/go-sequell/resource"
 	"sync"
+
+	"github.com/greensnark/go-sequell/resource"
+	"github.com/greensnark/go-sequell/text"
 )
 
 var mutex = &sync.Mutex{}
@@ -33,6 +35,24 @@ func String(key string) string {
 		return s
 	}
 	return ""
+}
+
+func StringMap(key string) map[string]string {
+	return IStringMap(Data()[key])
+}
+
+func Map(key string) map[interface{}]interface{} {
+	return Data()[key].(map[interface{}]interface{})
+}
+
+func IStringMap(v interface{}) map[string]string {
+	res := map[string]string{}
+	if keyMap, ok := v.(map[interface{}]interface{}); ok {
+		for key, value := range keyMap {
+			res[text.Str(key)] = text.Str(value)
+		}
+	}
+	return res
 }
 
 func StringArray(key string) []string {

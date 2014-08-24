@@ -20,8 +20,9 @@ type Normalizer interface {
 type List []Normalizer
 
 func (n List) Normalize(text string) (string, error) {
+	var err error
 	for _, norm := range n {
-		text, err := norm.Normalize(text)
+		text, err = norm.Normalize(text)
 		if err != nil {
 			if err == ErrNormalizeComplete {
 				return text, nil

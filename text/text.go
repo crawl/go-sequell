@@ -1,6 +1,28 @@
 package text
 
-import "strconv"
+import (
+	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
+)
+
+func Str(any interface{}) string {
+	switch t := any.(type) {
+	case string:
+		return t
+	case fmt.Stringer:
+		return t.String()
+	default:
+		return fmt.Sprintf("%s", t)
+	}
+}
+
+var rSpaceRegexp = regexp.MustCompile(`\s+`)
+
+func NormalizeSpace(text string) string {
+	return rSpaceRegexp.ReplaceAllLiteralString(strings.TrimSpace(text), " ")
+}
 
 func FirstNotEmpty(choices ...string) string {
 	for _, val := range choices {

@@ -30,3 +30,46 @@ func TestNormalizeKiller(t *testing.T) {
 		}
 	}
 }
+
+var kmodTests = [][]string{
+	{"a spectral warrior", ""},
+	{"a spectral hydra", "spectre"},
+	{"a dragon (shapeshifter)", "shapeshifter"},
+	{"a glowing shapeshifter", "shapeshifter"},
+	{"an 18-headed hydra zombie", "zombie"},
+	{"a bat skeleton", "skeleton"},
+	{"a goblin simulacrum", "simulacrum"},
+	{"a kobold", ""},
+}
+
+func TestNormalizeKmod(t *testing.T) {
+	for _, test := range kmodTests {
+		killer, kmod := test[0], test[1]
+		actual := NormalizeKmod(killer)
+		if actual != kmod {
+			t.Errorf("NormalizeKmod(%s) == %s, expected %s\n",
+				killer, actual, kmod)
+		}
+	}
+}
+
+var kauxTests = [][]string{
+	{"a longsword {cow}", "longsword"},
+	{"a +2 sling (mu)", "sling"},
+	{"an ox", "ox"},
+	{"an elven crossbow", "crossbow"},
+	{"Hit by a dart thrown by a horse", "dart"},
+	{"Shot with an arrow by an elf", "arrow"},
+	{"a cursed dagger", "dagger"},
+}
+
+func TestNormalizeKaux(t *testing.T) {
+	for _, kauxTest := range kauxTests {
+		kaux, ckaux := kauxTest[0], kauxTest[1]
+		res := NormalizeKaux(kaux)
+		if res != ckaux {
+			t.Errorf("NormalizeKaux(%#v) == %#v, expected %#v\n",
+				kaux, res, ckaux)
+		}
+	}
+}
