@@ -25,9 +25,9 @@ func TestXlogParseSingleField(t *testing.T) {
 	}
 }
 
-func TestNormalizeValue(t *testing.T) {
+func TestUnquoteValue(t *testing.T) {
 	val := "x::::y"
-	res := NormalizeValue(val)
+	res := UnquoteValue(val)
 	expected := "x::y"
 	if res != expected {
 		t.Errorf("NormalizeValue(%#v) == %#v, expected %#v", val, res, expected)

@@ -31,7 +31,7 @@ func (x Xlog) String() string {
 		if len(result) > 0 {
 			result += ":"
 		}
-		result += key + "=" + strings.Replace(value, ":", "::", -1)
+		result += key + "=" + QuoteValue(value)
 	}
 	return result
 }
@@ -66,7 +66,7 @@ func Parse(line string) (Xlog, error) {
 		}
 
 		value := line[startIndex:fieldEndIndex]
-		res[key] = NormalizeValue(value)
+		res[key] = UnquoteValue(value)
 
 		if nextSeparator != -1 {
 			startIndex += nextSeparator + 1
@@ -88,7 +88,7 @@ func FindSeparator(s string) int {
 		if sep == -1 {
 			return -1
 		}
-		var nextSep bool
+		nextSep := false
 		for _, c := range s[sep+1:] {
 			nextSep = c == sepRune
 			break
@@ -101,7 +101,11 @@ func FindSeparator(s string) int {
 	}
 }
 
-func NormalizeValue(value string) string {
+func QuoteValue(value string) string {
+	return strings.Replace(value, ":", "::", -1)
+}
+
+func UnquoteValue(value string) string {
 	return strings.Replace(value, "::", ":", -1)
 }
 
