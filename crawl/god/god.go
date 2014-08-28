@@ -6,7 +6,7 @@ import (
 	"github.com/greensnark/go-sequell/crawl/data"
 )
 
-var godAliases = data.StringMap("god-aliases")
+var godAliases = data.Crawl.StringMap("god-aliases")
 
 func CanonicalGod(god string) string {
 	if canonical, exists := godAliases[strings.ToLower(god)]; exists {

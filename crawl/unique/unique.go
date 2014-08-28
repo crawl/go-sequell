@@ -2,6 +2,7 @@ package unique
 
 import (
 	"github.com/greensnark/go-sequell/crawl/data"
+	"github.com/greensnark/go-sequell/qyaml"
 	"github.com/greensnark/go-sequell/xlog"
 	"regexp"
 	"strings"
@@ -19,7 +20,7 @@ func uniqueMap() map[string]bool {
 	defer dataLock.Unlock()
 
 	if uniqueMapData == nil {
-		uniqueMapData = data.StringSliceSet(data.Uniques())
+		uniqueMapData = qyaml.StringSliceSet(data.Uniques())
 	}
 	return uniqueMapData
 }
@@ -29,13 +30,13 @@ func orcMap() map[string]bool {
 	defer dataLock.Unlock()
 
 	if orcMapData == nil {
-		orcMapData = data.StringSliceSet(data.Orcs())
+		orcMapData = qyaml.StringSliceSet(data.Orcs())
 	}
 	return orcMapData
 }
 
 func GenericPanLordName() string {
-	return data.String("generic_panlord")
+	return data.Crawl.String("generic_panlord")
 }
 
 func IsUnique(name string, rec xlog.Xlog) bool {

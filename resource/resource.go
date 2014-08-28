@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+
+	"github.com/greensnark/go-sequell/qyaml"
 )
 
 var Root = root()
@@ -42,13 +44,25 @@ func ResourceString(filepath string) (string, error) {
 	return string(bytes), err
 }
 
-func ResourceYaml(filepath string) (interface{}, error) {
+func ResourceYaml(filepath string) (qyaml.Yaml, error) {
 	text, err := ResourceString(filepath)
 	if err != nil {
-		return nil, err
+		return qyaml.Yaml{}, err
 	}
 
-	var res = make(map[interface{}]interface{})
-	err = yaml.Unmarshal([]byte(text), &res)
-	return res, err
+	return StringYaml(text)
+}
+
+func ResourceYamlMustExist(filepath string) qyaml.Yaml {
+	yaml, err := ResourceYaml(filepath)
+	if err != nil {
+		panic(err)
+	}
+	return yaml
+}
+
+func StringYaml(text string) (qyaml.Yaml, error) {
+	var res interface{}
+	err := yaml.Unmarshal([]byte(text), &res)
+	return qyaml.Yaml{res}, err
 }

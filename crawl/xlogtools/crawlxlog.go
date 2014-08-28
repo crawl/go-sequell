@@ -113,7 +113,7 @@ func NormalizeMapName(mapname string) string {
 	return strings.Replace(mapname, ",", ";", -1)
 }
 
-var milestoneVerbMap = data.StringMap("milestone-verb-mappings")
+var milestoneVerbMap = data.Crawl.StringMap("milestone-verb-mappings")
 var rActionWord = regexp.MustCompile(`(\w+) (.*?)\.?$`)
 var rGhostWord = regexp.MustCompile(`(\w+) the ghost of (\S+)`)
 var rAbyssCause = regexp.MustCompile(`\((.*?)\)$`)
@@ -229,7 +229,7 @@ func ShaftedPlace(shaftMsg string) string {
 	return textReSubmatch(shaftMsg, rShaftedPlace, 1)
 }
 
-var fieldInputTransforms = data.Map("field-input-transforms")
+var fieldInputTransforms = data.Crawl.Map("field-input-transforms")
 
 func CanonicalizeFields(log xlog.Xlog) {
 	for field, transforms := range fieldInputTransforms {

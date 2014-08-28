@@ -8,6 +8,9 @@ import (
 )
 
 func Str(any interface{}) string {
+	if any == nil {
+		return ""
+	}
 	switch t := any.(type) {
 	case string:
 		return t
