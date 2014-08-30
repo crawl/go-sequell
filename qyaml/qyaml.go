@@ -1,6 +1,8 @@
 package qyaml
 
 import (
+	"strings"
+
 	"github.com/greensnark/go-sequell/text"
 )
 
@@ -21,7 +23,7 @@ func IStringMap(v interface{}) map[string]string {
 func (y Yaml) Key(key string) interface{} {
 	switch v := y.Yaml.(type) {
 	case map[interface{}]interface{}:
-		return v[key]
+		return ResolveMapKey(v, key)
 	}
 	return nil
 }
@@ -67,4 +69,34 @@ func StringSliceSet(slice []string) map[string]bool {
 		res[val] = true
 	}
 	return res
+}
+
+func ResolveMapKey(m map[interface{}]interface{}, key string) interface{} {
+	if directLookup, ok := m[key]; ok {
+		return directLookup
+	}
+
+	hierarchy := SplitHierarchyKey(key)
+	last := len(hierarchy) - 1
+	for i, fragment := range hierarchy {
+		if value, ok := m[fragment]; ok {
+			if i == last {
+				return value
+			}
+			if m, ok = value.(map[interface{}]interface{}); !ok {
+				return nil
+			}
+			continue
+		}
+		break
+	}
+	return nil
+}
+
+func SplitHierarchyKey(key string) []string {
+	fragments := strings.Split(key, ">")
+	for i := len(fragments) - 1; i >= 0; i-- {
+		fragments[i] = strings.TrimSpace(fragments[i])
+	}
+	return fragments
 }

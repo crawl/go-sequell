@@ -6,7 +6,7 @@ import (
 )
 
 var Crawl qyaml.Yaml = resource.ResourceYamlMustExist("config/crawl-data.yml")
-var Schema = resource.ResourceYamlMustExist("config/schema.yml")
+var Schema = Crawl
 
 func Uniques() []string {
 	return Crawl.StringArray("uniques")
