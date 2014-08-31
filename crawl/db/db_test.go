@@ -13,10 +13,10 @@ var fieldParseCases = []struct {
 }{
 	{"idIB%*", Field{
 		Name:             "id",
-		Type:             "IB",
+		Type:             "PK",
 		Features:         "%*",
 		SqlName:          "id",
-		SqlType:          "bigint",
+		SqlType:          "serial",
 		DefaultString:    "",
 		PrimaryKey:       true,
 		Summarizable:     false,
@@ -31,6 +31,7 @@ var fieldParseCases = []struct {
 		Features:         "?^",
 		SqlName:          "killermap",
 		SqlType:          "citext",
+		SqlRefType:       "int",
 		DefaultString:    "",
 		PrimaryKey:       false,
 		Summarizable:     true,
@@ -59,6 +60,8 @@ var fieldParseCases = []struct {
 		Features:         "?^",
 		SqlName:          "pname",
 		SqlType:          "text",
+		SqlRefType:       "int",
+		SqlLookupExpr:    "cast(pname as citext)",
 		DefaultString:    "",
 		PrimaryKey:       false,
 		Summarizable:     true,
@@ -73,6 +76,7 @@ var fieldParseCases = []struct {
 		Features:         "^+",
 		SqlName:          "maxskills",
 		SqlType:          "citext",
+		SqlRefType:       "int",
 		DefaultString:    "",
 		PrimaryKey:       false,
 		Summarizable:     true,
@@ -92,7 +96,7 @@ func TestParseField(t *testing.T) {
 		}
 		if !reflect.DeepEqual(&testCase.field, field) {
 			t.Errorf("Expected %#v to parse as %#v, but got %#v",
-				testCase.spec, testCase.field, field)
+				testCase.spec, &testCase.field, field)
 		}
 	}
 }

@@ -38,8 +38,8 @@ type ForeignKeyConstraint struct {
 	TargetTableField string
 }
 
-func (f *ForeignKeyConstraint) Sql() string {
-	return fmt.Sprintf("FOREIGN KEY (%s) REFERENCES %s (%s)",
+func (f ForeignKeyConstraint) Sql() string {
+	return fmt.Sprintf("foreign key (%s) references %s (%s)",
 		f.SourceTableField, f.TargetTable, f.TargetTableField)
 }
 
@@ -47,6 +47,6 @@ type PrimaryKeyConstraint struct {
 	Column string
 }
 
-func (c *PrimaryKeyConstraint) Sql() string {
-	return "PRIMARY KEY (" + c.Column + ")"
+func (c PrimaryKeyConstraint) Sql() string {
+	return "primary key (" + c.Column + ")"
 }

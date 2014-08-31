@@ -10,16 +10,6 @@ type Yaml struct {
 	Yaml interface{}
 }
 
-func IStringMap(v interface{}) map[string]string {
-	res := map[string]string{}
-	if keyMap, ok := v.(map[interface{}]interface{}); ok {
-		for key, value := range keyMap {
-			res[text.Str(key)] = text.Str(value)
-		}
-	}
-	return res
-}
-
 func (y Yaml) Key(key string) interface{} {
 	switch v := y.Yaml.(type) {
 	case map[interface{}]interface{}:
@@ -39,7 +29,7 @@ func (y Yaml) Map(key string) map[interface{}]interface{} {
 	return nil
 }
 
-func (y Yaml) Array(key string) []interface{} {
+func (y Yaml) Slice(key string) []interface{} {
 	if arr, ok := y.Key(key).([]interface{}); ok {
 		return arr
 	}
@@ -47,20 +37,35 @@ func (y Yaml) Array(key string) []interface{} {
 }
 
 func (y Yaml) StringSlice(key string) []string {
-	arr := y.Array(key)
-	if arr == nil {
-		return nil
-	}
-
-	sarr := make([]string, len(arr))
-	for i, v := range arr {
-		sarr[i] = text.Str(v)
-	}
-	return sarr
+	return IStringSlice(y.Key(key))
 }
 
 func (y Yaml) StringMap(key string) map[string]string {
 	return IStringMap(y.Key(key))
+}
+
+func IStringMap(v interface{}) map[string]string {
+	res := map[string]string{}
+	if keyMap, ok := v.(map[interface{}]interface{}); ok {
+		for key, value := range keyMap {
+			res[text.Str(key)] = text.Str(value)
+		}
+	}
+	return res
+}
+
+func IStringSlice(islice interface{}) []string {
+	if islice == nil {
+		return nil
+	}
+	if slice, ok := islice.([]interface{}); ok {
+		sarr := make([]string, len(slice))
+		for i, v := range slice {
+			sarr[i] = text.Str(v)
+		}
+		return sarr
+	}
+	return nil
 }
 
 func StringSliceSet(slice []string) map[string]bool {
