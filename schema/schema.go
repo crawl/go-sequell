@@ -4,6 +4,8 @@ import (
 	"fmt"
 )
 
+const UnknownColumn = "§"
+
 type Schema struct {
 	Tables []*Table
 }
@@ -13,6 +15,7 @@ type Table struct {
 	Columns     []*Column
 	Indexes     []*Index
 	Constraints []Constraint
+	knownDeps   map[string]bool
 }
 
 type Column struct {
@@ -30,6 +33,7 @@ type Index struct {
 
 type Constraint interface {
 	Sql() string
+	DependsOnTable() string
 }
 
 type ForeignKeyConstraint struct {
@@ -43,10 +47,18 @@ func (f ForeignKeyConstraint) Sql() string {
 		f.SourceTableField, f.TargetTable, f.TargetTableField)
 }
 
+func (f ForeignKeyConstraint) DependsOnTable() string {
+	return f.TargetTable
+}
+
 type PrimaryKeyConstraint struct {
 	Column string
 }
 
 func (c PrimaryKeyConstraint) Sql() string {
 	return "primary key (" + c.Column + ")"
+}
+
+func (c PrimaryKeyConstraint) DependsOnTable() string {
+	return ""
 }
