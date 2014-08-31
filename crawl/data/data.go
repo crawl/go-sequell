@@ -9,9 +9,9 @@ var Crawl qyaml.Yaml = resource.ResourceYamlMustExist("config/crawl-data.yml")
 var Schema = Crawl
 
 func Uniques() []string {
-	return Crawl.StringArray("uniques")
+	return Crawl.StringSlice("uniques")
 }
 
 func Orcs() []string {
-	return Crawl.StringArray("orcs")
+	return Crawl.StringSlice("orcs")
 }

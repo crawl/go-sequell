@@ -3,6 +3,8 @@ package db
 import (
 	"reflect"
 	"testing"
+
+	"github.com/greensnark/go-sequell/crawl/data"
 )
 
 var fieldParseCases = []struct {
@@ -81,8 +83,9 @@ var fieldParseCases = []struct {
 }
 
 func TestParseField(t *testing.T) {
+	p := NewFieldParser(data.Schema)
 	for _, testCase := range fieldParseCases {
-		field, err := ParseField(testCase.spec)
+		field, err := p.ParseField(testCase.spec)
 		if err != nil {
 			t.Errorf("Error parsing %#v: %v", field, err)
 			continue

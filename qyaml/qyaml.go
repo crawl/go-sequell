@@ -46,7 +46,7 @@ func (y Yaml) Array(key string) []interface{} {
 	return nil
 }
 
-func (y Yaml) StringArray(key string) []string {
+func (y Yaml) StringSlice(key string) []string {
 	arr := y.Array(key)
 	if arr == nil {
 		return nil

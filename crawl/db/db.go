@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/greensnark/go-sequell/crawl/data"
+	"github.com/greensnark/go-sequell/qyaml"
 )
 
 type Field struct {
@@ -22,23 +22,39 @@ type Field struct {
 	Indexed          bool
 }
 
+type FieldParser struct {
+	yaml             qyaml.Yaml
+	sqlFieldNameMap  map[string]string
+	sqlFieldTypes    map[string]string
+	sqlFieldDefaults map[string]string
+}
+
+func NewFieldParser(spec qyaml.Yaml) *FieldParser {
+	return &FieldParser{
+		yaml:             spec,
+		sqlFieldNameMap:  spec.StringMap("sql-field-names"),
+		sqlFieldTypes:    spec.StringMap("field-types > sql"),
+		sqlFieldDefaults: spec.StringMap("field-types > defaults"),
+	}
+}
+
 var rFieldSpec = regexp.MustCompile(`^([a-z]+)([A-Z]*)([^\w]*)$`)
 
-func ParseField(spec string) (*Field, error) {
+func (f *FieldParser) ParseField(spec string) (*Field, error) {
 	match := rFieldSpec.FindStringSubmatch(strings.TrimSpace(spec))
 	if match == nil {
 		return nil, fmt.Errorf("malformed field spec \"%s\"", spec)
 	}
 
 	field := &Field{Name: match[1], Type: match[2], Features: match[3]}
-	err := field.initialize()
+	err := field.initialize(f)
 	if err != nil {
 		return nil, err
 	}
 	return field, nil
 }
 
-func (f *Field) initialize() (err error) {
+func (f *Field) initialize(parser *FieldParser) (err error) {
 	f.Summarizable = true
 	for _, feat := range f.Features {
 		f.applyFeature(feat)
@@ -50,13 +66,13 @@ func (f *Field) initialize() (err error) {
 	if f.Type == "PK" {
 		f.PrimaryKey = true
 	}
-	f.SqlName = FieldSqlName(f.Name)
-	f.SqlType, err = FieldSqlType(f.Type)
+	f.SqlName = parser.FieldSqlName(f.Name)
+	f.SqlType, err = parser.FieldSqlType(f.Type)
 	if err != nil {
 		return
 	}
 	if !f.PrimaryKey {
-		f.DefaultString = FieldSqlDefault(f.Type)
+		f.DefaultString = parser.FieldSqlDefault(f.Type)
 	}
 	return
 }
@@ -78,26 +94,20 @@ func (f *Field) applyFeature(feat rune) {
 	}
 }
 
-var sqlFieldNameMap = data.Schema.StringMap("sql-field-names")
-
-func FieldSqlName(name string) string {
-	if sqlName, ok := sqlFieldNameMap[name]; ok {
+func (p *FieldParser) FieldSqlName(name string) string {
+	if sqlName, ok := p.sqlFieldNameMap[name]; ok {
 		return sqlName
 	}
 	return name
 }
 
-var sqlFieldTypes = data.Schema.StringMap("field-types > sql")
-
-func FieldSqlType(annotatedType string) (string, error) {
-	if sqlType, ok := sqlFieldTypes[annotatedType]; ok {
+func (p *FieldParser) FieldSqlType(annotatedType string) (string, error) {
+	if sqlType, ok := p.sqlFieldTypes[annotatedType]; ok {
 		return sqlType, nil
 	}
 	return "", fmt.Errorf("FieldSqlType(%#v) undefined", annotatedType)
 }
 
-var sqlFieldDefaults = data.Schema.StringMap("field-types > defaults")
-
-func FieldSqlDefault(annotatedType string) string {
-	return sqlFieldDefaults[annotatedType]
+func (p *FieldParser) FieldSqlDefault(annotatedType string) string {
+	return p.sqlFieldDefaults[annotatedType]
 }
