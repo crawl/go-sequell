@@ -123,6 +123,9 @@ func (p PgDB) ColumnDef(name, defval, dataType string, precision int64) *schema.
 }
 
 func (p PgDB) NormalizeType(sqlType, defval string, precision int64) (string, string) {
+	if sqlType == "timestamp without time zone" {
+		sqlType = "timestamp"
+	}
 	if sqlType == "integer" {
 		sqlType = "int"
 	}

@@ -6,6 +6,14 @@ import (
 
 const UnknownColumn = "§"
 
+type Diff int
+
+const (
+	Added Diff = iota
+	Removed
+	Changed
+)
+
 type Schema struct {
 	Tables []*Table
 }
@@ -16,6 +24,7 @@ type Table struct {
 	Indexes     []*Index
 	Constraints []Constraint
 	knownDeps   map[string]bool
+	DiffStruct
 }
 
 type Column struct {
@@ -23,23 +32,39 @@ type Column struct {
 	SqlType string
 	Default string
 	Alias   string
+	DiffStruct
 }
 
 type Index struct {
 	Name      string
 	TableName string
 	Columns   []string
+	DiffStruct
 }
 
 type Constraint interface {
 	Sql() string
 	DependsOnTable() string
+	Differ
 }
+
+type Differ interface {
+	Diff() Diff
+	SetDiff(diff Diff)
+}
+
+type DiffStruct struct {
+	diff Diff
+}
+
+func (d DiffStruct) Diff() Diff        { return d.diff }
+func (d DiffStruct) SetDiff(diff Diff) { d.diff = diff }
 
 type ForeignKeyConstraint struct {
 	SourceTableField string
 	TargetTable      string
 	TargetTableField string
+	DiffStruct
 }
 
 func (f ForeignKeyConstraint) Sql() string {
@@ -53,6 +78,7 @@ func (f ForeignKeyConstraint) DependsOnTable() string {
 
 type PrimaryKeyConstraint struct {
 	Column string
+	DiffStruct
 }
 
 func (c PrimaryKeyConstraint) Sql() string {
