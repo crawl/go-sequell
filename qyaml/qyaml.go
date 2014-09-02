@@ -10,6 +10,8 @@ type Yaml struct {
 	Yaml interface{}
 }
 
+func Wrap(value interface{}) Yaml { return Yaml{Yaml: value} }
+
 func (y Yaml) Key(key string) interface{} {
 	switch v := y.Yaml.(type) {
 	case map[interface{}]interface{}:

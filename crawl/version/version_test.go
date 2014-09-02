@@ -88,3 +88,17 @@ func testVersionId(t *testing.T, impl func(string) uint64) {
 		}
 	}
 }
+
+func TestExpandVersionKey(t *testing.T) {
+	tests := [][]string{
+		{"01", "0.1"},
+		{"10", "0.10"},
+	}
+	for _, test := range tests {
+		actual := ExpandVersionKey(test[0])
+		if actual != test[1] {
+			t.Errorf("ExpandVersionKey(%s) = %s, expected %s",
+				test[0], actual, test[1])
+		}
+	}
+}

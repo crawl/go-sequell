@@ -79,6 +79,12 @@ func SplitDottedVersion(ver string) []string {
 	return text.RightPadSlice(strings.Split(ver, "."), 3, "0")
 }
 
+// ExpandVersionKey expands a shortened Crawl version of the form
+// "01", "11" etc to a 0.X form.
+func ExpandVersionKey(verkey string) string {
+	return "0." + strings.TrimLeft(verkey, "0")
+}
+
 func VersionNumericId(ver string) uint64 {
 	version, qualifier := SplitVersionQualifier(ver)
 	return versionNumberize(SplitDottedVersion(version)) +

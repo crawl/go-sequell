@@ -27,7 +27,7 @@ var normXlogTest = [][]xlog.Xlog{
 			"verb":      "uniq.pac",
 			"noun":      "Sigmund",
 			"rstart":    "20140001123755S",
-			"start":     "20140101123755",
+			"start":     "20140101123755S",
 		},
 	},
 }

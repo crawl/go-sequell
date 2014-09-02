@@ -66,3 +66,85 @@ func RightPadSlice(slice []string, nparts int, pad string) []string {
 	}
 	return paddedSlice
 }
+
+// ExpandBraceGroups expands {foo,bar} groups in text by returning every
+// permutation of brace expansions, similar to shell brace expansion.
+func ExpandBraceGroups(text string) ([]string, error) {
+	firstBrace := strings.Index(text, "{")
+	if firstBrace == -1 {
+		return []string{text}, nil
+	}
+	group, end, err := scanBracedGroup(text[firstBrace:])
+	if err != nil {
+		return nil, err
+	}
+	tailExpansions, err := ExpandBraceGroups(text[end+firstBrace:])
+	if err != nil {
+		return nil, err
+	}
+	expansions, err := group.Expand()
+	if err != nil {
+		return nil, err
+	}
+	leader := text[:firstBrace]
+	res := make([]string, len(expansions)*len(tailExpansions))
+	i := 0
+	for _, expansion := range expansions {
+		prefix := leader + expansion
+		for _, tailExp := range tailExpansions {
+			res[i] = prefix + tailExp
+			i++
+		}
+	}
+	return res, nil
+}
+
+type braceGroup struct {
+	groups []string
+}
+
+func (b braceGroup) Expand() ([]string, error) {
+	res := make([]string, 0, len(b.groups))
+	for _, g := range b.groups {
+		groupExp, err := ExpandBraceGroups(g)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, groupExp...)
+	}
+	return res, nil
+}
+
+func scanBracedGroup(text string) (grp braceGroup, end int, err error) {
+	groups := []string{}
+	order := 0
+	end = len(text)
+
+	var groupStart int
+	for i, c := range text {
+		if order == 0 && i > 0 {
+			end = i
+			break
+		}
+		if (c == ',' || c == '}') && order == 1 {
+			groups = append(groups, text[groupStart:i])
+		}
+		switch c {
+		case '{':
+			order++
+			if order == 1 {
+				groupStart = i + 1
+			}
+		case ',':
+			if order == 1 {
+				groupStart = i + 1
+			}
+		case '}':
+			order--
+		}
+	}
+	if order > 0 {
+		return braceGroup{}, 0, fmt.Errorf("Mismatched brace group: %s", text)
+	}
+	return braceGroup{groups: groups}, end, nil
+}

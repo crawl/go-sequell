@@ -6,12 +6,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/greensnark/go-sequell/crawl/ctime"
 	"github.com/greensnark/go-sequell/crawl/data"
 	"github.com/greensnark/go-sequell/crawl/god"
 	"github.com/greensnark/go-sequell/crawl/killer"
 	"github.com/greensnark/go-sequell/crawl/place"
 	"github.com/greensnark/go-sequell/crawl/player"
-	"github.com/greensnark/go-sequell/crawl/time"
 	"github.com/greensnark/go-sequell/crawl/version"
 	"github.com/greensnark/go-sequell/text"
 	"github.com/greensnark/go-sequell/xlog"
@@ -26,6 +26,16 @@ const (
 )
 
 var ErrNoSrc = errors.New("`src` field is not set")
+
+func (x XlogType) String() string {
+	switch x {
+	case Log:
+		return "logfile"
+	case Milestone:
+		return "milestones"
+	}
+	return "unk"
+}
 
 func Type(line xlog.Xlog) XlogType {
 	if _, ok := line["type"]; ok {
@@ -95,7 +105,7 @@ func NormalizeLog(log xlog.Xlog) (xlog.Xlog, error) {
 
 	normTime := func(timeField string) {
 		if logtime, exists := log[timeField]; exists {
-			log[timeField] = time.NormalizeUnixTime(logtime)
+			log[timeField] = ctime.NormalizeUnixTime(logtime)
 		}
 	}
 
