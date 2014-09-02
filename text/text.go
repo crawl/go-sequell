@@ -1,3 +1,4 @@
+// Package text provides convenience functions for text manipulation.
 package text
 
 import (
@@ -7,6 +8,9 @@ import (
 	"strings"
 )
 
+// Str converts any object into a string, either by a direct cast, a
+// call to Stringer.String, falling back to fmt.Sprintf("%s", object).
+// nil converts to "".
 func Str(any interface{}) string {
 	if any == nil {
 		return ""

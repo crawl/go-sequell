@@ -1,3 +1,4 @@
+// Package xlog is an xlogfile parsing and manipulation library.
 package xlog
 
 import (
@@ -36,7 +37,7 @@ func (x Xlog) String() string {
 	return result
 }
 
-// Parse parses the given xlog line into a map
+// Parse parses the given xlog line into an Xlog object.
 func Parse(line string) (Xlog, error) {
 	line = strings.TrimSpace(line)
 	res := make(Xlog)
@@ -101,14 +102,17 @@ func FindSeparator(s string) int {
 	}
 }
 
+// QuoteValue quotes an Xlog value field by escaping embedded ":" as "::".
 func QuoteValue(value string) string {
 	return strings.Replace(value, ":", "::", -1)
 }
 
+// UnquoteValue unquotes an Xlog value, replacing "::" with ":".
 func UnquoteValue(value string) string {
 	return strings.Replace(value, "::", ":", -1)
 }
 
+// An XlogParseError is an error in parsing an xlog line.
 type XlogParseError struct {
 	Line         string
 	Cause        string
