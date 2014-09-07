@@ -70,7 +70,7 @@ func (s *CrawlSchema) ParseTable(name string, schemaDef qyaml.Yaml) (err error) 
 		return err
 	}
 
-	indexes, err := s.ParseCompositeIndexes(name, schemaDef)
+	indexes, err := s.ParseCompositeIndexes(name, fields, schemaDef)
 	if err != nil {
 		return err
 	}
@@ -106,17 +106,43 @@ func (s *CrawlSchema) ParseFields(annotatedFieldNames []string) (tableFields []*
 	return
 }
 
-func (s *CrawlSchema) ParseCompositeIndexes(name string, schemaDef qyaml.Yaml) ([]*Index, error) {
+func (s *CrawlSchema) ParseCompositeIndexes(name string, fields []*Field, schemaDef qyaml.Yaml) ([]*Index, error) {
 	indexDefs := schemaDef.Slice(name + "-indexes")
 	compositeIndexes := make([]*Index, len(indexDefs))
+
+	findField := func(name string) *Field {
+		for _, f := range fields {
+			if f.Name == name {
+				return f
+			}
+		}
+		return nil
+	}
+
+	fieldSqlNames := func(names []string) ([]string, error) {
+		res := make([]string, len(names))
+		for i, name := range names {
+			field := findField(name)
+			if field == nil {
+				return nil, fmt.Errorf("no field definition for '%s'", name)
+			}
+			res[i] = field.RefName()
+		}
+		return res, nil
+	}
+
 	for i, def := range indexDefs {
 		fields := qyaml.IStringSlice(def)
 		if len(fields) == 0 {
 			return nil, fmt.Errorf("No fields defined for index on %s with spec %#v\n",
 				name, def)
 		}
+		sqlNames, err := fieldSqlNames(fields)
+		if err != nil {
+			return nil, err
+		}
 		compositeIndexes[i] = &Index{
-			Columns: s.FieldParser.FieldSqlNames(fields),
+			Columns: sqlNames,
 		}
 	}
 	return compositeIndexes, nil

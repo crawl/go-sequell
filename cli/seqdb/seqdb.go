@@ -59,9 +59,9 @@ func fatal(msg string) {
 func defineCommands(app *cli.App) {
 	dbSpec := func(c *cli.Context) pg.ConnSpec {
 		return pg.ConnSpec{
-			Database: c.String("db"),
-			User:     c.String("user"),
-			Password: c.String("password"),
+			Database: c.GlobalString("db"),
+			User:     c.GlobalString("user"),
+			Password: c.GlobalString("password"),
 		}
 	}
 	app.Commands = []cli.Command{
@@ -96,6 +96,13 @@ func defineCommands(app *cli.App) {
 			},
 		},
 		{
+			Name:  "dumpschema",
+			Usage: "dump the schema currently in the db",
+			Action: func(c *cli.Context) {
+				action.DumpSchema(dbSpec(c))
+			},
+		},
+		{
 			Name:      "checkdb",
 			ShortName: "c",
 			Usage:     "check the DB schema for correctness",
@@ -106,7 +113,7 @@ func defineCommands(app *cli.App) {
 				},
 			},
 			Action: func(c *cli.Context) {
-				action.CheckDBSchema(dbSpec(c), c.Bool("upgrade"))
+				reportError(action.CheckDBSchema(dbSpec(c), c.Bool("upgrade")))
 			},
 		},
 		{

@@ -46,7 +46,7 @@ type Table struct {
 	Indexes     []*Index
 	Constraints []Constraint
 	knownDeps   map[string]bool
-	DiffStruct
+	*DiffStruct
 }
 
 func (t *Table) Column(name string) *Column {
@@ -97,14 +97,14 @@ type DiffStruct struct {
 	Diff Diff
 }
 
-func (d DiffStruct) DiffMode() Diff        { return d.Diff }
-func (d DiffStruct) SetDiffMode(diff Diff) { d.Diff = diff }
+func (d *DiffStruct) DiffMode() Diff        { return d.Diff }
+func (d *DiffStruct) SetDiffMode(diff Diff) { d.Diff = diff }
 
 type ForeignKeyConstraint struct {
 	SourceTableField string
 	TargetTable      string
 	TargetTableField string
-	DiffStruct
+	*DiffStruct
 }
 
 func (f ForeignKeyConstraint) Sql() string {
@@ -118,7 +118,7 @@ func (f ForeignKeyConstraint) DependsOnTable() string {
 
 type PrimaryKeyConstraint struct {
 	Column string
-	DiffStruct
+	*DiffStruct
 }
 
 func (c PrimaryKeyConstraint) Sql() string {

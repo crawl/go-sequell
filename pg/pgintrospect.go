@@ -115,6 +115,9 @@ func (p DB) IntrospectTableColumns(table string) ([]*schema.Column, error) {
 
 func (p DB) ColumnDef(name, defval, dataType string, precision int64) *schema.Column {
 	dataType, defval = p.NormalizeType(dataType, defval, precision)
+	if defval != "" {
+		defval = "default " + defval
+	}
 	return &schema.Column{
 		Name:    name,
 		SqlType: dataType,

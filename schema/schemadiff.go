@@ -16,12 +16,13 @@ func (t *Table) PrintDelta(out io.Writer) {
 	case Added, Removed:
 		fmt.Fprintf(out, "%s: table %s\n", t.Diff.Sigil(), t.Name)
 	case Changed:
-		fmt.Fprintf(out, "%s: table %s:\n", t.Diff.Sigil(), t.Name)
+		fmt.Fprintf(out, "%s: table %s (%d col, %d ind, %d cons):\n",
+			t.Diff.Sigil(), t.Name, len(t.Columns), len(t.Indexes), len(t.Constraints))
 		for _, c := range t.Columns {
 			c.PrintDelta(out)
 		}
 		for _, c := range t.Constraints {
-			fmt.Fprintf(out, "%s: constraint: %s\n", Added.Sigil(), c.Sql())
+			fmt.Fprintf(out, "\t%s: constraint: %s\n", Added.Sigil(), c.Sql())
 		}
 		for _, i := range t.Indexes {
 			i.PrintDelta(out)
@@ -31,13 +32,13 @@ func (t *Table) PrintDelta(out io.Writer) {
 
 func (c *Column) PrintDelta(out io.Writer) {
 	if c.Diff != NoDiff {
-		fmt.Fprintf(out, "  %s: %s\n", c.Diff.Sigil(), c.Sql())
+		fmt.Fprintf(out, "\t%s: %s\n", c.Diff.Sigil(), c.Sql())
 	}
 }
 
 func (c *Index) PrintDelta(out io.Writer) {
 	if c.Diff != NoDiff {
-		fmt.Fprintf(out, "  %s: %s\n", c.Diff.Sigil(), c.Sql())
+		fmt.Fprintf(out, "\t%s: %s\n", c.Diff.Sigil(), c.Sql())
 	}
 }
 
@@ -56,13 +57,13 @@ func (t *Table) DiffSchema(old *Table) *Table {
 	if old == nil {
 		return &Table{
 			Name:       t.Name,
-			DiffStruct: DiffStruct{Added},
+			DiffStruct: &DiffStruct{Added},
 		}
 	}
 
 	diffTable := Table{
 		Name:       t.Name,
-		DiffStruct: DiffStruct{Changed},
+		DiffStruct: &DiffStruct{Changed},
 	}
 	for _, col := range t.Columns {
 		if diffCol := col.DiffSchema(old.Column(col.Name)); diffCol != nil {
@@ -99,16 +100,16 @@ func (t *Table) DiffConstraints(old *Table) []Constraint {
 }
 
 func (c *Column) DiffSchema(old *Column) *Column {
-	copy := func(change Diff) *Column {
+	copyCol := func(change Diff) *Column {
 		col := *c
 		col.SetDiffMode(change)
 		return &col
 	}
 	if old == nil {
-		return copy(Added)
+		return copyCol(Added)
 	}
 	if old.SqlType != c.SqlType || old.Default != c.Default {
-		return copy(Changed)
+		return copyCol(Changed)
 	}
 	return nil
 }
