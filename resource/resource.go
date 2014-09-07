@@ -64,5 +64,5 @@ func ResourceYamlMustExist(filepath string) qyaml.Yaml {
 func StringYaml(text string) (qyaml.Yaml, error) {
 	var res interface{}
 	err := yaml.Unmarshal([]byte(text), &res)
-	return qyaml.Yaml{res}, err
+	return qyaml.Yaml{Yaml: res}, err
 }

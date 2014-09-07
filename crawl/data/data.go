@@ -5,8 +5,12 @@ import (
 	"github.com/greensnark/go-sequell/resource"
 )
 
-var Crawl qyaml.Yaml = resource.ResourceYamlMustExist("config/crawl-data.yml")
+var Crawl qyaml.Yaml = CrawlData()
 var Schema = Crawl
+
+func CrawlData() qyaml.Yaml {
+	return resource.ResourceYamlMustExist("config/crawl-data.yml")
+}
 
 func Uniques() []string {
 	return Crawl.StringSlice("uniques")

@@ -5,19 +5,30 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type PgDB struct {
+type DB struct {
 	*sql.DB
 }
 
-func OpenDB(db, user, password string) (PgDB, error) {
+type ConnSpec struct {
+	User, Password string
+	Database       string
+}
+
+func (c ConnSpec) Open() (DB, error) {
 	dbh, err :=
 		sql.Open(
 			"postgres",
-			"sslmode=disable user="+user+" password="+password+" dbname="+db)
+			"sslmode=disable user="+c.User+
+				" password="+c.Password+
+				" dbname="+c.Database)
 	if err != nil {
-		return PgDB{}, err
+		return DB{}, err
 	}
-	return PgDB{dbh}, nil
+	return DB{dbh}, nil
+}
+
+func OpenDBUser(db, user, password string) (DB, error) {
+	return ConnSpec{Database: db, User: user, Password: password}.Open()
 }
 
 type PgError struct {

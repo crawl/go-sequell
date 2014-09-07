@@ -6,7 +6,7 @@ import (
 
 func TestXlogGame(t *testing.T) {
 	tests := [][]string{
-		{"logfile04", "crawl"},
+		{"logfile04", ""},
 		{"logfile11-zotdef", "zotdef"},
 		{"logfile15-sprint", "sprint"},
 		{"allgames-spr", "sprint"},

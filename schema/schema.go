@@ -9,13 +9,35 @@ const UnknownColumn = "§"
 type Diff int
 
 const (
-	Added Diff = iota
+	NoDiff Diff = iota
+	Added
 	Removed
 	Changed
 )
 
+func (d Diff) Sigil() string {
+	switch d {
+	case Added:
+		return "A"
+	case Removed:
+		return "D"
+	case Changed:
+		return "M"
+	}
+	return ""
+}
+
 type Schema struct {
 	Tables []*Table
+}
+
+func (s *Schema) Table(name string) *Table {
+	for _, table := range s.Tables {
+		if table.Name == name {
+			return table
+		}
+	}
+	return nil
 }
 
 type Table struct {
@@ -25,6 +47,24 @@ type Table struct {
 	Constraints []Constraint
 	knownDeps   map[string]bool
 	DiffStruct
+}
+
+func (t *Table) Column(name string) *Column {
+	for _, c := range t.Columns {
+		if c.Name == name {
+			return c
+		}
+	}
+	return nil
+}
+
+func (t *Table) Index(name string) *Index {
+	for _, i := range t.Indexes {
+		if i.Name == name {
+			return i
+		}
+	}
+	return nil
 }
 
 type Column struct {
@@ -49,16 +89,16 @@ type Constraint interface {
 }
 
 type Differ interface {
-	Diff() Diff
-	SetDiff(diff Diff)
+	DiffMode() Diff
+	SetDiffMode(diff Diff)
 }
 
 type DiffStruct struct {
-	diff Diff
+	Diff Diff
 }
 
-func (d DiffStruct) Diff() Diff        { return d.diff }
-func (d DiffStruct) SetDiff(diff Diff) { d.diff = diff }
+func (d DiffStruct) DiffMode() Diff        { return d.Diff }
+func (d DiffStruct) SetDiffMode(diff Diff) { d.Diff = diff }
 
 type ForeignKeyConstraint struct {
 	SourceTableField string

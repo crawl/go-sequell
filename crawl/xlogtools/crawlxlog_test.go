@@ -1,8 +1,9 @@
 package xlogtools
 
 import (
-	"github.com/greensnark/go-sequell/xlog"
 	"testing"
+
+	"github.com/greensnark/go-sequell/xlog"
 )
 
 var normXlogTest = [][]xlog.Xlog{

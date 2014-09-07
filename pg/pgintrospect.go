@@ -9,7 +9,7 @@ import (
 	"strconv"
 )
 
-func (p PgDB) IntrospectSchema() (*schema.Schema, error) {
+func (p DB) IntrospectSchema() (*schema.Schema, error) {
 	tables, err := p.IntrospectTableNames()
 	if err != nil {
 		return nil, ctx("IntrospectSchema", err)
@@ -26,7 +26,7 @@ func (p PgDB) IntrospectSchema() (*schema.Schema, error) {
 	return &schema, nil
 }
 
-func (p PgDB) IntrospectTableNames() ([]string, error) {
+func (p DB) IntrospectTableNames() ([]string, error) {
 	rows, err := p.Query("select table_name from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE'")
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func (p PgDB) IntrospectTableNames() ([]string, error) {
 	return tableNames, nil
 }
 
-func (p PgDB) IntrospectTableSchemas(tables []string) (schemas []*schema.Table, err error) {
+func (p DB) IntrospectTableSchemas(tables []string) (schemas []*schema.Table, err error) {
 	schemas = make([]*schema.Table, len(tables))
 	for i, t := range tables {
 		schemas[i], err = p.IntrospectTable(t)
@@ -59,7 +59,7 @@ func (p PgDB) IntrospectTableSchemas(tables []string) (schemas []*schema.Table, 
 	return schemas, nil
 }
 
-func (p PgDB) IntrospectTable(table string) (*schema.Table, error) {
+func (p DB) IntrospectTable(table string) (*schema.Table, error) {
 	cols, err := p.IntrospectTableColumns(table)
 	if err != nil {
 		return nil, err
@@ -83,7 +83,7 @@ func (p PgDB) IntrospectTable(table string) (*schema.Table, error) {
 	}, nil
 }
 
-func (p PgDB) IntrospectTableColumns(table string) ([]*schema.Column, error) {
+func (p DB) IntrospectTableColumns(table string) ([]*schema.Column, error) {
 	rows, err := p.Query(`select column_name, column_default,
                                  data_type, udt_name, numeric_precision
                             from information_schema.columns
@@ -113,7 +113,7 @@ func (p PgDB) IntrospectTableColumns(table string) ([]*schema.Column, error) {
 	return cols, nil
 }
 
-func (p PgDB) ColumnDef(name, defval, dataType string, precision int64) *schema.Column {
+func (p DB) ColumnDef(name, defval, dataType string, precision int64) *schema.Column {
 	dataType, defval = p.NormalizeType(dataType, defval, precision)
 	return &schema.Column{
 		Name:    name,
@@ -122,7 +122,7 @@ func (p PgDB) ColumnDef(name, defval, dataType string, precision int64) *schema.
 	}
 }
 
-func (p PgDB) NormalizeType(sqlType, defval string, precision int64) (string, string) {
+func (p DB) NormalizeType(sqlType, defval string, precision int64) (string, string) {
 	if sqlType == "timestamp without time zone" {
 		sqlType = "timestamp"
 	}
@@ -140,7 +140,7 @@ func (p PgDB) NormalizeType(sqlType, defval string, precision int64) (string, st
 	return sqlType, defval
 }
 
-func (p PgDB) IntrospectTableConstraints(table string, cols []*schema.Column) ([]schema.Constraint, error) {
+func (p DB) IntrospectTableConstraints(table string, cols []*schema.Column) ([]schema.Constraint, error) {
 	pkey, err := p.IntrospectTablePrimaryKey(table)
 	if err != nil {
 		return nil, err
@@ -165,7 +165,7 @@ func (p PgDB) IntrospectTableConstraints(table string, cols []*schema.Column) ([
 	return constraints, nil
 }
 
-func (p PgDB) IntrospectTablePrimaryKey(table string) (schema.Constraint, error) {
+func (p DB) IntrospectTablePrimaryKey(table string) (schema.Constraint, error) {
 	row := p.QueryRow(`select kcu.column_name
                               from information_schema.table_constraints as tc
                               join information_schema.key_column_usage as kcu
@@ -182,7 +182,7 @@ func (p PgDB) IntrospectTablePrimaryKey(table string) (schema.Constraint, error)
 	return schema.PrimaryKeyConstraint{Column: pkey}, nil
 }
 
-func (p PgDB) IntrospectTableForeignKeys(table string) ([]schema.Constraint, error) {
+func (p DB) IntrospectTableForeignKeys(table string) ([]schema.Constraint, error) {
 	rows, err := p.Query(`select kcu.column_name,
                                  ccu.table_name as foreign_table,
                                  ccu.column_name as foreign_column
@@ -216,7 +216,7 @@ func (p PgDB) IntrospectTableForeignKeys(table string) ([]schema.Constraint, err
 	return constraints, nil
 }
 
-func (p PgDB) IntrospectTableUniqueConstraints(table string, cols []*schema.Column) error {
+func (p DB) IntrospectTableUniqueConstraints(table string, cols []*schema.Column) error {
 	rows, err := p.Query(`select kcu.column_name
                             from information_schema.table_constraints as tc
                             join information_schema.key_column_usage as kcu
@@ -242,7 +242,7 @@ func (p PgDB) IntrospectTableUniqueConstraints(table string, cols []*schema.Colu
 	return rows.Err()
 }
 
-func (p PgDB) IntrospectTableIndexes(table string, cols []*schema.Column) ([]*schema.Index, error) {
+func (p DB) IntrospectTableIndexes(table string, cols []*schema.Column) ([]*schema.Index, error) {
 	indexNameRows, err :=
 		p.Query(`select c.relname as index_name,
                         i.indkey as column_indexes
@@ -280,7 +280,7 @@ func (p PgDB) IntrospectTableIndexes(table string, cols []*schema.Column) ([]*sc
 	return indexes, nil
 }
 
-func (p PgDB) TableIndex(
+func (p DB) TableIndex(
 	table, index string, cols []*schema.Column,
 	indexColNumbers []int) *schema.Index {
 	indexDef := schema.Index{

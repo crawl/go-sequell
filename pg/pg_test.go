@@ -7,8 +7,8 @@ import (
 	"github.com/greensnark/go-sequell/schema"
 )
 
-func TestOpenDB(t *testing.T) {
-	db, err := OpenDB("henzell", "henzell", "henzell")
+func TestOpenDBUser(t *testing.T) {
+	db, err := OpenDBUser("henzell", "henzell", "henzell")
 	if err != nil {
 		t.Errorf("Database connection failed: %s\n", err)
 	}

@@ -12,6 +12,8 @@ func (s *Schema) SqlSel(sel SchemaSelect) []string {
 		return s.SqlNoIndex()
 	case SelIndexes:
 		return s.IndexSql()
+	case SelDropIndexes:
+		return s.DropIndexSql()
 	}
 	return nil
 }
@@ -20,6 +22,10 @@ func (s *Schema) Sql() []string {
 	return append(
 		s.sqlTableRevMap((*Table).DropSql),
 		s.sqlTableMap((*Table).Sql)...)
+}
+
+func (s *Schema) DropIndexSql() []string {
+	return s.sqlTableMap((*Table).DropIndexSql)
 }
 
 func (s *Schema) IndexSql() []string {
@@ -64,6 +70,14 @@ func (t *Table) IndexSql() []string {
 	return t.CreateIndexSqls()
 }
 
+func (t *Table) DropIndexSql() []string {
+	sqls := make([]string, len(t.Indexes))
+	for i, index := range t.Indexes {
+		sqls[i] = index.DropSql()
+	}
+	return sqls
+}
+
 func (t *Table) CreateTableSql() string {
 	colsConstraints :=
 		append(t.CreateColumnClauses(), t.CreateConstraintClauses()...)
@@ -106,4 +120,8 @@ func (c *Column) Sql() string {
 func (i *Index) Sql() string {
 	return "create index " + i.Name + " on " + i.TableName +
 		" (" + strings.Join(i.Columns, ", ") + ")"
+}
+
+func (i *Index) DropSql() string {
+	return "drop index if exists " + i.Name
 }
