@@ -29,12 +29,19 @@ func (x Xlog) Contains(key string) bool {
 func (x Xlog) String() string {
 	result := ""
 	for key, value := range x {
+		if IsKeyHidden(key) {
+			continue
+		}
 		if len(result) > 0 {
 			result += ":"
 		}
 		result += key + "=" + QuoteValue(value)
 	}
 	return result
+}
+
+func IsKeyHidden(key string) bool {
+	return key == "" || key[0] == ':'
 }
 
 // Parse parses the given xlog line into an Xlog object.
@@ -110,6 +117,16 @@ func QuoteValue(value string) string {
 // UnquoteValue unquotes an Xlog value, replacing "::" with ":".
 func UnquoteValue(value string) string {
 	return strings.Replace(value, "::", ":", -1)
+}
+
+// IsPotentialXlogLine returns true if line looks like it might be a
+// valid Xlog line. This is a convenient shortcut to discard trivial
+// invalid lines such as blank lines and lines starting with colons.
+//
+// It is the caller's responsibility to strip any extraneous leading
+// and trailing space, including trailing newlines.
+func IsPotentialXlogLine(line string) bool {
+	return len(line) > 0 && line[0] != ':'
 }
 
 // An XlogParseError is an error in parsing an xlog line.
