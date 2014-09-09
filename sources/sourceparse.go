@@ -2,7 +2,6 @@ package sources
 
 import (
 	"fmt"
-	"net/url"
 	"path"
 	"strings"
 
@@ -169,15 +168,10 @@ func UrlJoin(base, path string) string {
 	if base == "" {
 		return path
 	}
-	baseURL, err := url.Parse(base)
-	if err != nil {
-		return path
+	if base[len(base)-1] == '/' {
+		return base + path
 	}
-	pathURL, err := baseURL.Parse(path)
-	if err != nil {
-		return base + "/" + path
-	}
-	return pathURL.String()
+	return base + "/" + path
 }
 
 // SplitFilenamesMustSync takes a name like "foo{bar,baz}*", strips

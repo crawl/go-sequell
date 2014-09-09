@@ -3,7 +3,6 @@ package httpfetch
 import (
 	"fmt"
 	"io"
-	"os"
 )
 
 type Logger interface {
@@ -41,7 +40,6 @@ func CreateLogger() Logger {
 	res := &loggerImpl{
 		logMsg:    make(chan func() string),
 		writerSet: make(chan io.Writer),
-		writer:    os.Stderr,
 	}
 	go logAppender(res)
 	return res

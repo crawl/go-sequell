@@ -7,6 +7,23 @@ import (
 	"github.com/greensnark/go-sequell/resource"
 )
 
+func TestUrlJoin(t *testing.T) {
+	var testCases = []struct {
+		base, path string
+		expected   string
+	}{
+		{"http://crawl.berotato.org/crawl", "meta/nostalgia/logfile",
+			"http://crawl.berotato.org/crawl/meta/nostalgia/logfile"},
+	}
+	for _, test := range testCases {
+		actual := UrlJoin(test.base, test.path)
+		if actual != test.expected {
+			t.Errorf("UrlJoin(%#v, %#v) = %#v, expected %#v",
+				test.base, test.path, actual, test.expected)
+		}
+	}
+}
+
 func TestSources(t *testing.T) {
 	schema := resource.YamlMustParse("config/sources.yml")
 	src, err := Sources(schema, "test")

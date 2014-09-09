@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -284,11 +285,16 @@ func groupFetchRequestsByHost(requests []*FetchRequest) map[string][]*FetchReque
 	return grouped
 }
 
-func (h *HttpFetcher) ParallelFetch(requests []*FetchRequest) []*FetchResult {
+func (h *HttpFetcher) ParallelFetch(requests []*FetchRequest) <-chan *FetchResult {
 	h.Logf("ParallelFetch: %d files", len(requests))
 
 	completion := make(chan *FetchResult)
-	defer close(completion)
+	waitGroup := sync.WaitGroup{}
+	waitGroup.Add(len(requests))
+	go func() {
+		waitGroup.Wait()
+		close(completion)
+	}()
 
 	runHostRequests := func(host string, reqs []*FetchRequest) {
 		reqChan := make(chan *FetchRequest, len(reqs))
@@ -303,6 +309,7 @@ func (h *HttpFetcher) ParallelFetch(requests []*FetchRequest) []*FetchResult {
 			go func() {
 				for req := range reqChan {
 					h.FetchFile(req, completion)
+					waitGroup.Done()
 				}
 			}()
 		}
@@ -311,17 +318,7 @@ func (h *HttpFetcher) ParallelFetch(requests []*FetchRequest) []*FetchResult {
 		h.Logf("runHostRequests: %s (%d requests)", host, len(requests))
 		runHostRequests(host, requests)
 	}
-
-	nrequests := len(requests)
-	h.Logf("ParallelFetch: waiting for %d requests to complete", nrequests)
-	results := make([]*FetchResult, nrequests)
-	for i := 0; i < nrequests; i++ {
-		results[i] = <-completion
-		h.Logf("ParallelFetch [%d/%d]: completed: %s", i+1, nrequests,
-			results[i])
-	}
-	h.Logf("ParallelFetch: all done: %d requests completed", nrequests)
-	return results
+	return completion
 }
 
 func UrlFilename(url string) (string, error) {

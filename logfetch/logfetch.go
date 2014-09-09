@@ -1,11 +1,27 @@
 package logfetch
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/greensnark/go-sequell/httpfetch"
 	"github.com/greensnark/go-sequell/sources"
 )
+
+type FetchErrors []error
+
+func (f FetchErrors) Error() string {
+	buf := bytes.Buffer{}
+	buf.WriteString("[")
+	for i, e := range f {
+		if i > 0 {
+			buf.WriteString("; ")
+			buf.WriteString(e.Error())
+		}
+	}
+	buf.WriteString("]")
+	return buf.String()
+}
 
 func sourceFetchRequests(incremental bool, src []*sources.XlogSrc) []*httpfetch.FetchRequest {
 	res := make([]*httpfetch.FetchRequest, 0, len(src))
@@ -26,12 +42,28 @@ func sourceFetchRequests(incremental bool, src []*sources.XlogSrc) []*httpfetch.
 
 func Download(src *sources.Servers, incremental bool) error {
 	req := sourceFetchRequests(incremental, src.XlogSources())
-	fmt.Printf("Downloading %d files\n", len(req))
-	res := httpfetch.New().ParallelFetch(req)
-	for _, r := range res {
-		if r.Err != nil {
-			return r.Err
+	nDownloads := len(req)
+	fmt.Printf("Downloading %d files\n", nDownloads)
+	resChan := httpfetch.New().ParallelFetch(req)
+
+	errors := FetchErrors{}
+	for fetchResult := range resChan {
+		if fetchResult.Err != nil {
+			errors = append(errors, fetchResult.Err)
 		}
+		ShowFetchResult(fetchResult)
 	}
-	return nil
+	if len(errors) == 0 {
+		return nil
+	} else {
+		return errors
+	}
+}
+
+func ShowFetchResult(res *httpfetch.FetchResult) {
+	if res.Err != nil {
+		fmt.Printf("ERR %s (%s)\n", res.Req, res.Err)
+	} else {
+		fmt.Printf("ok %s [%d]\n", res.Req, res.DownloadSize)
+	}
 }
