@@ -16,8 +16,8 @@ func (f FetchErrors) Error() string {
 	for i, e := range f {
 		if i > 0 {
 			buf.WriteString("; ")
-			buf.WriteString(e.Error())
 		}
+		buf.WriteString(e.Error())
 	}
 	buf.WriteString("]")
 	return buf.String()
