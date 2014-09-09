@@ -1,5 +1,0 @@
-package resource
-
-import (
-	"testing"
-)

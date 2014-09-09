@@ -8,7 +8,7 @@ import (
 )
 
 func TestSources(t *testing.T) {
-	schema := resource.ResourceYamlMustExist("config/sources.yml")
+	schema := resource.YamlMustParse("config/sources.yml")
 	src, err := Sources(schema, "test")
 	if err != nil {
 		t.Errorf("Error parsing sources: %s", err)

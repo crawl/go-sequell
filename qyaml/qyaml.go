@@ -1,13 +1,37 @@
 package qyaml
 
 import (
+	"io/ioutil"
 	"strings"
 
 	"github.com/greensnark/go-sequell/text"
+	"gopkg.in/v1/yaml"
 )
 
 type Yaml struct {
 	Yaml interface{}
+}
+
+func ParseBytes(text []byte) (Yaml, error) {
+	var res interface{}
+	err := yaml.Unmarshal(text, &res)
+	return Yaml{Yaml: res}, err
+}
+
+func Parse(path string) (Yaml, error) {
+	bytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		return Yaml{}, err
+	}
+	return ParseBytes(bytes)
+}
+
+func MustParse(path string) Yaml {
+	res, err := Parse(path)
+	if err != nil {
+		panic(err)
+	}
+	return res
 }
 
 func Wrap(value interface{}) Yaml { return Yaml{Yaml: value} }

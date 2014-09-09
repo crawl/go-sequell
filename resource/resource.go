@@ -1,68 +1,20 @@
 package resource
 
 import (
-	"gopkg.in/v1/yaml"
-	"io/ioutil"
-	"os"
-	"path"
-
 	"github.com/greensnark/go-sequell/qyaml"
+	"github.com/greensnark/go-sequell/root"
 )
 
-var Root = root()
+var Root = root.New("", "SEQUELL_ROOT", "HENZELL_ROOT")
 
-func firstSet(vars ...string) string {
-	for _, value := range vars {
-		if value != "" {
-			return value
-		}
-	}
-	return ""
+func Yaml(path string) (qyaml.Yaml, error) {
+	return qyaml.Parse(Root.Path(path))
 }
 
-func root() string {
-	root := firstSet(os.Getenv("SEQUELL_ROOT"), os.Getenv("HENZELL_ROOT"))
-	if root != "" {
-		return root
-	}
-	root, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	return root
-}
-
-func ResourcePath(filepath string) string {
-	return path.Join(Root, filepath)
-}
-
-func ResourceString(filepath string) (string, error) {
-	bytes, err := ioutil.ReadFile(ResourcePath(filepath))
-	if err != nil {
-		return "", err
-	}
-	return string(bytes), err
-}
-
-func ResourceYaml(filepath string) (qyaml.Yaml, error) {
-	text, err := ResourceString(filepath)
-	if err != nil {
-		return qyaml.Yaml{}, err
-	}
-
-	return StringYaml(text)
-}
-
-func ResourceYamlMustExist(filepath string) qyaml.Yaml {
-	yaml, err := ResourceYaml(filepath)
+func YamlMustParse(path string) qyaml.Yaml {
+	yaml, err := Yaml(path)
 	if err != nil {
 		panic(err)
 	}
 	return yaml
-}
-
-func StringYaml(text string) (qyaml.Yaml, error) {
-	var res interface{}
-	err := yaml.Unmarshal([]byte(text), &res)
-	return qyaml.Yaml{Yaml: res}, err
 }
