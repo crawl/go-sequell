@@ -12,6 +12,10 @@ func CrawlData() qyaml.Yaml {
 	return resource.ResourceYamlMustExist("config/crawl-data.yml")
 }
 
+func Sources() qyaml.Yaml {
+	return resource.ResourceYamlMustExist("config/sources.yml")
+}
+
 func Uniques() []string {
 	return Crawl.StringSlice("uniques")
 }

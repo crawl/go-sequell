@@ -24,6 +24,11 @@ func TestSources(t *testing.T) {
 	if cao == nil {
 		t.Errorf("Couldn't find source cao in %s", src)
 	}
+	expectedUrl := "http://crawl.akrasiac.org/allgames.txt"
+	if cao.Logfiles[0].Url != expectedUrl {
+		t.Errorf("Expected CAO first URL to be %s, was %s", expectedUrl,
+			cao.Logfiles[0].Url)
+	}
 
 	for _, srv := range src.Servers {
 		fmt.Println()

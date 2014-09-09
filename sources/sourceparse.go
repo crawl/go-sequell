@@ -2,6 +2,7 @@ package sources
 
 import (
 	"fmt"
+	"net/url"
 	"path"
 	"strings"
 
@@ -154,13 +155,29 @@ func (p xlogSpecParser) NewXlogSrc(name, qualifier string, mustSync bool) *XlogS
 		Name:        name,
 		Qualifier:   qualifier,
 		TargetPath:  path.Join(p.cachedir, qualifiedName),
-		Url:         path.Join(p.server.BaseURL, name),
+		Url:         UrlJoin(p.server.BaseURL, name),
 		LocalPath:   localPath,
 		Live:        mustSync,
 		Type:        p.logtype,
 		Game:        game,
 		GameVersion: gameVersion,
 	}
+}
+
+// UrlJoin joins two URL path segments.
+func UrlJoin(base, path string) string {
+	if base == "" {
+		return path
+	}
+	baseURL, err := url.Parse(base)
+	if err != nil {
+		return path
+	}
+	pathURL, err := baseURL.Parse(path)
+	if err != nil {
+		return base + "/" + path
+	}
+	return pathURL.String()
 }
 
 // SplitFilenamesMustSync takes a name like "foo{bar,baz}*", strips

@@ -6,9 +6,25 @@ import (
 
 	"github.com/greensnark/go-sequell/crawl/data"
 	cdb "github.com/greensnark/go-sequell/crawl/db"
+	"github.com/greensnark/go-sequell/logfetch"
 	"github.com/greensnark/go-sequell/pg"
 	"github.com/greensnark/go-sequell/schema"
+	"github.com/greensnark/go-sequell/sources"
 )
+
+const LogCache = "server-xlogs"
+
+func DownloadLogs(incremental bool) error {
+	src, err := sources.Sources(data.Sources(), LogCache)
+	if err != nil {
+		return err
+	}
+	err = os.MkdirAll(LogCache, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	return logfetch.Download(src, incremental)
+}
 
 func CrawlSchema() *schema.Schema {
 	schema, err := cdb.LoadSchema(data.CrawlData())

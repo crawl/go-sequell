@@ -14,6 +14,20 @@ type Servers struct {
 	Servers []*Server
 }
 
+func (x *Servers) XlogSources() []*XlogSrc {
+	sources := []*XlogSrc{}
+	addAll := func(logs []*XlogSrc) {
+		for _, log := range logs {
+			sources = append(sources, log)
+		}
+	}
+	for _, s := range x.Servers {
+		addAll(s.Logfiles)
+		addAll(s.Milestones)
+	}
+	return sources
+}
+
 func (x *Servers) Server(alias string) *Server {
 	for _, s := range x.Servers {
 		if s.Name == alias || s.Aliases[alias] {
@@ -86,8 +100,32 @@ func (x *XlogSrc) Local() bool {
 	return err == nil
 }
 
+func (x *XlogSrc) TargetExists() bool {
+	_, err := os.Stat(x.TargetPath)
+	return err == nil
+}
+
 func (x *XlogSrc) NeedsFetch() bool {
 	return x.Live && !x.Local()
+}
+
+func (x *XlogSrc) LinkLocal() error {
+	if !x.Local() {
+		return fmt.Errorf("%s is not a local xlog", x.String())
+	}
+	if x.TargetPath == "" {
+		return fmt.Errorf("No target path for %s", x.String())
+	}
+	if x.TargetPath == x.LocalPath {
+		return nil
+	}
+	if fi, err := os.Stat(x.TargetPath); err == nil {
+		if (fi.Mode() & os.ModeSymlink) == 0 {
+			return fmt.Errorf("%s: %s exists and is not a symlink", x, x.TargetPath)
+		}
+		return nil
+	}
+	return os.Symlink(x.LocalPath, x.TargetPath)
 }
 
 func (x *XlogSrc) DownloadURL() string {

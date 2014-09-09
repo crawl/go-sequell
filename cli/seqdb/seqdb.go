@@ -66,6 +66,19 @@ func defineCommands(app *cli.App) {
 	}
 	app.Commands = []cli.Command{
 		{
+			Name:  "download-logs",
+			Usage: "download logs from all sources",
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "only-live",
+					Usage: "fetch only logs that are believe to be live",
+				},
+			},
+			Action: func(c *cli.Context) {
+				reportError(action.DownloadLogs(c.Bool("only-live")))
+			},
+		},
+		{
 			Name:  "schema",
 			Usage: "print the Sequell schema",
 			Flags: []cli.Flag{
