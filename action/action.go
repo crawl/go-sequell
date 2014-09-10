@@ -49,19 +49,6 @@ func PrintSchema(skipIndexes, dropIndexes, createIndexes bool) {
 	s.Sort().Write(sel, os.Stdout)
 }
 
-func DumpSchema(dbspec pg.ConnSpec) error {
-	db, err := dbspec.Open()
-	if err != nil {
-		return err
-	}
-	s, err := db.IntrospectSchema()
-	if err != nil {
-		return err
-	}
-	s.Sort().Write(schema.SelTablesIndexes, os.Stdout)
-	return nil
-}
-
 func CheckDBSchema(dbspec pg.ConnSpec, applyDelta bool) error {
 	db, err := dbspec.Open()
 	if err != nil {
@@ -83,9 +70,5 @@ func CheckDBSchema(dbspec pg.ConnSpec, applyDelta bool) error {
 	if applyDelta {
 		return nil
 	}
-	return nil
-}
-
-func CreateDB(admin, db pg.ConnSpec) error {
 	return nil
 }

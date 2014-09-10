@@ -14,13 +14,28 @@ type ConnSpec struct {
 	Database       string
 }
 
+func (c ConnSpec) SpecForDB(db string) ConnSpec {
+	copy := c
+	copy.Database = db
+	return copy
+}
+
+func (c ConnSpec) ConnectionString() string {
+	res := "sslmode=disable"
+	if c.Database != "" {
+		res += " dbname=" + c.Database
+	}
+	if c.User != "" {
+		res += " user=" + c.User
+	}
+	if c.Password != "" {
+		res += " password=" + c.Password
+	}
+	return res
+}
+
 func (c ConnSpec) Open() (DB, error) {
-	dbh, err :=
-		sql.Open(
-			"postgres",
-			"sslmode=disable user="+c.User+
-				" password="+c.Password+
-				" dbname="+c.Database)
+	dbh, err := sql.Open("postgres", c.ConnectionString())
 	if err != nil {
 		return DB{}, err
 	}

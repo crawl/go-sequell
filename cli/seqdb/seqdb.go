@@ -6,6 +6,7 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/greensnark/go-sequell/action"
+	"github.com/greensnark/go-sequell/action/db"
 	"github.com/greensnark/go-sequell/pg"
 )
 
@@ -47,7 +48,7 @@ func defineFlags(app *cli.App) {
 
 func reportError(err error) {
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err)
+		fmt.Fprintf(os.Stderr, "%s\n", err)
 	}
 }
 
@@ -112,7 +113,7 @@ func defineCommands(app *cli.App) {
 			Name:  "dumpschema",
 			Usage: "dump the schema currently in the db",
 			Action: func(c *cli.Context) {
-				action.DumpSchema(dbSpec(c))
+				db.DumpSchema(dbSpec(c))
 			},
 		},
 		{
@@ -153,7 +154,7 @@ func defineCommands(app *cli.App) {
 					User:     c.String("admin"),
 					Password: c.String("adminpassword"),
 				}
-				reportError(action.CreateDB(adminSpec, dbSpec(c)))
+				reportError(db.CreateDB(adminSpec, dbSpec(c)))
 			},
 		},
 	}
