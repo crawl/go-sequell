@@ -67,7 +67,7 @@ func defineCommands(app *cli.App) {
 	}
 	app.Commands = []cli.Command{
 		{
-			Name:  "download-logs",
+			Name:  "fetch",
 			Usage: "download logs from all sources",
 			Flags: []cli.Flag{
 				cli.BoolFlag{
@@ -162,6 +162,34 @@ func defineCommands(app *cli.App) {
 			Usage: "create tables in the Sequell database",
 			Action: func(c *cli.Context) {
 				reportError(db.CreateDBSchema(dbSpec(c)))
+			},
+		},
+		{
+			Name:  "load",
+			Usage: "load all outstanding data in the logs to the db",
+			Action: func(c *cli.Context) {
+				// TODO
+			},
+		},
+		{
+			Name:  "isync",
+			Usage: "load all data, then run an interactive process that accepts commands to \"load\" and \"fetch\" on stdin",
+			Action: func(c *cli.Context) {
+				// TODO
+			},
+		},
+		{
+			Name:  "export-tv",
+			Usage: "export ntv data",
+			Action: func(c *cli.Context) {
+				// TODO
+			},
+		},
+		{
+			Name:  "import-tv",
+			Usage: "import ntv data",
+			Action: func(c *cli.Context) {
+				// TODO
 			},
 		},
 	}
