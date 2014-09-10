@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/greensnark/go-sequell/crawl/data"
+	cdb "github.com/greensnark/go-sequell/crawl/db"
 	"github.com/greensnark/go-sequell/ectx"
 	"github.com/greensnark/go-sequell/pg"
 	"github.com/greensnark/go-sequell/schema"
@@ -79,6 +81,68 @@ func CreateExtensions(db pg.ConnSpec) error {
 			if err = c.CreateExtension(ext); err != nil {
 				return err
 			}
+		}
+	}
+	return nil
+}
+
+func CrawlSchema() *schema.Schema {
+	schema, err := cdb.LoadSchema(data.CrawlData())
+	if err != nil {
+		panic(err)
+	}
+	return schema.Schema()
+}
+
+func PrintSchema(skipIndexes, dropIndexes, createIndexes bool) {
+	s := CrawlSchema()
+	sel := schema.SelTablesIndexes
+	if skipIndexes {
+		sel = schema.SelTables
+	}
+	if dropIndexes {
+		sel = schema.SelDropIndexes
+	}
+	if createIndexes {
+		sel = schema.SelIndexes
+	}
+	s.Sort().Write(sel, os.Stdout)
+}
+
+func CheckDBSchema(dbspec pg.ConnSpec, applyDelta bool) error {
+	db, err := dbspec.Open()
+	if err != nil {
+		return err
+	}
+	actualSchema, err := db.IntrospectSchema()
+	if err != nil {
+		return err
+	}
+	wantedSchema := CrawlSchema()
+	diff := wantedSchema.DiffSchema(actualSchema)
+	if len(diff.Tables) == 0 {
+		fmt.Fprintf(os.Stderr, "Schema is up-to-date.\n")
+		return nil
+	}
+
+	fmt.Fprintf(os.Stderr, "Schema delta:\n")
+	diff.PrintDelta(os.Stderr)
+	if applyDelta {
+		return nil
+	}
+	return nil
+}
+
+func CreateDBSchema(db pg.ConnSpec) error {
+	c, err := db.Open()
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+	s := CrawlSchema()
+	for _, sql := range s.SqlSel(schema.SelTables) {
+		if _, err = c.Exec(sql); err != nil {
+			return err
 		}
 	}
 	return nil

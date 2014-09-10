@@ -106,7 +106,7 @@ func defineCommands(app *cli.App) {
 				if dropIndex && createIndex {
 					fatal("--drop-index cannot be combined with --create-index")
 				}
-				action.PrintSchema(noIndex, dropIndex, createIndex)
+				db.PrintSchema(noIndex, dropIndex, createIndex)
 			},
 		},
 		{
@@ -127,12 +127,12 @@ func defineCommands(app *cli.App) {
 				},
 			},
 			Action: func(c *cli.Context) {
-				reportError(action.CheckDBSchema(dbSpec(c), c.Bool("upgrade")))
+				reportError(db.CheckDBSchema(dbSpec(c), c.Bool("upgrade")))
 			},
 		},
 		{
 			Name:  "createdb",
-			Usage: "create the Sequell database",
+			Usage: "create the Sequell database (empty)",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "admin",
@@ -155,6 +155,13 @@ func defineCommands(app *cli.App) {
 					Password: c.String("adminpassword"),
 				}
 				reportError(db.CreateDB(adminSpec, dbSpec(c)))
+			},
+		},
+		{
+			Name:  "initdb",
+			Usage: "create tables in the Sequell database",
+			Action: func(c *cli.Context) {
+				reportError(db.CreateDBSchema(dbSpec(c)))
 			},
 		},
 	}
