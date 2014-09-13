@@ -149,9 +149,6 @@ func ParseLogTime(
 	}
 
 	if utcepoch.IsZero() || dstlocations.IsZero() || utcTime.After(utcepoch) {
-		if dst {
-			return time.Time{}, fmt.Errorf("Unexpected DST in %s with no TZ conversion available", logtime)
-		}
 		return utcTime, nil
 	}
 

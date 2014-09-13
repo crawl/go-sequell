@@ -2,6 +2,7 @@ package loader
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -16,7 +17,7 @@ import (
 	"github.com/lib/pq"
 )
 
-const LoadBufferSize = 5
+const LoadBufferSize = 50000
 
 type Loader struct {
 	*sources.Servers
@@ -170,24 +171,27 @@ func (l *Loader) LoadCommit() error {
 }
 
 func (l *Loader) LoadReaderLogs(reader Reader) error {
+	log.Printf("%s: Reading %s\n", reader.Table, reader.Filename)
 	seekPos, err := l.QuerySeekOffset(reader.Filename, reader.Table)
 	if err != nil {
 		return ectx.Err("QuerySeekOffset", err)
 	}
 	if seekPos != -1 {
+		log.Printf("LoadReaderLogs: resuming at offset %d in %s",
+			seekPos, reader.Filename)
 		if err = reader.SeekNext(seekPos); err != nil {
 			if err == xlog.ErrNoFile {
 				log.Printf("Ignoring missing file: %s\n", reader)
 				return nil
 			}
-			return err
+			return ectx.Err("SeekNext", err)
 		}
 	}
 
 	for {
 		xlog, err := reader.Next()
 		if err != nil {
-			return err
+			return ectx.Err("reader.Next", err)
 		}
 		if xlog == nil {
 			return nil
@@ -224,7 +228,10 @@ func (l *Loader) NormalizeLog(x xlog.Xlog, reader Reader) error {
 	normTime("end")
 	normTime("time")
 
-	return err
+	if err != nil {
+		return ectx.Err(fmt.Sprintf("NormalizeLog(%#v)", x), err)
+	}
+	return nil
 }
 
 // Add normalizes the xlog and adds it to the buffer of xlogs to be
@@ -262,9 +269,14 @@ func (l *Loader) saveBufferedLogs() error {
 }
 
 func (l *Loader) loadTableLogs(table string, logs []xlog.Xlog) error {
-	if len(logs) == 0 {
+	nlogs := len(logs)
+	if nlogs == 0 {
 		return nil
 	}
+
+	lookups := l.tableLookups[logs[0]["base_table"]]
+	log.Printf("%s: Committing %d logs\n", table, nlogs)
+
 	txn, err := l.DB.Begin()
 	if err != nil {
 		return nil
@@ -273,7 +285,6 @@ func (l *Loader) loadTableLogs(table string, logs []xlog.Xlog) error {
 		txn.Rollback()
 		return err
 	}
-	lookups := l.tableLookups[logs[0]["base_table"]]
 	l.queueLookups(lookups, logs)
 	if err = l.resolveLookups(txn, lookups); err != nil {
 		return fail(ectx.Err("resolveLookups", err))

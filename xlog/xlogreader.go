@@ -89,7 +89,11 @@ func (x *XlogReader) SeekNext(offset int64) error {
 	if err := x.Seek(offset); err != nil {
 		return err
 	}
-	_, err := x.ReadCompleteLine()
+	line, err := x.ReadCompleteLine()
+	if err == nil {
+		x.Offset += int64(len(line))
+		return nil
+	}
 	return err
 }
 
@@ -131,13 +135,18 @@ func (x *XlogReader) Next() (Xlog, error) {
 		if err != nil && err != io.EOF {
 			return nil, err
 		}
-		var lineLen int64 = int64(len(line) + 1)
+		var lineLen int64 = int64(len(line))
 		readOffset += lineLen
+
+		// Discard trailing newline
+		if lineLen > 0 {
+			line = line[:lineLen-1]
+		}
 		if !IsPotentialXlogLine(line) {
 			if err == nil {
 				continue
 			}
-			// EOF, no parseable data:
+			// EOF with no parseable data: go back to last line.
 			err = x.BackToLastCompleteLine()
 			if err != nil {
 				return nil, err
@@ -157,11 +166,11 @@ func (x *XlogReader) Next() (Xlog, error) {
 
 // ReadCompleteLine reads a complete line from the Xlog reader,
 // returning an empty string if it can't read a full \n-terminated
-// line.
+// line. The line returned is always empty or \n-terminated.
 func (x *XlogReader) ReadCompleteLine() (string, error) {
 	line, err := x.Reader.ReadString('\n')
 	if err != nil {
 		return "", err
 	}
-	return line, err
+	return line, nil
 }

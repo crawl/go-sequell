@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/codegangsta/cli"
@@ -20,6 +21,7 @@ func main() {
 	}
 	defineFlags(app)
 	defineCommands(app)
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 	app.Run(os.Args)
 }
 

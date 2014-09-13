@@ -25,7 +25,7 @@ func CrawlSchema() *cdb.CrawlSchema {
 }
 
 func Sources() *sources.Servers {
-	src, err := sources.Sources(data.Crawl, action.LogCache)
+	src, err := sources.Sources(data.Sources(), action.LogCache)
 	if err != nil {
 		panic(err)
 	}
@@ -178,7 +178,9 @@ func LoadLogs(db pg.ConnSpec) error {
 	if err != nil {
 		return err
 	}
-	ldr := loader.New(c, Sources(), CrawlSchema(), data.Crawl.StringMap("game-type-prefixes"))
+	ldr := loader.New(c, Sources(), CrawlSchema(),
+		data.Crawl.StringMap("game-type-prefixes"))
+	fmt.Println("Loading logs...")
 	return ldr.LoadCommit()
 }
 
@@ -189,6 +191,7 @@ func CreateIndexes(db pg.ConnSpec) error {
 	}
 	sch := CrawlSchema().Schema().Sort()
 	for _, index := range sch.SqlSel(schema.SelIndexes) {
+		fmt.Println("EXEC", index)
 		if _, err = c.Exec(index); err != nil {
 			return err
 		}

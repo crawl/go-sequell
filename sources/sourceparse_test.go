@@ -47,6 +47,17 @@ func TestSources(t *testing.T) {
 			cao.Logfiles[0].Url)
 	}
 
+	if cao.TimeZoneMap.IsZero() {
+		t.Errorf("CAO has no tz map")
+	} else {
+		fmt.Printf("CAO tz maps: %#v\n", cao.TimeZoneMap)
+	}
+	if cao.UtcEpoch.IsZero() {
+		t.Errorf("CAO has no UTC epoch")
+	} else {
+		fmt.Printf("CAO UTC epoch: %s\n", cao.UtcEpoch)
+	}
+
 	for _, srv := range src.Servers {
 		fmt.Println()
 		fmt.Println(srv.Name)

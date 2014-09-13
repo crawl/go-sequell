@@ -5,10 +5,12 @@ import (
 
 	"github.com/greensnark/go-sequell/crawl/data"
 	"github.com/greensnark/go-sequell/logfetch"
+	"github.com/greensnark/go-sequell/resource"
 	"github.com/greensnark/go-sequell/sources"
 )
 
-const LogCache = "server-xlogs"
+var Root = resource.Root
+var LogCache = Root.Path("server-xlogs")
 
 func DownloadLogs(incremental bool) error {
 	src, err := sources.Sources(data.Sources(), LogCache)
