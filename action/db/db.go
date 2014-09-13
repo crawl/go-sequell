@@ -56,7 +56,7 @@ func CreateDB(admin, db pg.ConnSpec) error {
 		return err
 	}
 	if !dbexist {
-		fmt.Println("Creating database", db.Database)
+		fmt.Printf("Creating database \"%s\"\n", db.Database)
 		if err = pgdb.CreateDatabase(db.Database); err != nil {
 			return ectx.Err("CreateDatabase", err)
 		}
@@ -78,6 +78,7 @@ func CreateUser(pgdb pg.DB, dbspec pg.ConnSpec) error {
 		return err
 	}
 	if !userExist {
+		fmt.Printf("Creating user \"%s\"\n", dbspec.User)
 		if err = pgdb.CreateUser(dbspec.User, dbspec.Password); err != nil {
 			return err
 		}
@@ -97,6 +98,7 @@ func CreateExtensions(db pg.ConnSpec) error {
 			return err
 		}
 		if !extExists {
+			fmt.Printf("Creating extension \"%s\"\n", ext)
 			if err = c.CreateExtension(ext); err != nil {
 				return err
 			}
@@ -151,6 +153,7 @@ func CreateDBSchema(db pg.ConnSpec) error {
 	}
 	defer c.Close()
 	s := CrawlSchema().Schema()
+	fmt.Printf("Creating tables in database \"%s\"\n", db.Database)
 	for _, sql := range s.SqlSel(schema.SelTables) {
 		if _, err = c.Exec(sql); err != nil {
 			return err
@@ -168,7 +171,7 @@ func DropDB(admin pg.ConnSpec, db pg.ConnSpec, force bool) error {
 		return err
 	}
 
-	fmt.Println("Dropping database", db.Database)
+	fmt.Printf("Dropping database \"%s\"\n", db.Database)
 	_, err = adminDB.Exec("drop database " + db.Database)
 	return err
 }
