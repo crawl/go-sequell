@@ -141,6 +141,10 @@ func (p xlogSpecParser) ParseXlogAliased(aliased map[interface{}]interface{}) ([
 	return res, nil
 }
 
+func (p xlogSpecParser) Table(game string, logtype xlogtools.XlogType) {
+
+}
+
 func (p xlogSpecParser) NewXlogSrc(name, qualifier string, mustSync bool) *XlogSrc {
 	game := xlogtools.XlogGame(name)
 	gameVersion := xlogtools.XlogGameVersion(name)

@@ -61,6 +61,10 @@ type Server struct {
 	Milestones    []*XlogSrc
 }
 
+func (s *Server) ParseLogTime(logtime string) (time.Time, error) {
+	return ctime.ParseLogTime(logtime, s.UtcEpoch, s.TimeZoneMap)
+}
+
 func (s *Server) String() string {
 	return fmt.Sprintf(
 		"%s(aliases=%#v base=%s local=%s tz=%s epoch=%s nlog=%d nmile=%d",

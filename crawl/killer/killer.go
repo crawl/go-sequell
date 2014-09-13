@@ -6,13 +6,12 @@ import (
 
 	"github.com/greensnark/go-sequell/stringnorm"
 	"github.com/greensnark/go-sequell/text"
-	"github.com/greensnark/go-sequell/xlog"
 )
 
-func NormalizeKiller(killer string, rec xlog.Xlog) string {
+func NormalizeKiller(killer, rawKiller, killerFlags string) string {
 	var err error
 	for _, norm := range normalizers {
-		killer, err = norm.NormalizeKiller(killer, rec)
+		killer, err = norm.NormalizeKiller(killer, rawKiller, killerFlags)
 		if err != nil {
 			return killer
 		}
@@ -56,7 +55,7 @@ func NormalizeKaux(kaux string) string {
 }
 
 type killerNormalizer interface {
-	NormalizeKiller(killer string, rec xlog.Xlog) (string, error)
+	NormalizeKiller(killer, killerRawValue, killerFlags string) (string, error)
 }
 
 var normalizers = []killerNormalizer{
@@ -74,7 +73,7 @@ type simpleKillerNormalizer struct {
 	norm stringnorm.Normalizer
 }
 
-func (n *simpleKillerNormalizer) NormalizeKiller(killer string, rec xlog.Xlog) (string, error) {
+func (n *simpleKillerNormalizer) NormalizeKiller(killer, rawKiller, killerFlags string) (string, error) {
 	return n.norm.Normalize(killer)
 }
 

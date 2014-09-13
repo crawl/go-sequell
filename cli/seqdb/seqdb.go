@@ -131,6 +131,37 @@ func defineCommands(app *cli.App) {
 			},
 		},
 		{
+			Name:  "newdb",
+			Usage: "create the Sequell database and initialize it",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "admin",
+					Usage: "Postgres admin user (optional; to create schema)",
+				},
+				cli.StringFlag{
+					Name:  "adminpassword",
+					Usage: "Postgres admin user's password (optional; to create schema)",
+				},
+				cli.StringFlag{
+					Name:  "admindb",
+					Value: "postgres",
+					Usage: "Postgres admin db",
+				},
+			},
+			Action: func(c *cli.Context) {
+				adminSpec := pg.ConnSpec{
+					Database: c.String("admindb"),
+					User:     c.String("admin"),
+					Password: c.String("adminpassword"),
+				}
+				if err := db.CreateDB(adminSpec, dbSpec(c)); err != nil {
+					reportError(err)
+					return
+				}
+				reportError(db.CreateDBSchema(dbSpec(c)))
+			},
+		},
+		{
 			Name:  "createdb",
 			Usage: "create the Sequell database (empty)",
 			Flags: []cli.Flag{
@@ -158,7 +189,7 @@ func defineCommands(app *cli.App) {
 			},
 		},
 		{
-			Name:  "initdb",
+			Name:  "create-tables",
 			Usage: "create tables in the Sequell database",
 			Action: func(c *cli.Context) {
 				reportError(db.CreateDBSchema(dbSpec(c)))
@@ -168,7 +199,7 @@ func defineCommands(app *cli.App) {
 			Name:  "load",
 			Usage: "load all outstanding data in the logs to the db",
 			Action: func(c *cli.Context) {
-				// TODO
+				reportError(db.LoadLogs(dbSpec(c)))
 			},
 		},
 		{

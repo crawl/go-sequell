@@ -17,8 +17,10 @@ type Field struct {
 	SqlType          string
 	SqlRefType       string
 	SqlLookupExpr    string
+	DefaultValue     string
 	DefaultString    string
 	PrimaryKey       bool
+	CaseSensitive    bool
 	Summarizable     bool
 	ForeignKeyLookup bool
 	ForeignKeyTable  string
@@ -30,6 +32,19 @@ func (f *Field) NeedsIndex() bool {
 	return f.ForeignKeyLookup || f.Indexed
 }
 
+// ResolvedKey returns the key name in the xlog for this field after
+// lookups have been resolved, viz. the RefName() for foreign key
+// fields and the simple name for other fields.
+func (f *Field) ResolvedKey() string {
+	if f.ForeignKeyLookup {
+		return f.RefName()
+	}
+	return f.Name
+}
+
+// RefName returns the SQL column name for this field in the primary
+// table, being the foreign key column name for reference fields and
+// the simple SQL name for other fields.
 func (f *Field) RefName() string {
 	if f.ForeignKeyLookup {
 		return f.SqlName + "_id"
@@ -85,6 +100,9 @@ func (f *Field) initialize(parser *FieldParser) (err error) {
 	if f.Type == "" {
 		f.Type = "TEXT"
 	}
+	if f.Type == "S" {
+		f.CaseSensitive = true
+	}
 	if f.PrimaryKey {
 		f.Type = "PK"
 	} else if f.Type == "PK" {
@@ -105,7 +123,10 @@ func (f *Field) initialize(parser *FieldParser) (err error) {
 	}
 
 	if !f.PrimaryKey {
-		f.DefaultString = parser.FieldSqlDefault(f.Type)
+		f.DefaultValue = parser.FieldSqlDefault(f.Type)
+		if f.DefaultValue != "" {
+			f.DefaultString = "default " + f.DefaultValue
+		}
 	}
 	return
 }

@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/greensnark/go-sequell/crawl/ctime"
 	"github.com/greensnark/go-sequell/crawl/data"
 	"github.com/greensnark/go-sequell/crawl/god"
 	"github.com/greensnark/go-sequell/crawl/killer"
@@ -35,6 +34,16 @@ func (x XlogType) String() string {
 		return "milestones"
 	}
 	return "unk"
+}
+
+func (x XlogType) BaseTable() string {
+	switch x {
+	case Log:
+		return "logrecord"
+	case Milestone:
+		return "milestone"
+	}
+	return ""
 }
 
 func Type(line xlog.Xlog) XlogType {
@@ -97,21 +106,13 @@ func NormalizeLog(log xlog.Xlog) (xlog.Xlog, error) {
 		log["ckiller"] =
 			killer.NormalizeKiller(
 				text.FirstNotEmpty(log["killer"], log["ktyp"]),
-				log)
+				log["killer"], log["killer_flags"])
+		log["cikiller"] =
+			killer.NormalizeKiller(log["ikiller"], log["ikiller"], "")
 		log["kmod"] = killer.NormalizeKmod(log["killer"])
 		log["ckaux"] = killer.NormalizeKaux(log["kaux"])
 		log["rend"] = log["end"]
 	}
-
-	normTime := func(timeField string) {
-		if logtime, exists := log[timeField]; exists {
-			log[timeField] = ctime.NormalizeUnixTime(logtime)
-		}
-	}
-
-	normTime("start")
-	normTime("end")
-	normTime("time")
 
 	CanonicalizeFields(log)
 	sanitizeGold(log)

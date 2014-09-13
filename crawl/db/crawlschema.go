@@ -28,7 +28,19 @@ type Index struct {
 	Columns []string
 }
 
-type LookupTable CrawlTable
+type LookupTable struct {
+	CrawlTable
+	ReferencingFields []*Field
+	DerivedFields     []*Field
+}
+
+func MustLoadSchema(schemaDef qyaml.Yaml) *CrawlSchema {
+	sch, err := LoadSchema(schemaDef)
+	if err != nil {
+		panic(err)
+	}
+	return sch
+}
 
 func LoadSchema(schemaDef qyaml.Yaml) (*CrawlSchema, error) {
 	schema := CrawlSchema{
@@ -49,6 +61,15 @@ func LoadSchema(schemaDef qyaml.Yaml) (*CrawlSchema, error) {
 		}
 	}
 	return &schema, nil
+}
+
+func (s *CrawlSchema) LookupTable(name string) *LookupTable {
+	for _, lt := range s.LookupTables {
+		if lt.Name == name {
+			return lt
+		}
+	}
+	return nil
 }
 
 func (s *CrawlSchema) ParseVariants(variantMap map[string]string) {
@@ -155,19 +176,27 @@ func (s *CrawlSchema) ParseLookupTable(name string, defn interface{}) error {
 		if err != nil {
 			return err
 		}
-		s.AddLookupTable(name, fields, nil)
+		s.AddLookupTable(name, s.markReferenceFields(fields), nil)
 	case map[interface{}]interface{}:
 		fields, err := s.ParseFields(qyaml.IStringSlice(tdef["fields"]))
 		if err != nil {
 			return err
 		}
-		generatedFields, err := s.ParseFields(qyaml.IStringSlice(tdef["generated-fields"]))
+		generatedFields, err := s.ParseFields(
+			qyaml.IStringSlice(tdef["generated-fields"]))
 		if err != nil {
 			return err
 		}
-		s.AddLookupTable(name, fields, generatedFields)
+		s.AddLookupTable(name, s.markReferenceFields(fields), generatedFields)
 	}
 	return nil
+}
+
+func (s *CrawlSchema) markReferenceFields(fields []*Field) []*Field {
+	for _, f := range fields {
+		f.ForeignKeyLookup = true
+	}
+	return fields
 }
 
 func (s *CrawlSchema) RegisterLookupTables(fields []*Field) {
@@ -191,13 +220,19 @@ func (s *CrawlSchema) AddLookupTable(name string, fields []*Field, generatedFiel
 	if err != nil {
 		panic(err)
 	}
-	fields = append([]*Field{idField}, fields...)
-	if generatedFields != nil {
-		fields = append(fields, generatedFields...)
+	tableFields := make([]*Field, 2+len(generatedFields))
+	tableFields[0] = idField
+	tableFields[1] = fields[0]
+	for i, g := range generatedFields {
+		tableFields[i+2] = g
 	}
 	lookupTable := &LookupTable{
-		Name:   name,
-		Fields: fields,
+		CrawlTable: CrawlTable{
+			Name:   name,
+			Fields: tableFields,
+		},
+		ReferencingFields: fields,
+		DerivedFields:     generatedFields,
 	}
 	for _, field := range fields {
 		s.FieldNameLookupTableMap[field.Name] = lookupTable
@@ -304,6 +339,20 @@ func (t *CrawlTable) SchemaConstraints() []schema.Constraint {
 	}
 
 	return constraints
+}
+
+func (l *LookupTable) CaseSensitive() bool {
+	return l.LookupField().CaseSensitive
+}
+
+// ReferencingFieldCount returns the number of fields in a single row
+// that may refer to the lookup table.
+func (l *LookupTable) ReferencingFieldCount() int {
+	return len(l.ReferencingFields)
+}
+
+func (l *LookupTable) LookupField() *Field {
+	return l.Fields[1]
 }
 
 func (l *LookupTable) TableName() string {

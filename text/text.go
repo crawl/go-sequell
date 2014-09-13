@@ -20,6 +20,12 @@ func Str(any interface{}) string {
 		return t
 	case fmt.Stringer:
 		return t.String()
+	case int:
+		return strconv.Itoa(t)
+	case float32:
+		return strconv.FormatFloat(float64(t), 'f', -1, 32)
+	case float64:
+		return strconv.FormatFloat(t, 'f', -1, 64)
 	default:
 		return fmt.Sprintf("%s", t)
 	}

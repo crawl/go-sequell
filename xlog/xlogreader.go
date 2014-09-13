@@ -3,22 +3,26 @@ package xlog
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 	"os"
+	"path"
+	"strconv"
 	"syscall"
 )
 
 var ErrNoFile = errors.New("xlog file not found")
 
 type XlogReader struct {
-	Path   string
-	File   *os.File
-	Offset int64
-	Reader *bufio.Reader
+	Path     string
+	Filename string
+	File     *os.File
+	Offset   int64
+	Reader   *bufio.Reader
 }
 
-func Reader(path string) *XlogReader {
-	return &XlogReader{Path: path}
+func Reader(filepath string) *XlogReader {
+	return &XlogReader{Path: filepath, Filename: path.Base(filepath)}
 }
 
 func translateErr(e error) error {
@@ -29,6 +33,15 @@ func translateErr(e error) error {
 		}
 	}
 	return e
+}
+
+func (x *XlogReader) String() string {
+	var opened string
+	if x.File != nil {
+		opened = " opened"
+	}
+	return fmt.Sprintf("XlogReader[path=%s%s offset=%d]",
+		x.Path, opened, x.Offset)
 }
 
 func (x *XlogReader) Close() error {
@@ -49,12 +62,14 @@ func (x *XlogReader) open() error {
 	var err error
 	x.File, err = os.Open(x.Path)
 	if err != nil {
+		fmt.Println("Error opening file:", x.Path, err)
 		return translateErr(err)
 	}
 	x.Reader = bufio.NewReader(x.File)
 	return nil
 }
 
+// Seek seeks to the given offset from the start of the file.
 func (x *XlogReader) Seek(offset int64) error {
 	if err := x.open(); err != nil {
 		return err
@@ -64,6 +79,17 @@ func (x *XlogReader) Seek(offset int64) error {
 		x.Offset = offset
 		x.Reader.Reset(x.File)
 	}
+	return err
+}
+
+// SeekNext seeks to the given offset, then reads and discards one
+// complete line. This is convenient if you have the offset of the
+// last processed line and want to resume reading on the next line.
+func (x *XlogReader) SeekNext(offset int64) error {
+	if err := x.Seek(offset); err != nil {
+		return err
+	}
+	_, err := x.ReadCompleteLine()
 	return err
 }
 
@@ -105,7 +131,8 @@ func (x *XlogReader) Next() (Xlog, error) {
 		if err != nil && err != io.EOF {
 			return nil, err
 		}
-		readOffset += int64(len(line))
+		var lineLen int64 = int64(len(line) + 1)
+		readOffset += lineLen
 		if !IsPotentialXlogLine(line) {
 			if err == nil {
 				continue
@@ -123,6 +150,7 @@ func (x *XlogReader) Next() (Xlog, error) {
 			return nil, err
 		}
 		x.Offset += readOffset
+		parsedXlog[":offset"] = strconv.FormatInt(x.Offset-lineLen, 10)
 		return parsedXlog, nil
 	}
 }

@@ -1,20 +1,19 @@
 package unique
 
 import (
-	"github.com/greensnark/go-sequell/xlog"
 	"testing"
 )
 
 func TestIsUnique(t *testing.T) {
-	if !IsUnique("Blork the orc", xlog.Xlog{}) {
+	if !IsUnique("Blork the orc", "") {
 		t.Errorf("Expected Blork to be unique, but isn't")
 	}
 
-	if IsUnique("Abigabaxcjd", xlog.Xlog{}) {
+	if IsUnique("Abigabaxcjd", "") {
 		t.Errorf("Expected junk name to be non-unique, but is")
 	}
 
-	if !IsUnique("elcid", xlog.Xlog{"killer_flags": "zombie,unique,powwow"}) {
+	if !IsUnique("elcid", "zombie,unique,powwow") {
 		t.Errorf("Expected flagged name to be unique, but isn't")
 	}
 }
@@ -30,16 +29,16 @@ func TestIsOrc(t *testing.T) {
 
 func TestMaybePanLord(t *testing.T) {
 	for _, fake := range []string{"a Bogon", "an ufetubus", "the Lernaean Dogfish"} {
-		if MaybePanLord(fake, xlog.Xlog{}) {
+		if MaybePanLord(fake, "") {
 			t.Errorf("MaybePanLord: %s flagged a panlord, but isn't", fake)
 		}
 	}
 
-	if MaybePanLord("Hawl", xlog.Xlog{}) {
+	if MaybePanLord("Hawl", "") {
 		t.Errorf("MaybePanLord: Hawl incorrectly flagged as a panlord")
 	}
 
-	if !MaybePanLord("Fruitfly", xlog.Xlog{}) {
+	if !MaybePanLord("Fruitfly", "") {
 		t.Errorf("Fruitfly not flagged as a panlord")
 	}
 }

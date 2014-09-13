@@ -147,3 +147,11 @@ func CreateDBSchema(db pg.ConnSpec) error {
 	}
 	return nil
 }
+
+func LoadLogs(db pg.ConnSpec) error {
+	_, err := db.Open()
+	if err != nil {
+		return err
+	}
+	return nil
+}

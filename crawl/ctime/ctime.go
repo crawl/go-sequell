@@ -11,6 +11,7 @@ import (
 const LayoutTimeWithZone = "20060102150405Z0700"
 const LayoutUTCTime = "20060102150405"
 const LayoutUTCEpoch = "200601021504Z0700"
+const LayoutDBTime = "2006-01-02 15:04:05"
 const LayoutLogTime = LayoutUTCTime
 
 // Explicit 0-9: don't match Unicode digits.

@@ -1,7 +1,6 @@
 package killer
 
 import (
-	"github.com/greensnark/go-sequell/xlog"
 	"testing"
 )
 
@@ -24,7 +23,7 @@ var killerTests = []struct {
 
 func TestNormalizeKiller(t *testing.T) {
 	for _, test := range killerTests {
-		res := NormalizeKiller(test.start, xlog.Xlog{"killer": test.start})
+		res := NormalizeKiller(test.start, test.start, "")
 		if res != test.finish {
 			t.Errorf("Expected '%s' to normalize to '%s', but got '%s'", test.start, test.finish, res)
 		}
