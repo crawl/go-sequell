@@ -4,14 +4,33 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/greensnark/go-sequell/action"
 	"github.com/greensnark/go-sequell/crawl/data"
 	cdb "github.com/greensnark/go-sequell/crawl/db"
 	"github.com/greensnark/go-sequell/ectx"
+	"github.com/greensnark/go-sequell/loader"
 	"github.com/greensnark/go-sequell/pg"
 	"github.com/greensnark/go-sequell/schema"
+	"github.com/greensnark/go-sequell/sources"
 )
 
 var DbExtensions = []string{"citext", "orafce"}
+
+func CrawlSchema() *cdb.CrawlSchema {
+	schema, err := cdb.LoadSchema(data.Crawl)
+	if err != nil {
+		panic(err)
+	}
+	return schema
+}
+
+func Sources() *sources.Servers {
+	src, err := sources.Sources(data.Crawl, action.LogCache)
+	if err != nil {
+		panic(err)
+	}
+	return src
+}
 
 func DumpSchema(dbspec pg.ConnSpec) error {
 	db, err := dbspec.Open()
@@ -86,16 +105,8 @@ func CreateExtensions(db pg.ConnSpec) error {
 	return nil
 }
 
-func CrawlSchema() *schema.Schema {
-	schema, err := cdb.LoadSchema(data.CrawlData())
-	if err != nil {
-		panic(err)
-	}
-	return schema.Schema()
-}
-
 func PrintSchema(skipIndexes, dropIndexes, createIndexes bool) {
-	s := CrawlSchema()
+	s := CrawlSchema().Schema()
 	sel := schema.SelTablesIndexes
 	if skipIndexes {
 		sel = schema.SelTables
@@ -118,7 +129,7 @@ func CheckDBSchema(dbspec pg.ConnSpec, applyDelta bool) error {
 	if err != nil {
 		return err
 	}
-	wantedSchema := CrawlSchema()
+	wantedSchema := CrawlSchema().Schema()
 	diff := wantedSchema.DiffSchema(actualSchema)
 	if len(diff.Tables) == 0 {
 		fmt.Fprintf(os.Stderr, "Schema is up-to-date.\n")
@@ -139,7 +150,7 @@ func CreateDBSchema(db pg.ConnSpec) error {
 		return err
 	}
 	defer c.Close()
-	s := CrawlSchema()
+	s := CrawlSchema().Schema()
 	for _, sql := range s.SqlSel(schema.SelTables) {
 		if _, err = c.Exec(sql); err != nil {
 			return err
@@ -148,10 +159,39 @@ func CreateDBSchema(db pg.ConnSpec) error {
 	return nil
 }
 
-func LoadLogs(db pg.ConnSpec) error {
-	_, err := db.Open()
+func DropDB(admin pg.ConnSpec, db pg.ConnSpec, force bool) error {
+	if !force {
+		return fmt.Errorf("Use --force to drop the database '%s'", db.Database)
+	}
+	adminDB, err := admin.Open()
 	if err != nil {
 		return err
+	}
+
+	fmt.Println("Dropping database", db.Database)
+	_, err = adminDB.Exec("drop database " + db.Database)
+	return err
+}
+
+func LoadLogs(db pg.ConnSpec) error {
+	c, err := db.Open()
+	if err != nil {
+		return err
+	}
+	ldr := loader.New(c, Sources(), CrawlSchema(), data.Crawl.StringMap("game-type-prefixes"))
+	return ldr.LoadCommit()
+}
+
+func CreateIndexes(db pg.ConnSpec) error {
+	c, err := db.Open()
+	if err != nil {
+		return err
+	}
+	sch := CrawlSchema().Schema().Sort()
+	for _, index := range sch.SqlSel(schema.SelIndexes) {
+		if _, err = c.Exec(index); err != nil {
+			return err
+		}
 	}
 	return nil
 }

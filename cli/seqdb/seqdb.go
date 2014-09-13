@@ -57,6 +57,32 @@ func fatal(msg string) {
 	os.Exit(1)
 }
 
+func adminFlags() []cli.Flag {
+	return []cli.Flag{
+		cli.StringFlag{
+			Name:  "admin",
+			Usage: "Postgres admin user (optional; to create schema)",
+		},
+		cli.StringFlag{
+			Name:  "adminpassword",
+			Usage: "Postgres admin user's password (optional; to create schema)",
+		},
+		cli.StringFlag{
+			Name:  "admindb",
+			Value: "postgres",
+			Usage: "Postgres admin db",
+		},
+	}
+}
+
+func adminDBSpec(c *cli.Context) pg.ConnSpec {
+	return pg.ConnSpec{
+		Database: c.String("admindb"),
+		User:     c.String("admin"),
+		Password: c.String("adminpassword"),
+	}
+}
+
 func defineCommands(app *cli.App) {
 	dbSpec := func(c *cli.Context) pg.ConnSpec {
 		return pg.ConnSpec{
@@ -133,28 +159,9 @@ func defineCommands(app *cli.App) {
 		{
 			Name:  "newdb",
 			Usage: "create the Sequell database and initialize it",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "admin",
-					Usage: "Postgres admin user (optional; to create schema)",
-				},
-				cli.StringFlag{
-					Name:  "adminpassword",
-					Usage: "Postgres admin user's password (optional; to create schema)",
-				},
-				cli.StringFlag{
-					Name:  "admindb",
-					Value: "postgres",
-					Usage: "Postgres admin db",
-				},
-			},
+			Flags: adminFlags(),
 			Action: func(c *cli.Context) {
-				adminSpec := pg.ConnSpec{
-					Database: c.String("admindb"),
-					User:     c.String("admin"),
-					Password: c.String("adminpassword"),
-				}
-				if err := db.CreateDB(adminSpec, dbSpec(c)); err != nil {
+				if err := db.CreateDB(adminDBSpec(c), dbSpec(c)); err != nil {
 					reportError(err)
 					return
 				}
@@ -162,30 +169,23 @@ func defineCommands(app *cli.App) {
 			},
 		},
 		{
+			Name:  "dropdb",
+			Usage: "drop the Sequell database (must use --force)",
+			Flags: append(adminFlags(), cli.BoolFlag{
+				Name:  "force",
+				Usage: "actually drop the database",
+			}),
+			Action: func(c *cli.Context) {
+				reportError(
+					db.DropDB(adminDBSpec(c), dbSpec(c), c.Bool("force")))
+			},
+		},
+		{
 			Name:  "createdb",
 			Usage: "create the Sequell database (empty)",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "admin",
-					Usage: "Postgres admin user (optional; to create schema)",
-				},
-				cli.StringFlag{
-					Name:  "adminpassword",
-					Usage: "Postgres admin user's password (optional; to create schema)",
-				},
-				cli.StringFlag{
-					Name:  "admindb",
-					Value: "postgres",
-					Usage: "Postgres admin db",
-				},
-			},
+			Flags: adminFlags(),
 			Action: func(c *cli.Context) {
-				adminSpec := pg.ConnSpec{
-					Database: c.String("admindb"),
-					User:     c.String("admin"),
-					Password: c.String("adminpassword"),
-				}
-				reportError(db.CreateDB(adminSpec, dbSpec(c)))
+				reportError(db.CreateDB(adminDBSpec(c), dbSpec(c)))
 			},
 		},
 		{
@@ -200,6 +200,13 @@ func defineCommands(app *cli.App) {
 			Usage: "load all outstanding data in the logs to the db",
 			Action: func(c *cli.Context) {
 				reportError(db.LoadLogs(dbSpec(c)))
+			},
+		},
+		{
+			Name:  "create-indexes",
+			Usage: "create indexes (use after loading)",
+			Action: func(c *cli.Context) {
+				reportError(db.CreateIndexes(dbSpec(c)))
 			},
 		},
 		{
