@@ -73,7 +73,7 @@ func NormalizeLog(log xlog.Xlog) (xlog.Xlog, error) {
 	log["v"] = version.FullVersion(log["v"])
 	log["cv"] = version.MajorVersion(log["v"])
 	if version.IsAlpha(log["v"]) {
-		log["alpha"] = "y"
+		log["alpha"] = "t"
 	}
 	if log["alpha"] != "" {
 		log["cv"] += "-a"
@@ -85,6 +85,7 @@ func NormalizeLog(log xlog.Xlog) (xlog.Xlog, error) {
 			strconv.FormatUint(version.VersionNumericId(vlong), 10)
 	}
 	log["tiles"] = NormalizeBool(log["tiles"])
+	log["wiz"] = NormalizeBool(log["wiz"])
 	if log["ntv"] == "" {
 		log["ntv"] = "0"
 	}
