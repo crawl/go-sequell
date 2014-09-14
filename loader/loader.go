@@ -25,6 +25,7 @@ type Loader struct {
 	Schema           *cdb.CrawlSchema
 	Readers          []Reader
 	GameTypePrefixes map[string]string
+	RowCount         int64
 
 	tableLookups        map[string][]*TableLookup
 	tableInsertFields   map[string][]*cdb.Field
@@ -153,6 +154,7 @@ func (l *Loader) getReaders() []Reader {
 // Load loads all outstanding logs from all readers, but does not Flush() them
 // automatically
 func (l *Loader) Load() error {
+	l.RowCount = 0
 	readers := l.getReaders()
 	for _, r := range readers {
 		if err := l.LoadReaderLogs(r); err != nil {
@@ -171,14 +173,11 @@ func (l *Loader) LoadCommit() error {
 }
 
 func (l *Loader) LoadReaderLogs(reader Reader) error {
-	log.Printf("%s: Reading %s\n", reader.Table, reader.Filename)
 	seekPos, err := l.QuerySeekOffset(reader.Filename, reader.Table)
 	if err != nil {
 		return ectx.Err("QuerySeekOffset", err)
 	}
 	if seekPos != -1 {
-		log.Printf("LoadReaderLogs: resuming at offset %d in %s",
-			seekPos, reader.Filename)
 		if err = reader.SeekNext(seekPos); err != nil {
 			if err == xlog.ErrNoFile {
 				log.Printf("Ignoring missing file: %s\n", reader)
@@ -188,8 +187,14 @@ func (l *Loader) LoadReaderLogs(reader Reader) error {
 		}
 	}
 
+	first := true
+	offset := reader.Offset
 	for {
 		xlog, err := reader.Next()
+		if first && (xlog != nil || err != nil) {
+			log.Printf("LoadLogs: %s offset=%d", reader.Filename, offset)
+			first = false
+		}
 		if err != nil {
 			return ectx.Err("reader.Next", err)
 		}
@@ -275,7 +280,6 @@ func (l *Loader) loadTableLogs(table string, logs []xlog.Xlog) error {
 	}
 
 	lookups := l.tableLookups[logs[0]["base_table"]]
-	log.Printf("%s: Committing %d logs\n", table, nlogs)
 
 	txn, err := l.DB.Begin()
 	if err != nil {
@@ -298,6 +302,8 @@ func (l *Loader) loadTableLogs(table string, logs []xlog.Xlog) error {
 	if err := txn.Commit(); err != nil {
 		return ectx.Err("loadTableLogs.Commit", err)
 	}
+	l.RowCount += int64(nlogs)
+	log.Printf("%s: Committed %d (total: %d)\n", table, nlogs, l.RowCount)
 	return nil
 }
 
@@ -346,7 +352,8 @@ func (l *Loader) insertTableLogs(tx *sql.Tx, table string, logs []xlog.Xlog) err
 	for _, x := range logs {
 		loadXlogRow(row, keys, defaults, x)
 		if _, err := st.Exec(row...); err != nil {
-			return ectx.Err("Loader.insertTableLogs.Exec(...)", err)
+			return ectx.Err(
+				fmt.Sprintf("Loader.insertTableLogs.Exec(%#v)", x), err)
 		}
 	}
 
@@ -366,6 +373,9 @@ func loadXlogRow(row []interface{}, keys []string, defaults []string, x xlog.Xlo
 		value := x[key]
 		if value == "" {
 			value = defaults[i]
+			if value == "" && (key == "start" || key == "end" || key == "time") {
+				fmt.Printf("No %s in %#v\n", key, x)
+			}
 		}
 		row[i] = value
 	}

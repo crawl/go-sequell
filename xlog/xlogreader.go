@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"syscall"
 )
 
@@ -138,9 +140,9 @@ func (x *XlogReader) Next() (Xlog, error) {
 		var lineLen int64 = int64(len(line))
 		readOffset += lineLen
 
-		// Discard trailing newline
+		// Discard trailing newline and whitespace
 		if lineLen > 0 {
-			line = line[:lineLen-1]
+			line = strings.TrimRight(line, " \n\r\t")
 		}
 		if !IsPotentialXlogLine(line) {
 			if err == nil {
@@ -155,8 +157,9 @@ func (x *XlogReader) Next() (Xlog, error) {
 		}
 		parsedXlog, err := Parse(line)
 		if err != nil {
-			x.BackToLastCompleteLine()
-			return nil, err
+			log.Printf("Xlog %s:%d skipping malformed line %#v\n",
+				x.Path, x.Offset+readOffset-lineLen, line)
+			continue
 		}
 		x.Offset += readOffset
 		parsedXlog[":offset"] = strconv.FormatInt(x.Offset-lineLen, 10)
