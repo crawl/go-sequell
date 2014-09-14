@@ -202,7 +202,7 @@ func (l *Loader) LoadReaderLogs(reader Reader) error {
 			return nil
 		}
 		if !xlogtools.ValidXlog(xlog) {
-			fmt.Printf("LoadLogs: %s offset=%s skipping bad xlog: %#v\n",
+			log.Printf("LoadLogs: %s offset=%s skipping bad xlog: %#v\n",
 				reader.Filename, xlog[":offset"], xlog)
 			continue
 		}
@@ -378,9 +378,6 @@ func loadXlogRow(row []interface{}, keys []string, defaults []string, x xlog.Xlo
 		value := x[key]
 		if value == "" {
 			value = defaults[i]
-			if value == "" && (key == "start" || key == "end" || key == "time") {
-				fmt.Printf("No %s in %#v\n", key, x)
-			}
 		}
 		row[i] = value
 	}
