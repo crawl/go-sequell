@@ -108,6 +108,20 @@ func defineCommands(app *cli.App) {
 			},
 		},
 		{
+			Name:  "load",
+			Usage: "load all outstanding data in the logs to the db",
+			Action: func(c *cli.Context) {
+				reportError(db.LoadLogs(dbSpec(c)))
+			},
+		},
+		{
+			Name:  "isync",
+			Usage: "load all data, then run an interactive process that accepts commands to \"load\" and \"fetch\" on stdin",
+			Action: func(c *cli.Context) {
+				// TODO
+			},
+		},
+		{
 			Name:  "schema",
 			Usage: "print the Sequell schema",
 			Flags: []cli.Flag{
@@ -198,24 +212,10 @@ func defineCommands(app *cli.App) {
 			},
 		},
 		{
-			Name:  "load",
-			Usage: "load all outstanding data in the logs to the db",
-			Action: func(c *cli.Context) {
-				reportError(db.LoadLogs(dbSpec(c)))
-			},
-		},
-		{
 			Name:  "create-indexes",
 			Usage: "create indexes (use after loading)",
 			Action: func(c *cli.Context) {
 				reportError(db.CreateIndexes(dbSpec(c)))
-			},
-		},
-		{
-			Name:  "isync",
-			Usage: "load all data, then run an interactive process that accepts commands to \"load\" and \"fetch\" on stdin",
-			Action: func(c *cli.Context) {
-				// TODO
 			},
 		},
 		{
