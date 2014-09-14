@@ -60,6 +60,11 @@ func NormalizeBool(b string) string {
 	return b
 }
 
+func ValidXlog(log xlog.Xlog) bool {
+	return log["start"] != "" && log["name"] != "" &&
+		(log["end"] != "" || log["time"] != "")
+}
+
 func NormalizeLog(log xlog.Xlog) (xlog.Xlog, error) {
 	if _, exists := log["src"]; !exists {
 		return log, ErrNoSrc

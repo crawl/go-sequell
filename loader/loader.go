@@ -201,6 +201,11 @@ func (l *Loader) LoadReaderLogs(reader Reader) error {
 		if xlog == nil {
 			return nil
 		}
+		if !xlogtools.ValidXlog(xlog) {
+			fmt.Printf("LoadLogs: %s offset=%s skipping bad xlog: %#v\n",
+				reader.Filename, xlog[":offset"], xlog)
+			continue
+		}
 		if err = l.Add(reader, xlog); err != nil {
 			return err
 		}

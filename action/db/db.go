@@ -215,8 +215,9 @@ func CreateIndexes(db pg.ConnSpec) error {
 	}
 	sch := CrawlSchema().Schema().Sort()
 	for _, index := range sch.SqlSel(schema.SelIndexesConstraints) {
+		fmt.Println("Creating index:", index)
 		if _, err = c.Exec(index); err != nil {
-			return ectx.Err(index, err)
+			fmt.Fprintf(os.Stderr, "Error creating index: %s\n", err)
 		}
 	}
 	return nil
