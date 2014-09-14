@@ -1,22 +1,20 @@
 package httpfetch
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 	"sync"
 	"time"
 )
 
 const DefaultUserAgent = "Sequell httpfetch/1.0"
 
-type HttpFetcher struct {
-	HttpClient                   *http.Client
+type Fetcher struct {
+	HTTPClient                   *http.Client
 	Quiet                        bool
 	ConnectTimeout               time.Duration
 	ReadTimeout                  time.Duration
@@ -24,32 +22,40 @@ type HttpFetcher struct {
 	MaxConcurrentRequestsPerHost int
 	Logger                       *log.Logger
 	logWriter                    Logger
+
+	// Queues for each host, monitored by the service goroutine.
+	hostQueues       map[string]chan<- *FetchRequest
+	hostWaitGroup    sync.WaitGroup
+	enqueueWaitGroup sync.WaitGroup
 }
 
-func New() *HttpFetcher {
+// New returns a new Fetcher for parallel downloads. Fetcher
+// methods are not threadsafe.
+func New() *Fetcher {
 	writer := CreateLogger()
-	return &HttpFetcher{
-		HttpClient:                   DefaultHttpClient,
+	return &Fetcher{
+		HTTPClient:                   DefaultHTTPClient,
 		ConnectTimeout:               DefaultConnectTimeout,
 		ReadTimeout:                  DefaultReadTimeout,
 		UserAgent:                    DefaultUserAgent,
 		MaxConcurrentRequestsPerHost: 5,
 		logWriter:                    writer,
 		Logger:                       log.New(writer, "", log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile),
+		hostQueues:                   map[string]chan<- *FetchRequest{},
 	}
 }
 
 var DefaultConnectTimeout = 10 * time.Second
 var DefaultReadTimeout = 20 * time.Second
-var DefaultHttpTransport = http.Transport{
+var DefaultHTTPTransport = http.Transport{
 	Dial: dialer(DefaultConnectTimeout, DefaultReadTimeout),
 	ResponseHeaderTimeout: DefaultConnectTimeout,
 }
-var DefaultHttpClient = &http.Client{
-	Transport: &DefaultHttpTransport,
+var DefaultHTTPClient = &http.Client{
+	Transport: &DefaultHTTPTransport,
 }
 
-func (h *HttpFetcher) SetLogWriter(writer io.Writer) {
+func (h *Fetcher) SetLogWriter(writer io.Writer) {
 	h.logWriter.SetWriter(writer)
 }
 
@@ -65,15 +71,15 @@ func (uw unbufferedWriter) Write(b []byte) (n int, err error) {
 	return
 }
 
-func (h *HttpFetcher) SetLogFile(file *os.File) {
+func (h *Fetcher) SetLogFile(file *os.File) {
 	h.SetLogWriter(unbufferedWriter{file: file})
 }
 
-func (h *HttpFetcher) Logf(format string, rest ...interface{}) {
+func (h *Fetcher) Logf(format string, rest ...interface{}) {
 	h.Logger.Printf(format, rest...)
 }
 
-func (h *HttpFetcher) GetConcurrentRequestCount(count int) int {
+func (h *Fetcher) GetConcurrentRequestCount(count int) int {
 	if count > h.MaxConcurrentRequestsPerHost {
 		return h.MaxConcurrentRequestsPerHost
 	}
@@ -82,12 +88,12 @@ func (h *HttpFetcher) GetConcurrentRequestCount(count int) int {
 
 type Headers map[string]string
 
-type HttpError struct {
+type HTTPError struct {
 	StatusCode int
 	Response   *http.Response
 }
 
-func (err *HttpError) Error() string {
+func (err *HTTPError) Error() string {
 	req := err.Response.Request
 	return fmt.Sprint(req.Method, " ", req.URL, " failed: ", err.StatusCode)
 }
@@ -143,7 +149,7 @@ func HeadersWith(headers Headers, newHeader, newValue string) Headers {
 	return headerCopy
 }
 
-func (h *HttpFetcher) FileGetResponse(url string, headers Headers) (*http.Response, error) {
+func (h *Fetcher) FileGetResponse(url string, headers Headers) (*http.Response, error) {
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -154,18 +160,18 @@ func (h *HttpFetcher) FileGetResponse(url string, headers Headers) (*http.Respon
 		headers.AddHeaders(&request.Header)
 	}
 	h.Logf("FileGetResponse[%s]: pre-connect", url)
-	resp, err := h.HttpClient.Do(request)
+	resp, err := h.HTTPClient.Do(request)
 	h.Logf("FileGetResponse[%s]: connected: %v, %v", url, resp, err)
 	if err != nil {
 		return resp, err
 	}
 	if resp.StatusCode >= 400 {
-		return nil, &HttpError{resp.StatusCode, resp}
+		return nil, &HTTPError{resp.StatusCode, resp}
 	}
 	return resp, err
 }
 
-func (h *HttpFetcher) FetchFile(req *FetchRequest, complete chan<- *FetchResult) {
+func (h *Fetcher) FetchFile(req *FetchRequest, complete chan<- *FetchResult) {
 	h.Logf("FetchFile[%s] -> %s (full download: %v)", req.Url, req.Filename,
 		req.FullDownload)
 	if !req.FullDownload {
@@ -198,7 +204,7 @@ func fileResumeHeaders(req *FetchRequest, file *os.File) (Headers, int64) {
 	return headers, resumePoint
 }
 
-func (h *HttpFetcher) ResumeFileDownload(req *FetchRequest, complete chan<- *FetchResult) {
+func (h *Fetcher) ResumeFileDownload(req *FetchRequest, complete chan<- *FetchResult) {
 	h.Logf("ResumeFileDownload[%s] -> %s", req.Url, req.Filename)
 	var err error
 	handleError := func() {
@@ -225,7 +231,7 @@ func (h *HttpFetcher) ResumeFileDownload(req *FetchRequest, complete chan<- *Fet
 
 	var copied int64 = 0
 	if err != nil {
-		httpErr, _ := err.(*HttpError)
+		httpErr, _ := err.(*HTTPError)
 		if httpErr == nil || httpErr.StatusCode != http.StatusRequestedRangeNotSatisfiable {
 			handleError()
 			return
@@ -246,7 +252,7 @@ func (h *HttpFetcher) ResumeFileDownload(req *FetchRequest, complete chan<- *Fet
 	complete <- &FetchResult{req, err, copied}
 }
 
-func (h *HttpFetcher) NewFileDownload(req *FetchRequest, complete chan<- *FetchResult) {
+func (h *Fetcher) NewFileDownload(req *FetchRequest, complete chan<- *FetchResult) {
 	h.Logf("NewFileDownload[%s] -> %s", req.Url, req.Filename)
 	if !h.Quiet {
 		h.Logf("NewFileDownload ", req)
@@ -285,58 +291,133 @@ func groupFetchRequestsByHost(requests []*FetchRequest) map[string][]*FetchReque
 	return grouped
 }
 
-func (h *HttpFetcher) ParallelFetch(requests []*FetchRequest) <-chan *FetchResult {
-	h.Logf("ParallelFetch: %d files", len(requests))
-
-	completion := make(chan *FetchResult)
-	waitGroup := sync.WaitGroup{}
-	waitGroup.Add(len(requests))
-	go func() {
-		waitGroup.Wait()
-		close(completion)
-	}()
-
-	runHostRequests := func(host string, reqs []*FetchRequest) {
-		reqChan := make(chan *FetchRequest, len(reqs))
-		for _, req := range reqs {
-			reqChan <- req
-		}
-		close(reqChan)
-		nRoutines := h.GetConcurrentRequestCount(len(reqs))
-		h.Logf("runHostRequests[%s]: spinning up %d fetch routines for %d URLs",
-			host, nRoutines, len(reqs))
-		for i := 0; i < nRoutines; i++ {
-			go func() {
-				for req := range reqChan {
-					h.FetchFile(req, completion)
-					waitGroup.Done()
-				}
-			}()
-		}
+// QueueFetch enqueues the given download requests for asynchronous download.
+func (h *Fetcher) QueueFetch(req []*FetchRequest) {
+	log.Printf("QueueFetch: %d files\n", len(req))
+	for host, reqs := range groupFetchRequestsByHost(req) {
+		hostQueue := h.hostQueue(host)
+		h.enqueueWaitGroup.Add(1)
+		go h.enqueueRequests(hostQueue, reqs)
 	}
-	for host, requests := range groupFetchRequestsByHost(requests) {
-		h.Logf("runHostRequests: %s (%d requests)", host, len(requests))
-		runHostRequests(host, requests)
-	}
-	return completion
 }
 
-func UrlFilename(url string) (string, error) {
-	for {
-		if len(url) == 0 {
-			return "", errors.New(fmt.Sprintf("No filename for empty URL"))
-		}
-
-		slashIndex := strings.LastIndex(url, "/")
-		if slashIndex == -1 {
-			return "", errors.New(fmt.Sprint("Cannot determine URL filename from ", url))
-		}
-
-		filename := url[slashIndex+1:]
-		if len(filename) == 0 {
-			url = url[:len(url)-1]
-			continue
-		}
-		return filename, nil
+// Shutdown gracefully shuts down the fetcher, cleaning up all
+// background goroutines, and waiting for all outstanding downloads to
+// end.
+func (h *Fetcher) Shutdown() {
+	h.enqueueWaitGroup.Wait()
+	for host, queue := range h.hostQueues {
+		close(queue)
+		delete(h.hostQueues, host)
 	}
+	h.hostWaitGroup.Wait()
+}
+
+func (h *Fetcher) enqueueRequests(queue chan<- *FetchRequest, reqs []*FetchRequest) {
+	for _, req := range reqs {
+		queue <- req
+	}
+	h.enqueueWaitGroup.Done()
+}
+
+func (h *Fetcher) hostQueue(host string) chan<- *FetchRequest {
+	queue := h.hostQueues[host]
+	if queue == nil {
+		h.hostWaitGroup.Add(1)
+		newQueue := make(chan *FetchRequest)
+		go h.monitorHostQueue(host, newQueue)
+		h.hostQueues[host] = newQueue
+		queue = newQueue
+	}
+	return queue
+}
+
+func (h *Fetcher) monitorHostQueue(host string, incoming <-chan *FetchRequest) {
+	slaveResult := make(chan *FetchResult)
+	slaveQueue := make(chan *FetchRequest)
+
+	nSlaves := h.MaxConcurrentRequestsPerHost
+	slaveWaitGroup := sync.WaitGroup{}
+	slaveWaitGroup.Add(nSlaves)
+	// Slaves lead uncomplicated lives:
+	for i := 0; i < nSlaves; i++ {
+		go func() {
+			for req := range slaveQueue {
+				h.FetchFile(req, slaveResult)
+			}
+			slaveWaitGroup.Done()
+		}()
+	}
+	// And a goroutine to close the slaveResult channel when
+	// everyone's done.
+	go func() {
+		slaveWaitGroup.Wait()
+		log.Printf("Cleaning up host monitor for %s\n", host)
+		close(slaveResult)
+	}()
+
+	queue := []*FetchRequest{}
+	inProgress := map[string]bool{}
+	reqKey := func(req *FetchRequest) string {
+		return req.Url + " | " + req.Filename
+	}
+
+	queueRequest := func(req *FetchRequest) {
+		// Suppress duplicate fetch requests:
+		key := reqKey(req)
+		if inProgress[key] {
+			log.Printf("%s: ignoring duplicate download %s\n", host, req.Url)
+			return
+		}
+		inProgress[key] = true
+		queue = append(queue, req)
+	}
+
+	applyResult := func(res *FetchResult) {
+		delete(inProgress, reqKey(res.Req))
+		if res.Err != nil {
+			log.Printf("ERR %s (%s)\n", res.Req, res.Err)
+		} else {
+			log.Printf("ok %s [%d]\n", res.Req, res.DownloadSize)
+		}
+	}
+
+	firstItem := func() *FetchRequest {
+		if len(queue) == 0 {
+			return nil
+		}
+		return queue[0]
+	}
+	slaveQueueOrNil := func() chan<- *FetchRequest {
+		if len(queue) == 0 {
+			return nil
+		}
+		return slaveQueue
+	}
+
+	for incoming != nil || len(inProgress) > 0 {
+		// Bi-modal select: if there are things in the queue, try to
+		// feed them to the first slave who will listen. In all cases,
+		// track incoming requests and slaves reporting results.
+		select {
+		case slaveQueueOrNil() <- firstItem():
+			queue = queue[1:]
+		case newRequest := <-incoming:
+			if newRequest == nil {
+				log.Printf("%s: Download queue shutting down\n", host)
+				incoming = nil
+				break
+			}
+			queueRequest(newRequest)
+		case result := <-slaveResult:
+			applyResult(result)
+		}
+	}
+
+	// Exiting, clean up:
+	close(slaveQueue)
+	for res := range slaveResult {
+		applyResult(res)
+	}
+	h.hostWaitGroup.Done()
 }

@@ -4,7 +4,9 @@ import (
 	"os"
 
 	"github.com/greensnark/go-sequell/crawl/data"
+	"github.com/greensnark/go-sequell/isync"
 	"github.com/greensnark/go-sequell/logfetch"
+	"github.com/greensnark/go-sequell/pg"
 	"github.com/greensnark/go-sequell/resource"
 	"github.com/greensnark/go-sequell/sources"
 )
@@ -21,5 +23,17 @@ func DownloadLogs(incremental bool) error {
 	if err != nil {
 		return err
 	}
-	return logfetch.Download(src, incremental)
+	logfetch.New(src).DownloadAndWait(incremental)
+	return nil
+}
+
+func Isync(db pg.ConnSpec) error {
+	if err := os.MkdirAll(LogCache, os.ModePerm); err != nil {
+		return err
+	}
+	sync, err := isync.New(db, LogCache)
+	if err != nil {
+		return err
+	}
+	return sync.Run()
 }

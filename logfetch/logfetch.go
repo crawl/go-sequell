@@ -2,7 +2,6 @@ package logfetch
 
 import (
 	"bytes"
-	"fmt"
 
 	"github.com/greensnark/go-sequell/httpfetch"
 	"github.com/greensnark/go-sequell/sources"
@@ -40,30 +39,24 @@ func sourceFetchRequests(incremental bool, src []*sources.XlogSrc) []*httpfetch.
 	return res
 }
 
-func Download(src *sources.Servers, incremental bool) error {
-	req := sourceFetchRequests(incremental, src.XlogSources())
-	nDownloads := len(req)
-	fmt.Printf("Downloading %d files\n", nDownloads)
-	resChan := httpfetch.New().ParallelFetch(req)
+type Fetcher struct {
+	Servers   *sources.Servers
+	HTTPFetch *httpfetch.Fetcher
+}
 
-	errors := FetchErrors{}
-	for fetchResult := range resChan {
-		if fetchResult.Err != nil {
-			errors = append(errors, fetchResult.Err)
-		}
-		ShowFetchResult(fetchResult)
-	}
-	if len(errors) == 0 {
-		return nil
-	} else {
-		return errors
+func New(src *sources.Servers) *Fetcher {
+	return &Fetcher{
+		Servers:   src,
+		HTTPFetch: httpfetch.New(),
 	}
 }
 
-func ShowFetchResult(res *httpfetch.FetchResult) {
-	if res.Err != nil {
-		fmt.Printf("ERR %s (%s)\n", res.Req, res.Err)
-	} else {
-		fmt.Printf("ok %s [%d]\n", res.Req, res.DownloadSize)
-	}
+func (f *Fetcher) DownloadAndWait(incremental bool) {
+	f.Download(incremental)
+	f.HTTPFetch.Shutdown()
+}
+
+func (f *Fetcher) Download(incremental bool) {
+	req := sourceFetchRequests(incremental, f.Servers.XlogSources())
+	f.HTTPFetch.QueueFetch(req)
 }
