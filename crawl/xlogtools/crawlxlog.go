@@ -54,10 +54,10 @@ func Type(line xlog.Xlog) XlogType {
 }
 
 func NormalizeBool(b string) string {
-	if b != "" {
-		return "y"
+	if b != "" && b != "0" {
+		return "t"
 	}
-	return b
+	return "f"
 }
 
 func ValidXlog(log xlog.Xlog) bool {

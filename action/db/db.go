@@ -216,9 +216,9 @@ func LoadLogs(db pg.ConnSpec, sourceDir string) error {
 		data.Crawl.StringMap("game-type-prefixes"))
 
 	if sourceDir != "" {
-		log.Println("Loading logs from", sourceDir)
+		log.Println("Loading logs from", sourceDir, "into", db.Database)
 	} else {
-		log.Println("Loading logs...")
+		log.Println("Loading logs into", db.Database)
 	}
 	return ldr.LoadCommit()
 }
