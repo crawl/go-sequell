@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/greensnark/go-sequell/crawl/ctime"
@@ -35,7 +34,6 @@ type Loader struct {
 	tableInsertDefaults map[string][]string
 	tableCopyStatements map[string]string
 	buffer              *XlogBuffer
-	lock                sync.Mutex
 	offsetQuery         *sql.Stmt
 }
 
@@ -462,8 +460,6 @@ func (l *Loader) QuerySeekOffset(file, table string) (int64, error) {
 
 // Close closes the loader and associated resources.
 func (l *Loader) Close() error {
-	l.lock.Lock()
-	defer l.lock.Unlock()
 	if l.Readers == nil {
 		return nil
 	}

@@ -10,9 +10,9 @@ import (
 	"github.com/greensnark/go-sequell/schema"
 )
 
-type Pid int
+type PID int
 
-func (p DB) ActiveConnections(db string) ([]Pid, error) {
+func (p DB) ActiveConnections(db string) ([]PID, error) {
 	rows, err :=
 		p.Query(`select pid from pg_stat_activity
                   where pid <> pg_backend_pid()
@@ -22,13 +22,13 @@ func (p DB) ActiveConnections(db string) ([]Pid, error) {
 	}
 	defer rows.Close()
 
-	pids := []Pid{}
+	pids := []PID{}
 	for rows.Next() {
 		var pid int
 		if err := rows.Scan(&pid); err != nil {
 			return nil, ectx.Err("pg_stat_activity.scan", err)
 		}
-		pids = append(pids, Pid(pid))
+		pids = append(pids, PID(pid))
 	}
 	if err = rows.Err(); err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func (p DB) ActiveConnections(db string) ([]Pid, error) {
 	return pids, nil
 }
 
-func (p DB) TerminateConnection(pid Pid) error {
+func (p DB) TerminateConnection(pid PID) error {
 	_, err := p.Exec(`select pg_terminate_backend($1)`, int(pid))
 	return ectx.Err("pg_terminate_backend", err)
 }

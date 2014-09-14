@@ -11,10 +11,12 @@ import (
 	"github.com/greensnark/go-sequell/pg"
 )
 
+var Error error
+
 func main() {
 	app := cli.NewApp()
 	app.Name = "seqdb"
-	app.Usage = "Sequell db operations"
+	app.Usage = "Sequell db ops"
 	app.Version = "1.0.0"
 	app.Action = func(c *cli.Context) {
 		cli.ShowAppHelp(c)
@@ -23,6 +25,9 @@ func main() {
 	defineCommands(app)
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 	app.Run(os.Args)
+	if Error != nil {
+		os.Exit(1)
+	}
 }
 
 func defineFlags(app *cli.App) {
@@ -51,6 +56,7 @@ func defineFlags(app *cli.App) {
 func reportError(err error) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
+		Error = err
 	}
 }
 
