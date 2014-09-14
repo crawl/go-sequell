@@ -55,6 +55,10 @@ func IsAlpha(ver string) bool {
 	return rAlphaQualifier.FindString(ver) != ""
 }
 
+// SplitVersionQualifier splits a hyphenated version into the parts
+// before and after the first hyphen. If the string contains no
+// hyphen, the first part is the entire string and the second part is
+// empty.
 func SplitVersionQualifier(ver string) (string, string) {
 	ver = strings.TrimSpace(ver)
 	hyphenatedParts := strings.SplitN(ver, "-", 2)
@@ -85,6 +89,9 @@ func ExpandVersionKey(verkey string) string {
 	return "0." + strings.TrimLeft(verkey, "0")
 }
 
+// VersionNumericId parses a Crawl version number and returns an int64
+// representing the version that can be used in numeric comparisons,
+// where later versions return higher numbers than older versions.
 func VersionNumericId(ver string) uint64 {
 	version, qualifier := SplitVersionQualifier(ver)
 	return versionNumberize(SplitDottedVersion(version)) +

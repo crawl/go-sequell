@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/greensnark/go-sequell/crawl/ctime"
@@ -434,7 +435,7 @@ func (l *Loader) updateFileOffsetSql(noffset int) string {
 
 func loadXlogRow(row []interface{}, keys []string, defaults []string, x xlog.Xlog) {
 	for i, key := range keys {
-		value := x[key]
+		value := strings.Replace(x[key], "_", " ", -1)
 		if value == "" {
 			value = defaults[i]
 		}
