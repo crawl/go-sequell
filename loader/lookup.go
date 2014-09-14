@@ -131,10 +131,6 @@ func (t *TableLookup) LookupKey(lookup string) string {
 func (t *TableLookup) AddLookup(lookup string, derivedValues []string, x xlog.Xlog) {
 	key := t.LookupKey(lookup)
 	if _, ok := t.idCache.Get(key); ok {
-		if t.Name() == "game_key" {
-			fmt.Printf("%s: unexpected hit in cache for lookup: %s (%#v)\n",
-				t.Name(), lookup, x)
-		}
 		return
 	}
 	if t.IsFull() {
@@ -176,12 +172,12 @@ func (t *TableLookup) queryAll(tx *sql.Tx) error {
 		return nil
 	}
 	query := t.lookupQuery(len(t.Lookups))
-	fmt.Printf("%s lookup: %d items\n", t.Name(), len(t.Lookups))
+	// fmt.Printf("%s lookup: %d items\n", t.Name(), len(t.Lookups))
 	rows, err := tx.Query(query, t.lookupValues()...)
 	if err != nil {
 		return ectx.Err(query, err)
 	}
-	fmt.Printf("%s lookup: resolving rows\n", t.Name())
+	// fmt.Printf("%s lookup: resolving rows\n", t.Name())
 	return t.resolveRows(rows, nil)
 }
 
