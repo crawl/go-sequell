@@ -113,15 +113,15 @@ func defineCommands(app *cli.App) {
 			Flags: []cli.Flag{
 				cli.BoolFlag{
 					Name:  "no-index",
-					Usage: "skip create index statements",
+					Usage: "table drop+create DDL only; no indexes and constraints",
 				},
 				cli.BoolFlag{
 					Name:  "drop-index",
-					Usage: "drop index statements only",
+					Usage: "DDL to drop indexes and constraints only; no tables",
 				},
 				cli.BoolFlag{
 					Name:  "create-index",
-					Usage: "create index statements only",
+					Usage: "DDL to create indexes and constraints only; no tables",
 				},
 			},
 			Action: func(c *cli.Context) {

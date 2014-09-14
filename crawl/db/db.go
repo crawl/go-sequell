@@ -66,11 +66,12 @@ func (f *Field) RefDefault() string {
 	return f.DefaultString
 }
 
-func (f *Field) ForeignKeyConstraint() schema.Constraint {
+func (f *Field) ForeignKeyConstraint(table string) schema.Constraint {
 	if !f.ForeignKeyLookup || f.ForeignKeyTable == "" {
 		return nil
 	}
 	return schema.ForeignKeyConstraint{
+		ConstraintName:   table + "_" + f.RefName() + "_fk",
 		SourceTableField: f.RefName(),
 		TargetTable:      f.ForeignKeyTable,
 		TargetTableField: "id",
@@ -88,7 +89,7 @@ func (f *Field) SchemaColumn() *schema.Column {
 func (f *Field) LookupSchemaColumn() *schema.Column {
 	return &schema.Column{
 		Name:    f.SqlName,
-		SqlType: f.SqlType + " unique",
+		SqlType: f.SqlType,
 	}
 }
 

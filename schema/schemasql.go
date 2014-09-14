@@ -6,14 +6,14 @@ import (
 
 func (s *Schema) SqlSel(sel SchemaSelect) []string {
 	switch sel {
-	case SelTablesIndexes:
+	case SelTablesIndexesConstraints:
 		return s.Sql()
 	case SelTables:
-		return s.SqlNoIndex()
-	case SelIndexes:
-		return s.IndexSql()
-	case SelDropIndexes:
-		return s.DropIndexSql()
+		return s.SqlNoIndexesConstraints()
+	case SelIndexesConstraints:
+		return s.IndexConstraintSql()
+	case SelDropIndexesConstraints:
+		return s.DropIndexConstraintSql()
 	}
 	return nil
 }
@@ -24,18 +24,18 @@ func (s *Schema) Sql() []string {
 		s.sqlTableMap((*Table).Sql)...)
 }
 
-func (s *Schema) DropIndexSql() []string {
-	return s.sqlTableMap((*Table).DropIndexSql)
+func (s *Schema) DropIndexConstraintSql() []string {
+	return s.sqlTableMap((*Table).DropIndexConstraintSql)
 }
 
-func (s *Schema) IndexSql() []string {
-	return s.sqlTableMap((*Table).IndexSql)
+func (s *Schema) IndexConstraintSql() []string {
+	return s.sqlTableMap((*Table).IndexConstraintSql)
 }
 
-func (s *Schema) SqlNoIndex() []string {
+func (s *Schema) SqlNoIndexesConstraints() []string {
 	return append(
 		s.sqlTableRevMap((*Table).DropSql),
-		s.sqlTableMap((*Table).SqlNoIndex)...)
+		s.sqlTableMap((*Table).SqlNoIndexesConstraints)...)
 }
 
 func (s *Schema) sqlTableRevMap(tsql func(t *Table) []string) []string {
@@ -55,40 +55,47 @@ func (s *Schema) sqlTableMap(tsql func(t *Table) []string) []string {
 }
 
 func (t *Table) Sql() []string {
-	return append(t.SqlNoIndex(), t.IndexSql()...)
+	return append(t.SqlNoIndexesConstraints(), t.IndexConstraintSql()...)
 }
 
 func (t *Table) DropSql() []string {
 	return []string{"drop table if exists " + t.Name}
 }
 
-func (t *Table) SqlNoIndex() []string {
+func (t *Table) SqlNoIndexesConstraints() []string {
 	return []string{t.CreateTableSql()}
 }
 
-func (t *Table) IndexSql() []string {
-	return t.CreateIndexSqls()
+func (t *Table) IndexConstraintSql() []string {
+	return t.CreateIndexConstraintSqls()
 }
 
-func (t *Table) DropIndexSql() []string {
-	sqls := make([]string, len(t.Indexes))
+func (t *Table) DropIndexConstraintSql() []string {
+	ncons := len(t.Constraints)
+	sqls := make([]string, ncons+len(t.Indexes))
+	for i, c := range t.Constraints {
+		sqls[i] = "alter table " + t.Name + " drop " + c.Sql()
+	}
 	for i, index := range t.Indexes {
-		sqls[i] = index.DropSql()
+		sqls[i+ncons] = index.DropSql()
 	}
 	return sqls
 }
 
 func (t *Table) CreateTableSql() string {
-	colsConstraints :=
-		append(t.CreateColumnClauses(), t.CreateConstraintClauses()...)
+	colsConstraints := t.CreateColumnClauses()
 	return "create table " + t.Name +
 		" (\n" + strings.Join(colsConstraints, ",\n") + "\n)"
 }
 
-func (t *Table) CreateIndexSqls() []string {
-	sqls := make([]string, len(t.Indexes))
+func (t *Table) CreateIndexConstraintSqls() []string {
+	nindex := len(t.Indexes)
+	sqls := make([]string, nindex+len(t.Constraints))
 	for i, index := range t.Indexes {
 		sqls[i] = index.Sql()
+	}
+	for i, c := range t.Constraints {
+		sqls[i+nindex] = "alter table " + t.Name + " add " + c.Sql()
 	}
 	return sqls
 }
@@ -101,14 +108,6 @@ func (t *Table) CreateColumnClauses() []string {
 	return pieces
 }
 
-func (t *Table) CreateConstraintClauses() []string {
-	constraints := make([]string, len(t.Constraints))
-	for i, cons := range t.Constraints {
-		constraints[i] = "  " + cons.Sql()
-	}
-	return constraints
-}
-
 func (c *Column) Sql() string {
 	base := c.Name + " " + c.SqlType
 	if c.Default != "" {
@@ -118,7 +117,11 @@ func (c *Column) Sql() string {
 }
 
 func (i *Index) Sql() string {
-	return "create index " + i.Name + " on " + i.TableName +
+	createClause := "create index"
+	if i.Unique {
+		createClause = "create unique index"
+	}
+	return createClause + " " + i.Name + " on " + i.TableName +
 		" (" + strings.Join(i.Columns, ", ") + ")"
 }
 

@@ -41,7 +41,7 @@ func DumpSchema(dbspec pg.ConnSpec) error {
 	if err != nil {
 		return err
 	}
-	s.Sort().Write(schema.SelTablesIndexes, os.Stdout)
+	s.Sort().Write(schema.SelTablesIndexesConstraints, os.Stdout)
 	return nil
 }
 
@@ -109,15 +109,15 @@ func CreateExtensions(db pg.ConnSpec) error {
 
 func PrintSchema(skipIndexes, dropIndexes, createIndexes bool) {
 	s := CrawlSchema().Schema()
-	sel := schema.SelTablesIndexes
+	sel := schema.SelTablesIndexesConstraints
 	if skipIndexes {
 		sel = schema.SelTables
 	}
 	if dropIndexes {
-		sel = schema.SelDropIndexes
+		sel = schema.SelDropIndexesConstraints
 	}
 	if createIndexes {
-		sel = schema.SelIndexes
+		sel = schema.SelIndexesConstraints
 	}
 	s.Sort().Write(sel, os.Stdout)
 }
@@ -164,7 +164,8 @@ func CreateDBSchema(db pg.ConnSpec) error {
 
 func DropDB(admin pg.ConnSpec, db pg.ConnSpec, force bool) error {
 	if !force {
-		return fmt.Errorf("Use --force to drop the database '%s'", db.Database)
+		return fmt.Errorf("Use --force to drop the database \"%s\"",
+			db.Database)
 	}
 	adminDB, err := admin.Open()
 	if err != nil {
@@ -193,10 +194,9 @@ func CreateIndexes(db pg.ConnSpec) error {
 		return err
 	}
 	sch := CrawlSchema().Schema().Sort()
-	for _, index := range sch.SqlSel(schema.SelIndexes) {
-		fmt.Println("EXEC", index)
+	for _, index := range sch.SqlSel(schema.SelIndexesConstraints) {
 		if _, err = c.Exec(index); err != nil {
-			return err
+			return ectx.Err(index, err)
 		}
 	}
 	return nil

@@ -241,8 +241,12 @@ func (s *CrawlSchema) AddLookupTable(name string, fields []*Field, generatedFiel
 	return lookupTable
 }
 
-func IndexName(table string, fields []string) string {
-	return "ind_" + table + "_" + strings.Join(fields, "_")
+func IndexName(table string, fields []string, unique bool) string {
+	base := "ind_" + table
+	if unique {
+		base += "_uniq"
+	}
+	return base + "_" + strings.Join(fields, "_")
 }
 
 func (s *CrawlSchema) Schema() *schema.Schema {
@@ -270,11 +274,12 @@ func (s *CrawlSchema) SchemaTables() []*schema.Table {
 }
 
 func (t *CrawlTable) SchemaTablePrefixed(prefix string) *schema.Table {
+	tableName := prefix + t.Name
 	return &schema.Table{
-		Name:        prefix + t.Name,
+		Name:        tableName,
 		Columns:     t.SchemaColumns(),
 		Indexes:     t.SchemaIndexes(prefix),
-		Constraints: t.SchemaConstraints(),
+		Constraints: t.SchemaConstraints(tableName),
 	}
 }
 
@@ -297,7 +302,7 @@ func (t *CrawlTable) SchemaIndexes(prefix string) []*schema.Index {
 	tableName := prefix + t.Name
 	for _, compIndex := range t.CompositeIndexes {
 		add(&schema.Index{
-			Name:      t.SchemaIndexName(prefix, compIndex.Columns),
+			Name:      t.SchemaIndexName(prefix, compIndex.Columns, false),
 			TableName: tableName,
 			Columns:   compIndex.Columns,
 		})
@@ -307,7 +312,7 @@ func (t *CrawlTable) SchemaIndexes(prefix string) []*schema.Index {
 		if field.NeedsIndex() {
 			cols := []string{field.RefName()}
 			add(&schema.Index{
-				Name:      t.SchemaIndexName(prefix, cols),
+				Name:      t.SchemaIndexName(prefix, cols, false),
 				TableName: tableName,
 				Columns:   cols,
 			})
@@ -317,11 +322,11 @@ func (t *CrawlTable) SchemaIndexes(prefix string) []*schema.Index {
 	return indexes
 }
 
-func (t *CrawlTable) SchemaIndexName(prefix string, columns []string) string {
-	return "ind_" + prefix + t.Name + "_" + strings.Join(columns, "_")
+func (t *CrawlTable) SchemaIndexName(prefix string, columns []string, unique bool) string {
+	return IndexName(prefix+t.Name, columns, unique)
 }
 
-func (t *CrawlTable) SchemaConstraints() []schema.Constraint {
+func (t *CrawlTable) SchemaConstraints(table string) []schema.Constraint {
 	constraints := []schema.Constraint{}
 	add := func(c schema.Constraint) {
 		if c != nil {
@@ -330,11 +335,14 @@ func (t *CrawlTable) SchemaConstraints() []schema.Constraint {
 	}
 
 	if t.PrimaryKeyField != nil {
-		add(schema.PrimaryKeyConstraint{Column: t.PrimaryKeyField.SqlName})
+		add(schema.PrimaryKeyConstraint{
+			ConstraintName: table + "_pk",
+			Column:         t.PrimaryKeyField.SqlName,
+		})
 	}
 	for _, field := range t.Fields {
 		if field.ForeignKeyLookup {
-			add(field.ForeignKeyConstraint())
+			add(field.ForeignKeyConstraint(table))
 		}
 	}
 
@@ -364,7 +372,10 @@ func (l *LookupTable) SchemaTable() *schema.Table {
 		Name:    l.TableName(),
 		Columns: l.SchemaColumns(),
 		Constraints: []schema.Constraint{
-			schema.PrimaryKeyConstraint{Column: "id"},
+			schema.PrimaryKeyConstraint{
+				ConstraintName: l.TableName() + "_pk",
+				Column:         "id",
+			},
 		},
 		Indexes: l.SchemaIndexes(),
 	}
@@ -379,11 +390,17 @@ func (l *LookupTable) SchemaColumns() []*schema.Column {
 }
 
 func (l *LookupTable) SchemaIndexes() []*schema.Index {
-	indexes := []*schema.Index{}
+	indexes := []*schema.Index{
+		&schema.Index{
+			Name:      IndexName(l.TableName(), []string{l.Fields[1].SqlName}, true),
+			TableName: l.TableName(),
+			Columns:   []string{l.Fields[1].SqlName},
+		},
+	}
 	for _, field := range l.Fields {
 		if field.SqlLookupExpr != "" {
 			indexes = append(indexes, &schema.Index{
-				Name:      IndexName(l.TableName(), []string{field.SqlName}),
+				Name:      IndexName(l.TableName(), []string{field.SqlName}, false),
 				TableName: l.TableName(),
 				Columns:   []string{field.SqlLookupExpr},
 			})

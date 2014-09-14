@@ -10,9 +10,9 @@ type SchemaSelect int
 
 const (
 	SelTables SchemaSelect = iota
-	SelIndexes
-	SelTablesIndexes
-	SelDropIndexes
+	SelIndexesConstraints
+	SelTablesIndexesConstraints
+	SelDropIndexesConstraints
 )
 
 func SqlCombine(sqls []string) string {

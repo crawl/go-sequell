@@ -1,9 +1,5 @@
 package schema
 
-import (
-	"fmt"
-)
-
 const UnknownColumn = "§"
 
 type Diff int
@@ -79,10 +75,12 @@ type Index struct {
 	Name      string
 	TableName string
 	Columns   []string
+	Unique    bool
 	DiffStruct
 }
 
 type Constraint interface {
+	Name() string
 	Sql() string
 	DependsOnTable() string
 	Differ
@@ -100,7 +98,15 @@ type DiffStruct struct {
 func (d *DiffStruct) DiffMode() Diff        { return d.Diff }
 func (d *DiffStruct) SetDiffMode(diff Diff) { d.Diff = diff }
 
+func constraintNamed(name string) string {
+	if name == "" {
+		return ""
+	}
+	return "constraint " + name + " "
+}
+
 type ForeignKeyConstraint struct {
+	ConstraintName   string
 	SourceTableField string
 	TargetTable      string
 	TargetTableField string
@@ -108,8 +114,13 @@ type ForeignKeyConstraint struct {
 }
 
 func (f ForeignKeyConstraint) Sql() string {
-	return fmt.Sprintf("foreign key (%s) references %s (%s)",
-		f.SourceTableField, f.TargetTable, f.TargetTableField)
+	return constraintNamed(f.ConstraintName) +
+		"foreign key (" + f.SourceTableField + ") references " +
+		f.TargetTable + " (" + f.TargetTableField + ")"
+}
+
+func (f ForeignKeyConstraint) Name() string {
+	return f.ConstraintName
 }
 
 func (f ForeignKeyConstraint) DependsOnTable() string {
@@ -117,12 +128,17 @@ func (f ForeignKeyConstraint) DependsOnTable() string {
 }
 
 type PrimaryKeyConstraint struct {
-	Column string
+	ConstraintName string
+	Column         string
 	*DiffStruct
 }
 
+func (c PrimaryKeyConstraint) Name() string {
+	return c.ConstraintName
+}
+
 func (c PrimaryKeyConstraint) Sql() string {
-	return "primary key (" + c.Column + ")"
+	return constraintNamed(c.ConstraintName) + "primary key (" + c.Column + ")"
 }
 
 func (c PrimaryKeyConstraint) DependsOnTable() string {

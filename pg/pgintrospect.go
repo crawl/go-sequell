@@ -169,26 +169,31 @@ func (p DB) IntrospectTableConstraints(table string, cols []*schema.Column) ([]s
 }
 
 func (p DB) IntrospectTablePrimaryKey(table string) (schema.Constraint, error) {
-	row := p.QueryRow(`select kcu.column_name
+	row := p.QueryRow(`select kcu.column_name, tc.constraint_name
                               from information_schema.table_constraints as tc
                               join information_schema.key_column_usage as kcu
                                 on tc.constraint_name = kcu.constraint_name
                              where tc.constraint_type = 'PRIMARY KEY'
                                and tc.table_name = $1`, table)
 	var pkey string
-	if err := row.Scan(&pkey); err != nil {
+	var constraintName sql.NullString
+	if err := row.Scan(&pkey, &constraintName); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
 		return nil, ctx("IntrospectTablePrimaryKey", err)
 	}
-	return schema.PrimaryKeyConstraint{Column: pkey}, nil
+	return schema.PrimaryKeyConstraint{
+		ConstraintName: constraintName.String,
+		Column:         pkey,
+	}, nil
 }
 
 func (p DB) IntrospectTableForeignKeys(table string) ([]schema.Constraint, error) {
-	rows, err := p.Query(`select kcu.column_name,
+	rows, err := p.Query(`select kcu.column_name
                                  ccu.table_name as foreign_table,
-                                 ccu.column_name as foreign_column
+                                 ccu.column_name as foreign_column,
+                                 tc.constraint_name
                             from information_schema.table_constraints as tc
                             join information_schema.key_column_usage as kcu
                               on tc.constraint_name = kcu.constraint_name
@@ -204,10 +209,12 @@ func (p DB) IntrospectTableForeignKeys(table string) ([]schema.Constraint, error
 	constraints := []schema.Constraint{}
 	for rows.Next() {
 		var col, foreignTable, foreignCol string
-		if err = rows.Scan(&col, &foreignTable, &foreignCol); err != nil {
+		var constraintName sql.NullString
+		if err = rows.Scan(&col, &foreignTable, &foreignCol, &constraintName); err != nil {
 			return nil, ctx("IntrospectTableForeignKeys", err)
 		}
 		constraints = append(constraints, schema.ForeignKeyConstraint{
+			ConstraintName:   constraintName.String,
 			SourceTableField: col,
 			TargetTable:      foreignTable,
 			TargetTableField: foreignCol,
