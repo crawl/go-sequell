@@ -117,7 +117,7 @@ func (t *TableLookup) Add(x xlog.Xlog) {
 		}
 	}
 	for _, f := range t.fieldNames {
-		t.AddLookup(x[f], derivedFieldValues)
+		t.AddLookup(x[f], derivedFieldValues, x)
 	}
 }
 
@@ -128,9 +128,13 @@ func (t *TableLookup) LookupKey(lookup string) string {
 	return lookup
 }
 
-func (t *TableLookup) AddLookup(lookup string, derivedValues []string) {
+func (t *TableLookup) AddLookup(lookup string, derivedValues []string, x xlog.Xlog) {
 	key := t.LookupKey(lookup)
 	if _, ok := t.idCache.Get(key); ok {
+		if t.Name() == "game_key" {
+			fmt.Printf("%s: unexpected hit in cache for lookup: %s (%#v)\n",
+				t.Name(), lookup, x)
+		}
 		return
 	}
 	if t.IsFull() {
@@ -144,7 +148,14 @@ func (t *TableLookup) ResolveAll(tx *sql.Tx) error {
 	if err := t.queryAll(tx); err != nil {
 		return err
 	}
-	return t.insertAll(tx)
+	if err := t.insertAll(tx); err != nil {
+		return err
+	}
+	if len(t.Lookups) != 0 {
+		return fmt.Errorf("%s: ResolveAll() left unresolved entries: %#v",
+			t.Name(), t.Lookups)
+	}
+	return nil
 }
 
 func (t *TableLookup) insertAll(tx *sql.Tx) error {
@@ -165,11 +176,12 @@ func (t *TableLookup) queryAll(tx *sql.Tx) error {
 		return nil
 	}
 	query := t.lookupQuery(len(t.Lookups))
+	fmt.Printf("%s lookup: %d items\n", t.Name(), len(t.Lookups))
 	rows, err := tx.Query(query, t.lookupValues()...)
 	if err != nil {
 		return ectx.Err(query, err)
 	}
-	// fmt.Printf("lookup query: %s\n", query)
+	fmt.Printf("%s lookup: resolving rows\n", t.Name())
 	return t.resolveRows(rows, nil)
 }
 

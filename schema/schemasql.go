@@ -63,7 +63,17 @@ func (t *Table) DropSql() []string {
 }
 
 func (t *Table) SqlNoIndexesConstraints() []string {
-	return []string{t.CreateTableSql()}
+	return append([]string{t.CreateTableSql()}, t.CreateForceIndexSql()...)
+}
+
+func (t *Table) CreateForceIndexSql() []string {
+	indexSqls := []string{}
+	for _, index := range t.Indexes {
+		if index.Force {
+			indexSqls = append(indexSqls, index.Sql())
+		}
+	}
+	return indexSqls
 }
 
 func (t *Table) IndexConstraintSql() []string {
@@ -71,13 +81,14 @@ func (t *Table) IndexConstraintSql() []string {
 }
 
 func (t *Table) DropIndexConstraintSql() []string {
-	ncons := len(t.Constraints)
-	sqls := make([]string, ncons+len(t.Indexes))
-	for i, c := range t.Constraints {
-		sqls[i] = "alter table " + t.Name + " drop " + c.Sql()
+	sqls := []string{}
+	for _, c := range t.Constraints {
+		sqls = append(sqls, "alter table "+t.Name+" drop "+c.Sql())
 	}
-	for i, index := range t.Indexes {
-		sqls[i+ncons] = index.DropSql()
+	for _, index := range t.Indexes {
+		if !index.Force {
+			sqls = append(sqls, index.DropSql())
+		}
 	}
 	return sqls
 }
@@ -89,13 +100,14 @@ func (t *Table) CreateTableSql() string {
 }
 
 func (t *Table) CreateIndexConstraintSqls() []string {
-	nindex := len(t.Indexes)
-	sqls := make([]string, nindex+len(t.Constraints))
-	for i, index := range t.Indexes {
-		sqls[i] = index.Sql()
+	sqls := []string{}
+	for _, index := range t.Indexes {
+		if !index.Force {
+			sqls = append(sqls, index.Sql())
+		}
 	}
-	for i, c := range t.Constraints {
-		sqls[i+nindex] = "alter table " + t.Name + " add " + c.Sql()
+	for _, c := range t.Constraints {
+		sqls = append(sqls, "alter table "+t.Name+" add "+c.Sql())
 	}
 	return sqls
 }

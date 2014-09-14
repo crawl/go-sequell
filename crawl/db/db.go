@@ -26,6 +26,7 @@ type Field struct {
 	ForeignKeyTable  string
 	Multivalued      bool
 	Indexed          bool
+	ForceIndex       bool
 }
 
 func (f *Field) NeedsIndex() bool {
@@ -145,6 +146,9 @@ func (f *Field) applyFeature(feat rune) {
 	case '*':
 		f.Summarizable = false
 	case '?':
+		if f.Indexed {
+			f.ForceIndex = true
+		}
 		f.Indexed = true
 	}
 }

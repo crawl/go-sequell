@@ -63,16 +63,29 @@ func adminFlags() []cli.Flag {
 	return []cli.Flag{
 		cli.StringFlag{
 			Name:  "admin",
-			Usage: "Postgres admin user (optional; to create schema)",
+			Usage: "Postgres admin user (optional)",
 		},
 		cli.StringFlag{
 			Name:  "adminpassword",
-			Usage: "Postgres admin user's password (optional; to create schema)",
+			Usage: "Postgres admin user's password (optional)",
 		},
 		cli.StringFlag{
 			Name:  "admindb",
 			Value: "postgres",
 			Usage: "Postgres admin db",
+		},
+	}
+}
+
+func dropFlags() []cli.Flag {
+	return []cli.Flag{
+		cli.BoolFlag{
+			Name:  "force",
+			Usage: "actually drop the database",
+		},
+		cli.BoolFlag{
+			Name:  "terminate",
+			Usage: "terminate other sessions connected to the database",
 		},
 	}
 }
@@ -187,13 +200,24 @@ func defineCommands(app *cli.App) {
 		{
 			Name:  "dropdb",
 			Usage: "drop the Sequell database (must use --force)",
-			Flags: append(adminFlags(), cli.BoolFlag{
-				Name:  "force",
-				Usage: "actually drop the database",
-			}),
+			Flags: append(adminFlags(), dropFlags()...),
 			Action: func(c *cli.Context) {
 				reportError(
-					db.DropDB(adminDBSpec(c), dbSpec(c), c.Bool("force")))
+					db.DropDB(adminDBSpec(c), dbSpec(c), c.Bool("force"),
+						c.Bool("terminate")))
+			},
+		},
+		{
+			Name:  "resetdb",
+			Usage: "drop and recreate the Sequell database (must use --force), => dropdb + newdb",
+			Flags: append(adminFlags(), dropFlags()...),
+			Action: func(c *cli.Context) {
+				reportError(
+					db.DropDB(adminDBSpec(c), dbSpec(c), c.Bool("force"),
+						c.Bool("terminate")))
+				reportError(
+					db.CreateDB(adminDBSpec(c), dbSpec(c)))
+				reportError(db.CreateDBSchema(dbSpec(c)))
 			},
 		},
 		{

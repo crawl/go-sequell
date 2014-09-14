@@ -25,10 +25,10 @@ var fieldParseCases = []struct {
 		Indexed:          false,
 	}},
 
-	{"killermapMAP?^", Field{
+	{"killermapMAP??^", Field{
 		Name:             "killermap",
 		Type:             "MAP",
-		Features:         "?^",
+		Features:         "??^",
 		SqlName:          "killermap",
 		SqlType:          "citext",
 		SqlRefType:       "int",
@@ -38,6 +38,7 @@ var fieldParseCases = []struct {
 		ForeignKeyLookup: true,
 		Multivalued:      false,
 		Indexed:          true,
+		ForceIndex:       true,
 	}},
 
 	{"tiles!", Field{

@@ -76,6 +76,7 @@ type Index struct {
 	TableName string
 	Columns   []string
 	Unique    bool
+	Force     bool // Always created, even if other indexes are omitted
 	DiffStruct
 }
 

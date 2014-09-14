@@ -3,11 +3,43 @@ package pg
 import (
 	"database/sql"
 	"fmt"
+	"strconv"
 	"strings"
 
+	"github.com/greensnark/go-sequell/ectx"
 	"github.com/greensnark/go-sequell/schema"
-	"strconv"
 )
+
+type Pid int
+
+func (p DB) ActiveConnections(db string) ([]Pid, error) {
+	rows, err :=
+		p.Query(`select pid from pg_stat_activity
+                  where pid <> pg_backend_pid()
+                    and datname = $1`, db)
+	if err != nil {
+		return nil, ectx.Err("pg_stat_activity", err)
+	}
+	defer rows.Close()
+
+	pids := []Pid{}
+	for rows.Next() {
+		var pid int
+		if err := rows.Scan(&pid); err != nil {
+			return nil, ectx.Err("pg_stat_activity.scan", err)
+		}
+		pids = append(pids, Pid(pid))
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return pids, nil
+}
+
+func (p DB) TerminateConnection(pid Pid) error {
+	_, err := p.Exec(`select pg_terminate_backend($1)`, int(pid))
+	return ectx.Err("pg_terminate_backend", err)
+}
 
 func (p DB) IntrospectSchema() (*schema.Schema, error) {
 	tables, err := p.IntrospectTableNames()
@@ -255,14 +287,15 @@ func (p DB) IntrospectTableUniqueConstraints(table string, cols []*schema.Column
 func (p DB) IntrospectTableIndexes(table string, cols []*schema.Column) ([]*schema.Index, error) {
 	indexNameRows, err :=
 		p.Query(`select c.relname as index_name,
-                        i.indkey as column_indexes
+                        i.indkey as column_indexes,
+                        i.indisunique
                    from pg_catalog.pg_class c
                    join pg_catalog.pg_index i on c.oid = i.indexrelid
                    join pg_catalog.pg_class c2 on i.indrelid = c2.oid
                    join pg_catalog.pg_namespace ns
                      on c.relnamespace = ns.oid
                   where c.relkind = 'i' and ns.nspname = 'public'
-                    and not i.indisprimary and not i.indisunique
+                    and not i.indisprimary
                     and c2.relname = $1`, table)
 	if err != nil {
 		return nil, err
@@ -272,8 +305,9 @@ func (p DB) IntrospectTableIndexes(table string, cols []*schema.Column) ([]*sche
 	indexes := []*schema.Index{}
 	for indexNameRows.Next() {
 		var index, colArray string
+		var unique bool
 
-		if err = indexNameRows.Scan(&index, &colArray); err != nil {
+		if err = indexNameRows.Scan(&index, &colArray, &unique); err != nil {
 			return nil, ctx("IntrospectTableIndexes", err)
 		}
 
@@ -282,7 +316,7 @@ func (p DB) IntrospectTableIndexes(table string, cols []*schema.Column) ([]*sche
 			return nil, err
 		}
 		indexes =
-			append(indexes, p.TableIndex(table, index, cols, colIndices))
+			append(indexes, p.TableIndex(table, index, unique, cols, colIndices))
 	}
 	if err = indexNameRows.Err(); err != nil {
 		return nil, err
@@ -291,12 +325,13 @@ func (p DB) IntrospectTableIndexes(table string, cols []*schema.Column) ([]*sche
 }
 
 func (p DB) TableIndex(
-	table, index string, cols []*schema.Column,
+	table, index string, unique bool, cols []*schema.Column,
 	indexColNumbers []int) *schema.Index {
 	indexDef := schema.Index{
 		Name:      index,
 		TableName: table,
 		Columns:   make([]string, len(indexColNumbers)),
+		Unique:    unique,
 	}
 	for i, num := range indexColNumbers {
 		if num == 0 {

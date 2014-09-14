@@ -162,7 +162,7 @@ func CreateDBSchema(db pg.ConnSpec) error {
 	return nil
 }
 
-func DropDB(admin pg.ConnSpec, db pg.ConnSpec, force bool) error {
+func DropDB(admin pg.ConnSpec, db pg.ConnSpec, force, terminate bool) error {
 	if !force {
 		return fmt.Errorf("Use --force to drop the database \"%s\"",
 			db.Database)
@@ -172,9 +172,29 @@ func DropDB(admin pg.ConnSpec, db pg.ConnSpec, force bool) error {
 		return err
 	}
 
+	if terminate {
+		if err = TerminateConnections(adminDB, db.Database); err != nil {
+			return err
+		}
+	}
+
 	fmt.Printf("Dropping database \"%s\"\n", db.Database)
 	_, err = adminDB.Exec("drop database " + db.Database)
 	return err
+}
+
+func TerminateConnections(adminDB pg.DB, targetDB string) error {
+	pids, err := adminDB.ActiveConnections(targetDB)
+	if err != nil {
+		return err
+	}
+	for _, pid := range pids {
+		fmt.Println("Terminating backend", pid)
+		if err = adminDB.TerminateConnection(pid); err != nil {
+			return ectx.Err(fmt.Sprintf("[%d]", pid), err)
+		}
+	}
+	return nil
 }
 
 func LoadLogs(db pg.ConnSpec) error {
