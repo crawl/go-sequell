@@ -190,7 +190,7 @@ func (p DB) IntrospectTablePrimaryKey(table string) (schema.Constraint, error) {
 }
 
 func (p DB) IntrospectTableForeignKeys(table string) ([]schema.Constraint, error) {
-	rows, err := p.Query(`select kcu.column_name
+	rows, err := p.Query(`select kcu.column_name,
                                  ccu.table_name as foreign_table,
                                  ccu.column_name as foreign_column,
                                  tc.constraint_name

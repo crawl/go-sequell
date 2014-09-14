@@ -14,7 +14,7 @@ func TestLoadSchema(t *testing.T) {
 		t.Errorf("Error loading schema: %v\n", err)
 		return
 	}
-	size, err := cschema.Schema().Sort().WriteFile(schema.SelTablesIndexes, "test.sql")
+	size, err := cschema.Schema().Sort().WriteFile(schema.SelTablesIndexesConstraints, "test.sql")
 	if err != nil {
 		t.Errorf("Error saving test.sql: %v\n", err)
 		return

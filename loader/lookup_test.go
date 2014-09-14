@@ -24,6 +24,24 @@ func createLookup() *TableLookup {
 	return NewTableLookup(testSchema.LookupTable("sk"), 3)
 }
 
+func TestLookupCI(t *testing.T) {
+	var tests = []struct {
+		table         string
+		caseSensitive bool
+	}{
+		{"killer", true},
+		{"sk", false},
+	}
+	for _, test := range tests {
+		l := NewTableLookup(testSchema.LookupTable(test.table), 3)
+		actual := l.CaseSensitive
+		if actual != test.caseSensitive {
+			t.Errorf("Expected lookup case-sensitive=%t, got %t",
+				test.table, test.caseSensitive, actual)
+		}
+	}
+}
+
 func TestTableLookup(t *testing.T) {
 	DB := testConn()
 	lookup := createLookup()

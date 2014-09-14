@@ -29,7 +29,7 @@ func TestOpenDBUser(t *testing.T) {
 	}
 
 	sch.Sort()
-	_, err = sch.WriteFile(schema.SelTablesIndexes, "introspect.sql")
+	_, err = sch.WriteFile(schema.SelTablesIndexesConstraints, "introspect.sql")
 	if err != nil {
 		t.Errorf("Error writing schema to introspect.sql: %s\n", err)
 	}
