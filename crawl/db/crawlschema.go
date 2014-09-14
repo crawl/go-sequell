@@ -226,13 +226,20 @@ func (s *CrawlSchema) AddLookupTable(name string, fields []*Field, generatedFiel
 	for i, g := range generatedFields {
 		tableFields[i+2] = g
 	}
+
+	logDerivedFields := make([]*Field, 0, len(generatedFields))
+	for _, f := range generatedFields {
+		if !f.External {
+			logDerivedFields = append(logDerivedFields, f)
+		}
+	}
 	lookupTable := &LookupTable{
 		CrawlTable: CrawlTable{
 			Name:   name,
 			Fields: tableFields,
 		},
 		ReferencingFields: fields,
-		DerivedFields:     generatedFields,
+		DerivedFields:     logDerivedFields,
 	}
 	for _, field := range fields {
 		s.FieldNameLookupTableMap[field.Name] = lookupTable

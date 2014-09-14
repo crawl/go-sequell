@@ -25,6 +25,18 @@ var fieldParseCases = []struct {
 		Indexed:          false,
 	}},
 
+	{"offsetIB*?&", Field{
+		Name:          "offset",
+		Type:          "IB",
+		Features:      "*?&",
+		SqlName:       "file_offset",
+		SqlType:       "bigint",
+		DefaultValue:  "0",
+		DefaultString: "default 0",
+		Indexed:       true,
+		External:      true,
+	}},
+
 	{"killermapMAP??^", Field{
 		Name:             "killermap",
 		Type:             "MAP",

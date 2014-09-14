@@ -1,9 +1,11 @@
 package loader
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"log"
+	"strconv"
 	"sync"
 	"time"
 
@@ -34,6 +36,7 @@ type Loader struct {
 	tableCopyStatements map[string]string
 	buffer              *XlogBuffer
 	lock                sync.Mutex
+	offsetQuery         *sql.Stmt
 }
 
 type Reader struct {
@@ -43,12 +46,14 @@ type Reader struct {
 }
 
 func New(db pg.DB, srv *sources.Servers, sch *cdb.CrawlSchema, gameTypePrefixes map[string]string) *Loader {
-	return &Loader{
+	l := &Loader{
 		Servers:          srv,
 		DB:               db,
 		Schema:           sch,
 		GameTypePrefixes: gameTypePrefixes,
 	}
+	l.init()
+	return l
 }
 
 func (l *Loader) init() {
@@ -68,6 +73,15 @@ func (l *Loader) init() {
 	l.createTableLookups()
 	l.initTableInsertFields()
 	l.initCopyStatements()
+	l.offsetQuery = l.createOffsetQueryStmt()
+}
+
+func (l *Loader) createOffsetQueryStmt() *sql.Stmt {
+	stmt, err := l.DB.Prepare("select file_offset from l_file where file = $1")
+	if err != nil {
+		panic(err)
+	}
+	return stmt
 }
 
 func (l *Loader) createTableLookups() {
@@ -145,9 +159,6 @@ func (l *Loader) TableName(x *sources.XlogSrc) string {
 }
 
 func (l *Loader) getReaders() []Reader {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-	l.init()
 	return l.Readers
 }
 
@@ -354,12 +365,15 @@ func (l *Loader) insertTableLogs(tx *sql.Tx, table string, logs []xlog.Xlog) err
 	}
 
 	row := make([]interface{}, len(keys))
+	fileOffsets := map[string]string{}
+
 	for _, x := range logs {
 		loadXlogRow(row, keys, defaults, x)
 		if _, err := st.Exec(row...); err != nil {
 			return ectx.Err(
 				fmt.Sprintf("Loader.insertTableLogs.Exec(%#v)", x), err)
 		}
+		fileOffsets[x["file"]] = x["offset"]
 	}
 
 	if _, err = st.Exec(); err != nil {
@@ -370,7 +384,54 @@ func (l *Loader) insertTableLogs(tx *sql.Tx, table string, logs []xlog.Xlog) err
 		return ectx.Err("Loader.insertTableLogs.Close()", err)
 	}
 
+	if err = l.updateFileOffsets(tx, fileOffsets); err != nil {
+		return ectx.Err("Loader.updateFileOffsets", err)
+	}
+
 	return nil
+}
+
+func (l *Loader) updateFileOffsets(tx *sql.Tx, offsets map[string]string) error {
+	noffsets := len(offsets)
+	if noffsets == 0 {
+		return nil
+	}
+	sql := l.updateFileOffsetSql(noffsets)
+	values := make([]interface{}, noffsets*2)
+	i := 0
+	for file, offsetText := range offsets {
+		values[i] = file
+		offset, err := strconv.ParseInt(offsetText, 10, 64)
+		if err != nil {
+			return err
+		}
+		values[i+1] = offset
+		i += 2
+	}
+	_, err := tx.Exec(sql, values...)
+	return err
+}
+
+func (l *Loader) updateFileOffsetSql(noffset int) string {
+	var buf bytes.Buffer
+	buf.WriteString(`update l_file f set file_offset = c.file_offset
+                              from (values `)
+	index := 0
+	for i := 0; i < noffset; i++ {
+		if i > 0 {
+			buf.WriteString(", ")
+		}
+		buf.WriteString("($")
+		buf.WriteString(strconv.Itoa(index + 1))
+		index++
+		buf.WriteString(", $")
+		buf.WriteString(strconv.Itoa(index + 1))
+		buf.WriteString("::bigint")
+		index++
+		buf.WriteString(")")
+	}
+	buf.WriteString(`) as c (file, file_offset) where f.file = c.file`)
+	return buf.String()
 }
 
 func loadXlogRow(row []interface{}, keys []string, defaults []string, x xlog.Xlog) {
@@ -387,10 +448,10 @@ func loadXlogRow(row []interface{}, keys []string, defaults []string, x xlog.Xlo
 // the table, or -1 if the file is not referenced in the table.
 func (l *Loader) QuerySeekOffset(file, table string) (int64, error) {
 	var offset sql.NullInt64
-	offsetQuery := "select max(file_offset) from " + table +
-		" where file_id = (select id from l_file where file = $1)"
-	err := l.DB.QueryRow(offsetQuery, file).Scan(&offset)
-	if err != nil {
+	if err := l.offsetQuery.QueryRow(file).Scan(&offset); err != nil {
+		if err == sql.ErrNoRows {
+			return -1, nil
+		}
 		return -1, err
 	}
 	if offset.Valid {

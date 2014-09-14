@@ -27,6 +27,7 @@ type Field struct {
 	Multivalued      bool
 	Indexed          bool
 	ForceIndex       bool
+	External         bool
 }
 
 func (f *Field) NeedsIndex() bool {
@@ -145,6 +146,8 @@ func (f *Field) applyFeature(feat rune) {
 		f.Multivalued = true
 	case '*':
 		f.Summarizable = false
+	case '&':
+		f.External = true
 	case '?':
 		if f.Indexed {
 			f.ForceIndex = true
