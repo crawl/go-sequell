@@ -433,9 +433,13 @@ func (l *Loader) updateFileOffsetSql(noffset int) string {
 	return buf.String()
 }
 
+func NormalizeValue(value string) string {
+	return strings.Replace(value, "_", " ", -1)
+}
+
 func loadXlogRow(row []interface{}, keys []string, defaults []string, x xlog.Xlog) {
 	for i, key := range keys {
-		value := strings.Replace(x[key], "_", " ", -1)
+		value := NormalizeValue(x[key])
 		if value == "" {
 			value = defaults[i]
 		}

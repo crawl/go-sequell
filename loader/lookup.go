@@ -262,10 +262,10 @@ func (t *TableLookup) insertValues() []interface{} {
 	res := make([]interface{}, len(t.Lookups)*(1+len(t.derivedFieldNames)))
 	i := 0
 	for _, v := range t.Lookups {
-		res[i] = v.Value
+		res[i] = NormalizeValue(v.Value)
 		i++
 		for _, v := range v.DerivedValues {
-			res[i] = v
+			res[i] = NormalizeValue(v)
 			i++
 		}
 	}
