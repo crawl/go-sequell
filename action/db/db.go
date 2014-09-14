@@ -2,11 +2,15 @@ package db
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
+	"path"
 
 	"github.com/greensnark/go-sequell/action"
 	"github.com/greensnark/go-sequell/crawl/data"
 	cdb "github.com/greensnark/go-sequell/crawl/db"
+	"github.com/greensnark/go-sequell/crawl/xlogtools"
 	"github.com/greensnark/go-sequell/ectx"
 	"github.com/greensnark/go-sequell/loader"
 	"github.com/greensnark/go-sequell/pg"
@@ -14,7 +18,7 @@ import (
 	"github.com/greensnark/go-sequell/sources"
 )
 
-var DbExtensions = []string{"citext", "orafce"}
+var DBExtensions = []string{"citext", "orafce"}
 
 func CrawlSchema() *cdb.CrawlSchema {
 	schema, err := cdb.LoadSchema(data.Crawl)
@@ -56,7 +60,7 @@ func CreateDB(admin, db pg.ConnSpec) error {
 		return err
 	}
 	if !dbexist {
-		fmt.Printf("Creating database \"%s\"\n", db.Database)
+		log.Printf("Creating database \"%s\"\n", db.Database)
 		if err = pgdb.CreateDatabase(db.Database); err != nil {
 			return ectx.Err("CreateDatabase", err)
 		}
@@ -78,7 +82,7 @@ func CreateUser(pgdb pg.DB, dbspec pg.ConnSpec) error {
 		return err
 	}
 	if !userExist {
-		fmt.Printf("Creating user \"%s\"\n", dbspec.User)
+		log.Printf("Creating user \"%s\"\n", dbspec.User)
 		if err = pgdb.CreateUser(dbspec.User, dbspec.Password); err != nil {
 			return err
 		}
@@ -92,13 +96,13 @@ func CreateExtensions(db pg.ConnSpec) error {
 		return err
 	}
 	defer c.Close()
-	for _, ext := range DbExtensions {
+	for _, ext := range DBExtensions {
 		extExists, err := c.ExtensionExists(ext)
 		if err != nil {
 			return err
 		}
 		if !extExists {
-			fmt.Printf("Creating extension \"%s\"\n", ext)
+			log.Printf("Creating extension \"%s\"\n", ext)
 			if err = c.CreateExtension(ext); err != nil {
 				return err
 			}
@@ -134,7 +138,7 @@ func CheckDBSchema(dbspec pg.ConnSpec, applyDelta bool) error {
 	wantedSchema := CrawlSchema().Schema()
 	diff := wantedSchema.DiffSchema(actualSchema)
 	if len(diff.Tables) == 0 {
-		fmt.Fprintf(os.Stderr, "Schema is up-to-date.\n")
+		log.Println("Schema is up-to-date.")
 		return nil
 	}
 
@@ -153,7 +157,7 @@ func CreateDBSchema(db pg.ConnSpec) error {
 	}
 	defer c.Close()
 	s := CrawlSchema().Schema()
-	fmt.Printf("Creating tables in database \"%s\"\n", db.Database)
+	log.Printf("Creating tables in database \"%s\"\n", db.Database)
 	for _, sql := range s.SqlSel(schema.SelTables) {
 		if _, err = c.Exec(sql); err != nil {
 			return err
@@ -178,7 +182,7 @@ func DropDB(admin pg.ConnSpec, db pg.ConnSpec, force, terminate bool) error {
 		}
 	}
 
-	fmt.Printf("Dropping database \"%s\"\n", db.Database)
+	log.Printf("Dropping database \"%s\"\n", db.Database)
 	_, err = adminDB.Exec("drop database " + db.Database)
 	return err
 }
@@ -189,7 +193,7 @@ func TerminateConnections(adminDB pg.DB, targetDB string) error {
 		return err
 	}
 	for _, pid := range pids {
-		fmt.Println("Terminating backend", pid)
+		log.Println("Terminating backend", pid)
 		if err = adminDB.TerminateConnection(pid); err != nil {
 			return ectx.Err(fmt.Sprintf("[%d]", pid), err)
 		}
@@ -197,15 +201,83 @@ func TerminateConnections(adminDB pg.DB, targetDB string) error {
 	return nil
 }
 
-func LoadLogs(db pg.ConnSpec) error {
+func LoadLogs(db pg.ConnSpec, sourceDir string) error {
 	c, err := db.Open()
 	if err != nil {
 		return err
 	}
-	ldr := loader.New(c, Sources(), CrawlSchema(),
+	sources := Sources()
+	if sourceDir != "" {
+		if err = forceSourceDir(sources, sourceDir); err != nil {
+			return err
+		}
+	}
+	ldr := loader.New(c, sources, CrawlSchema(),
 		data.Crawl.StringMap("game-type-prefixes"))
-	fmt.Println("Loading logs...")
+
+	if sourceDir != "" {
+		log.Println("Loading logs from", sourceDir)
+	} else {
+		log.Println("Loading logs...")
+	}
 	return ldr.LoadCommit()
+}
+
+func forceSourceDir(srv *sources.Servers, dir string) error {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+
+	// Zap all logs and milestones
+	for _, server := range srv.Servers {
+		server.Logfiles = nil
+		server.Milestones = nil
+	}
+
+	sourceMap := map[string][]*sources.XlogSrc{}
+	for _, f := range files {
+		filename := f.Name()
+		if !xlogtools.IsXlogQualifiedName(filename) {
+			continue
+		}
+		src, game, xtype := xlogtools.XlogServerType(filename)
+		if xtype == xlogtools.Unknown {
+			log.Printf("Ignoring %s: unknown type\n", filename)
+			continue
+		}
+
+		server := srv.Server(src)
+		if server == nil {
+			log.Printf("Ignoring %s: can't find server %s\n", filename, src)
+			continue
+		}
+
+		xl := sources.XlogSrc{
+			Server:     server,
+			Name:       filename,
+			TargetPath: path.Join(dir, filename),
+			Type:       xtype,
+			Game:       game,
+		}
+		sourceMap[src] = append(sourceMap[src], &xl)
+	}
+
+	for src, xlogs := range sourceMap {
+		server := srv.Server(src)
+		logs := []*sources.XlogSrc{}
+		milestones := []*sources.XlogSrc{}
+		for _, x := range xlogs {
+			if x.Type == xlogtools.Milestone {
+				milestones = append(milestones, x)
+			} else {
+				logs = append(logs, x)
+			}
+		}
+		server.Logfiles = logs
+		server.Milestones = milestones
+	}
+	return nil
 }
 
 func CreateIndexes(db pg.ConnSpec) error {
@@ -215,9 +287,9 @@ func CreateIndexes(db pg.ConnSpec) error {
 	}
 	sch := CrawlSchema().Schema().Sort()
 	for _, index := range sch.SqlSel(schema.SelIndexesConstraints) {
-		fmt.Println("Exec:", index)
+		log.Println("Exec:", index)
 		if _, err = c.Exec(index); err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating index: %s\n", err)
+			log.Printf("Error creating index: %s\n", err)
 		}
 	}
 	return nil

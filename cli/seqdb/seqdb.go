@@ -129,8 +129,14 @@ func defineCommands(app *cli.App) {
 		{
 			Name:  "load",
 			Usage: "load all outstanding data in the logs to the db",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "force-source-dir",
+					Usage: "Forces the loader to use the files in the directory specified, associating them with the appropriate servers (handy to load test data)",
+				},
+			},
 			Action: func(c *cli.Context) {
-				reportError(db.LoadLogs(dbSpec(c)))
+				reportError(db.LoadLogs(dbSpec(c), c.String("force-source-dir")))
 			},
 		},
 		{

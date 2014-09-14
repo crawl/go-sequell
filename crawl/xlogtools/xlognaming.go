@@ -34,6 +34,34 @@ func XlogGameVersion(filename string) string {
 	return "any"
 }
 
+var rXlogQualifiedName = regexp.MustCompile(`^remote.(\w+)-[\w.-]+$`)
+
+// IsXlogQualifiedName returns true if the filename is correctly
+// formatted as a canonical qualified name.
+func IsXlogQualifiedName(filename string) bool {
+	return rXlogQualifiedName.FindString(filename) != ""
+}
+
+// XlogServerType parses an Xlog qualified name and returns the Xlog
+// server, game type, and Xlog file type.
+func XlogServerType(filename string) (server, game string, xlogtype XlogType) {
+	m := rXlogQualifiedName.FindStringSubmatch(filename)
+	if m == nil {
+		return "", "", Unknown
+	}
+	return m[1], XlogGame(filename), XlogFileType(filename)
+}
+
+// XlogFileType guesses the type of xlog file based on the name.
+func XlogFileType(filename string) XlogType {
+	if strings.Index(filename, "logfile") != -1 {
+		return Log
+	} else if strings.Index(filename, "milestone") != -1 {
+		return Milestone
+	}
+	return Unknown
+}
+
 func XlogQualifiedName(server, game, version, qualifier string, xlogtype XlogType) string {
 	base := "remote." + server + "-" + xlogtype.String() + "-" + version
 	if game != "" {
