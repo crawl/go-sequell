@@ -122,6 +122,7 @@ func (t *TableLookup) Add(x xlog.Xlog) {
 }
 
 func (t *TableLookup) LookupKey(lookup string) string {
+	lookup = NormalizeValue(lookup)
 	if !t.CaseSensitive {
 		return strings.ToLower(lookup)
 	}
