@@ -396,7 +396,7 @@ func (l *LookupTable) SchemaIndexes() []*schema.Index {
 			TableName: l.TableName(),
 			Columns:   []string{l.Fields[1].SqlName},
 			Unique:    true,
-			Force:     l.Fields[1].ForceIndex,
+			Force:     true,
 		},
 	}
 	for _, field := range l.Fields {
