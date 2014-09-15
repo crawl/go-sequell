@@ -23,7 +23,7 @@ func DownloadLogs(incremental bool) error {
 	if err != nil {
 		return err
 	}
-	logfetch.New(src).DownloadAndWait(incremental)
+	logfetch.New().DownloadAndWait(src, incremental)
 	return nil
 }
 

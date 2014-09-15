@@ -161,9 +161,11 @@ func (t *TableLookup) insertAll(tx *sql.Tx) error {
 	}
 	insertQuery :=
 		t.insertStatement(len(t.Lookups), len(t.derivedFieldNames)+1)
-	rows, err := tx.Query(insertQuery, t.insertValues()...)
+	values := t.insertValues()
+	rows, err := tx.Query(insertQuery, values...)
 	if err != nil {
-		return ectx.Err(insertQuery, err)
+		return ectx.Err(
+			fmt.Sprintf("Query: %s, binds: %#v", insertQuery, values), err)
 	}
 	return t.resolveRows(rows, nil)
 }
@@ -208,7 +210,7 @@ func (t *TableLookup) lookupValues() []interface{} {
 	values := make([]interface{}, len(t.Lookups))
 	i := 0
 	for _, v := range t.Lookups {
-		values[i] = v.Value
+		values[i] = NormalizeValue(v.Value)
 		i++
 	}
 	return values

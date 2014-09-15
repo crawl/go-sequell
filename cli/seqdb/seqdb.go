@@ -224,12 +224,15 @@ func defineCommands(app *cli.App) {
 			Usage: "drop and recreate the Sequell database (must use --force), => dropdb + newdb",
 			Flags: append(adminFlags(), dropFlags()...),
 			Action: func(c *cli.Context) {
+				force := c.Bool("force")
 				reportError(
-					db.DropDB(adminDBSpec(c), dbSpec(c), c.Bool("force"),
+					db.DropDB(adminDBSpec(c), dbSpec(c), force,
 						c.Bool("terminate")))
-				reportError(
-					db.CreateDB(adminDBSpec(c), dbSpec(c)))
-				reportError(db.CreateDBSchema(dbSpec(c)))
+				if force {
+					reportError(
+						db.CreateDB(adminDBSpec(c), dbSpec(c)))
+					reportError(db.CreateDBSchema(dbSpec(c)))
+				}
 			},
 		},
 		{

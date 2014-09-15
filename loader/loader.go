@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/greensnark/go-sequell/crawl/ctime"
-	cdb "github.com/greensnark/go-sequell/crawl/db"
+	"github.com/greensnark/go-sequell/crawl/db"
 	"github.com/greensnark/go-sequell/crawl/xlogtools"
 	"github.com/greensnark/go-sequell/ectx"
 	"github.com/greensnark/go-sequell/pg"
@@ -24,13 +24,13 @@ const LoadBufferSize = 50000
 type Loader struct {
 	*sources.Servers
 	DB               pg.DB
-	Schema           *cdb.CrawlSchema
-	Readers          []Reader
+	Schema           *db.CrawlSchema
+	Readers          []*Reader
 	GameTypePrefixes map[string]string
 	RowCount         int64
 
 	tableLookups        map[string][]*TableLookup
-	tableInsertFields   map[string][]*cdb.Field
+	tableInsertFields   map[string][]*db.Field
 	tableInsertKeys     map[string][]string
 	tableInsertDefaults map[string][]string
 	tableCopyStatements map[string]string
@@ -44,7 +44,7 @@ type Reader struct {
 	Table string
 }
 
-func New(db pg.DB, srv *sources.Servers, sch *cdb.CrawlSchema, gameTypePrefixes map[string]string) *Loader {
+func New(db pg.DB, srv *sources.Servers, sch *db.CrawlSchema, gameTypePrefixes map[string]string) *Loader {
 	l := &Loader{
 		Servers:          srv,
 		DB:               db,
@@ -61,9 +61,9 @@ func (l *Loader) init() {
 	}
 	l.buffer = NewBuffer(LoadBufferSize)
 	xlogs := l.Servers.XlogSources()
-	l.Readers = make([]Reader, len(xlogs))
+	l.Readers = make([]*Reader, len(xlogs))
 	for i, x := range xlogs {
-		l.Readers[i] = Reader{
+		l.Readers[i] = &Reader{
 			XlogReader: xlog.Reader(x.TargetPath),
 			XlogSrc:    x,
 			Table:      l.TableName(x),
@@ -86,7 +86,7 @@ func (l *Loader) createOffsetQueryStmt() *sql.Stmt {
 func (l *Loader) createTableLookups() {
 	lookups := map[string]*TableLookup{}
 
-	findLookup := func(field *cdb.Field) *TableLookup {
+	findLookup := func(field *db.Field) *TableLookup {
 		lookupTable := l.Schema.FindLookupTableForField(field.Name)
 		if lookup, ok := lookups[lookupTable.Name]; ok {
 			return lookup
@@ -114,7 +114,7 @@ func (l *Loader) createTableLookups() {
 }
 
 func (l *Loader) initTableInsertFields() {
-	l.tableInsertFields = make(map[string][]*cdb.Field, len(l.Schema.Tables))
+	l.tableInsertFields = make(map[string][]*db.Field, len(l.Schema.Tables))
 	l.tableInsertKeys = make(map[string][]string, len(l.Schema.Tables))
 	l.tableInsertDefaults = make(map[string][]string, len(l.Schema.Tables))
 	for _, baseTable := range l.Schema.Tables {
@@ -144,7 +144,7 @@ func (l *Loader) initCopyStatements() {
 	}
 }
 
-func (l *Loader) copyStatement(table string, fields []*cdb.Field) string {
+func (l *Loader) copyStatement(table string, fields []*db.Field) string {
 	fieldRefNames := make([]string, len(fields))
 	for i, f := range fields {
 		fieldRefNames[i] = f.RefName()
@@ -157,16 +157,37 @@ func (l *Loader) TableName(x *sources.XlogSrc) string {
 	return l.GameTypePrefixes[x.Game] + x.Type.BaseTable()
 }
 
-func (l *Loader) getReaders() []Reader {
-	return l.Readers
+func (l *Loader) FindReader(file string) *Reader {
+	for _, r := range l.Readers {
+		if r.TargetPath == file {
+			return r
+		}
+	}
+	return nil
+}
+
+// LoadLog loads outstanding logs in the given file.
+func (l *Loader) LoadLog(file string) error {
+	reader := l.FindReader(file)
+	if reader == nil {
+		return fmt.Errorf("No reader known for %s", file)
+	}
+	return l.LoadReaderLogs(reader)
+}
+
+// LoadCommit loads all outstanding logs and flushes them to the database.
+func (l *Loader) LoadCommitLog(file string) error {
+	if err := l.LoadLog(file); err != nil {
+		return err
+	}
+	return l.Flush()
 }
 
 // Load loads all outstanding logs from all readers, but does not Flush() them
 // automatically
 func (l *Loader) Load() error {
 	l.RowCount = 0
-	readers := l.getReaders()
-	for _, r := range readers {
+	for _, r := range l.Readers {
 		if err := l.LoadReaderLogs(r); err != nil {
 			return err
 		}
@@ -182,7 +203,7 @@ func (l *Loader) LoadCommit() error {
 	return l.Flush()
 }
 
-func (l *Loader) LoadReaderLogs(reader Reader) error {
+func (l *Loader) LoadReaderLogs(reader *Reader) error {
 	seekPos, err := l.QuerySeekOffset(reader.Filename, reader.Table)
 	if err != nil {
 		return ectx.Err("QuerySeekOffset", err)
@@ -190,7 +211,7 @@ func (l *Loader) LoadReaderLogs(reader Reader) error {
 	if seekPos != -1 {
 		if err = reader.SeekNext(seekPos); err != nil {
 			if err == xlog.ErrNoFile {
-				log.Printf("Ignoring missing file: %s\n", reader)
+				log.Printf("Ignoring missing file: %s\n", reader.Filename)
 				return nil
 			}
 			return ectx.Err("SeekNext", err)
@@ -200,29 +221,33 @@ func (l *Loader) LoadReaderLogs(reader Reader) error {
 	first := true
 	offset := reader.Offset
 	for {
-		xlog, err := reader.Next()
-		if first && (xlog != nil || err != nil) {
+		xl, err := reader.Next()
+		if err == xlog.ErrNoFile {
+			log.Printf("Ignoring missing file: %s\n", reader.Filename)
+			return nil
+		}
+		if first && (xl != nil || err != nil) {
 			log.Printf("LoadLogs: %s offset=%d", reader.Filename, offset)
 			first = false
 		}
 		if err != nil {
 			return ectx.Err("reader.Next", err)
 		}
-		if xlog == nil {
+		if xl == nil {
 			return nil
 		}
-		if !xlogtools.ValidXlog(xlog) {
+		if !xlogtools.ValidXlog(xl) {
 			log.Printf("LoadLogs: %s offset=%s skipping bad xlog: %#v\n",
-				reader.Filename, xlog[":offset"], xlog)
+				reader.Filename, xl[":offset"], xl)
 			continue
 		}
-		if err = l.Add(reader, xlog); err != nil {
+		if err = l.Add(reader, xl); err != nil {
 			return err
 		}
 	}
 }
 
-func (l *Loader) NormalizeLog(x xlog.Xlog, reader Reader) error {
+func (l *Loader) NormalizeLog(x xlog.Xlog, reader *Reader) error {
 	x["file"] = reader.Filename
 	x["table"] = reader.Table
 	x["base_table"] = reader.Type.BaseTable()
@@ -256,7 +281,7 @@ func (l *Loader) NormalizeLog(x xlog.Xlog, reader Reader) error {
 
 // Add normalizes the xlog and adds it to the buffer of xlogs to be
 // saved to the database.
-func (l *Loader) Add(reader Reader, x xlog.Xlog) error {
+func (l *Loader) Add(reader *Reader, x xlog.Xlog) error {
 	if err := l.NormalizeLog(x, reader); err != nil {
 		return err
 	}
@@ -471,11 +496,5 @@ func (l *Loader) Close() error {
 	for _, r := range l.Readers {
 		r.Close()
 	}
-	return nil
-}
-
-// Monitor monitors all known logs for changes and incrementally loads
-// those when they change.
-func (l *Loader) Monitor() error {
 	return nil
 }

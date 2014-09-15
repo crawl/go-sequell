@@ -40,23 +40,21 @@ func sourceFetchRequests(incremental bool, src []*sources.XlogSrc) []*httpfetch.
 }
 
 type Fetcher struct {
-	Servers   *sources.Servers
 	HTTPFetch *httpfetch.Fetcher
 }
 
-func New(src *sources.Servers) *Fetcher {
+func New() *Fetcher {
 	return &Fetcher{
-		Servers:   src,
 		HTTPFetch: httpfetch.New(),
 	}
 }
 
-func (f *Fetcher) DownloadAndWait(incremental bool) {
-	f.Download(incremental)
+func (f *Fetcher) DownloadAndWait(srv *sources.Servers, incremental bool) {
+	f.Download(srv, incremental)
 	f.HTTPFetch.Shutdown()
 }
 
-func (f *Fetcher) Download(incremental bool) {
-	req := sourceFetchRequests(incremental, f.Servers.XlogSources())
+func (f *Fetcher) Download(srv *sources.Servers, incremental bool) {
+	req := sourceFetchRequests(incremental, srv.XlogSources())
 	f.HTTPFetch.QueueFetch(req)
 }

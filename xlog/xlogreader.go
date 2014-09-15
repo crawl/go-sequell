@@ -64,7 +64,7 @@ func (x *XlogReader) open() error {
 	var err error
 	x.File, err = os.Open(x.Path)
 	if err != nil {
-		fmt.Println("Error opening file:", x.Path, err)
+		log.Println("Error opening file:", x.Path, err)
 		return translateErr(err)
 	}
 	x.Reader = bufio.NewReader(x.File)
