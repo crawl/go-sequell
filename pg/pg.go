@@ -2,6 +2,8 @@ package pg
 
 import (
 	"database/sql"
+
+	"github.com/greensnark/go-sequell/ectx"
 	_ "github.com/lib/pq"
 )
 
@@ -37,7 +39,7 @@ func (c ConnSpec) ConnectionString() string {
 func (c ConnSpec) Open() (DB, error) {
 	dbh, err := sql.Open("postgres", c.ConnectionString())
 	if err != nil {
-		return DB{}, err
+		return DB{}, ectx.Err("connect db="+c.Database, err)
 	}
 	return DB{dbh}, nil
 }
