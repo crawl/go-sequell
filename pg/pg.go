@@ -2,6 +2,7 @@ package pg
 
 import (
 	"database/sql"
+	"strconv"
 
 	"github.com/greensnark/go-sequell/ectx"
 	_ "github.com/lib/pq"
@@ -14,6 +15,9 @@ type DB struct {
 type ConnSpec struct {
 	User, Password string
 	Database       string
+	Host           string
+	Port           int
+	SSLMode        string
 }
 
 func (c ConnSpec) SpecForDB(db string) ConnSpec {
@@ -22,22 +26,43 @@ func (c ConnSpec) SpecForDB(db string) ConnSpec {
 	return copy
 }
 
+func (c ConnSpec) DBHost() string {
+	if c.Host == "" {
+		return "localhost"
+	}
+	return c.Host
+}
+
+func (c ConnSpec) GetSSLMode() string {
+	if c.SSLMode == "" {
+		return "disable"
+	}
+	return c.SSLMode
+}
+
 func (c ConnSpec) ConnectionString() string {
-	res := "sslmode=disable"
+	connstr := "sslmode=" + c.GetSSLMode()
 	if c.Database != "" {
-		res += " dbname=" + c.Database
+		connstr += " dbname=" + c.Database
 	}
 	if c.User != "" {
-		res += " user=" + c.User
+		connstr += " user=" + c.User
+		if c.Password != "" {
+			connstr += " password=" + c.Password
+		}
 	}
-	if c.Password != "" {
-		res += " password=" + c.Password
+	if c.Host != "" {
+		connstr += " host=" + c.Host
 	}
-	return res
+	if c.Port > 0 {
+		connstr += " port=" + strconv.Itoa(c.Port)
+	}
+	return connstr
 }
 
 func (c ConnSpec) Open() (DB, error) {
-	dbh, err := sql.Open("postgres", c.ConnectionString())
+	cs := c.ConnectionString()
+	dbh, err := sql.Open("postgres", cs)
 	if err != nil {
 		return DB{}, ectx.Err("connect db="+c.Database, err)
 	}

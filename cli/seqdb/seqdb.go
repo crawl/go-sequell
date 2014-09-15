@@ -50,6 +50,18 @@ func defineFlags(app *cli.App) {
 			Usage:  "Sequell database user password",
 			EnvVar: "SEQUELL_DBPASS",
 		},
+		cli.StringFlag{
+			Name:   "host",
+			Value:  "localhost",
+			Usage:  "Sequell postgres database host",
+			EnvVar: "SEQUELL_DBHOST",
+		},
+		cli.IntFlag{
+			Name:   "port",
+			Value:  0,
+			Usage:  "Sequell postgres database port",
+			EnvVar: "SEQUELL_DBPORT",
+		},
 	}
 }
 
@@ -101,6 +113,8 @@ func adminDBSpec(c *cli.Context) pg.ConnSpec {
 		Database: c.String("admindb"),
 		User:     c.String("admin"),
 		Password: c.String("adminpassword"),
+		Host:     c.GlobalString("host"),
+		Port:     c.GlobalInt("port"),
 	}
 }
 
@@ -110,6 +124,8 @@ func defineCommands(app *cli.App) {
 			Database: c.GlobalString("db"),
 			User:     c.GlobalString("user"),
 			Password: c.GlobalString("password"),
+			Host:     c.GlobalString("host"),
+			Port:     c.GlobalInt("port"),
 		}
 	}
 	app.Commands = []cli.Command{
