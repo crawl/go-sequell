@@ -259,16 +259,16 @@ func defineCommands(app *cli.App) {
 		},
 		{
 			Name:  "export-tv",
-			Usage: "export ntv data",
+			Usage: "export ntv data (writes to stdout)",
 			Action: func(c *cli.Context) {
-				// TODO
+				reportError(db.ExportTV(dbSpec(c)))
 			},
 		},
 		{
 			Name:  "import-tv",
-			Usage: "import ntv data",
+			Usage: "import ntv data (reads from stdin)",
 			Action: func(c *cli.Context) {
-				// TODO
+				reportError(db.ImportTV(dbSpec(c)))
 			},
 		},
 	}
