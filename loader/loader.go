@@ -175,19 +175,20 @@ func (l *Loader) LoadLog(file string) error {
 	return l.LoadReaderLogs(reader)
 }
 
-// LoadCommit loads all outstanding logs and flushes them to the database.
+// LoadCommitLog loads a single log and commits all records to the db.
 func (l *Loader) LoadCommitLog(file string) error {
 	if err := l.LoadLog(file); err != nil {
 		return err
 	}
-	return l.Flush()
+	return l.Commit()
 }
 
-// Load loads all outstanding logs from all readers, but does not Flush() them
-// automatically
+// Load loads all outstanding logs from all readers, but does not Commit() them
+// automatically. After loading logs, Load closes all file handles.
 func (l *Loader) Load() error {
 	l.RowCount = 0
 	for _, r := range l.Readers {
+		defer r.Close()
 		if err := l.LoadReaderLogs(r); err != nil {
 			return err
 		}
@@ -195,14 +196,17 @@ func (l *Loader) Load() error {
 	return nil
 }
 
-// LoadCommit loads all outstanding logs and flushes them to the database.
+// LoadCommit loads all outstanding logs and flushes them to the database. All
+// file handles will be closed at the end of this.
 func (l *Loader) LoadCommit() error {
 	if err := l.Load(); err != nil {
 		return ectx.Err("Loader.Load", err)
 	}
-	return l.Flush()
+	return l.Commit()
 }
 
+// LoadReaderLogs loads logs from a single Reader. The Reader will
+// remain open at the end of this call.
 func (l *Loader) LoadReaderLogs(reader *Reader) error {
 	seekPos, err := l.QuerySeekOffset(reader.Filename, reader.Table)
 	if err != nil {
@@ -287,7 +291,7 @@ func (l *Loader) Add(reader *Reader, x xlog.Xlog) error {
 	}
 
 	if l.buffer.IsFull() {
-		if err := l.Flush(); err != nil {
+		if err := l.Commit(); err != nil {
 			return err
 		}
 	}
@@ -295,8 +299,8 @@ func (l *Loader) Add(reader *Reader, x xlog.Xlog) error {
 	return nil
 }
 
-// Flush saves all buffered xlogs to the database and clears the buffer.
-func (l *Loader) Flush() error {
+// Commit saves all buffered xlogs to the database and clears the buffer.
+func (l *Loader) Commit() error {
 	if err := l.saveBufferedLogs(); err != nil {
 		return err
 	}

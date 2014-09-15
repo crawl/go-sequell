@@ -47,12 +47,12 @@ func (x *XlogReader) String() string {
 }
 
 func (x *XlogReader) Close() error {
+	x.Reader = nil
 	if x.File != nil {
 		if err := x.File.Close(); err != nil {
 			return err
 		}
 		x.File = nil
-		x.Reader = nil
 	}
 	return nil
 }
@@ -109,7 +109,7 @@ func (x *XlogReader) BackToLastCompleteLine() error {
 	return nil
 }
 
-// ReadAll reads all available Xlog lines from the source. Can potentially
+// ReadAll reads all available Xlog lines from the source; use only for testing.
 func (x *XlogReader) ReadAll() ([]Xlog, error) {
 	res := []Xlog{}
 	for {

@@ -141,7 +141,7 @@ func defineCommands(app *cli.App) {
 		},
 		{
 			Name:  "isync",
-			Usage: "load all data, then run an interactive process that accepts commands to \"load\" and \"fetch\" on stdin",
+			Usage: "load all data, then run an interactive process that accepts commands to \"fetch\" on stdin, automatically loading logs that are updated",
 			Action: func(c *cli.Context) {
 				reportError(action.Isync(dbSpec(c)))
 			},
