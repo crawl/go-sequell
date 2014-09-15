@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -101,6 +102,7 @@ func ImportTV(db pg.ConnSpec) error {
 				args[i+1] = ntv
 				i += 2
 			}
+			log.Printf("%s: updating %d ntv rows\n", table, len(keyTVs))
 			_, err := c.Exec(query, args...)
 			if err != nil {
 				return err
