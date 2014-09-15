@@ -212,6 +212,12 @@ func LoadLogs(db pg.ConnSpec, sourceDir string) error {
 			return err
 		}
 	}
+
+	if err := action.DBLock.Lock(false); err != nil {
+		return err
+	}
+	defer action.DBLock.Unlock()
+
 	ldr := loader.New(c, sources, CrawlSchema(),
 		data.Crawl.StringMap("game-type-prefixes"))
 

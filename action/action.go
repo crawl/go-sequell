@@ -15,6 +15,9 @@ import (
 var Root = resource.Root
 var LogCache = Root.Path("server-xlogs")
 
+var DBLock = flock.New(Root.Path(".seq.db.lock"))
+var FetchLock = flock.New(Root.Path(".seq.fetch.lock"))
+
 func DownloadLogs(incremental bool) error {
 	src, err := sources.Sources(data.Sources(), LogCache)
 	if err != nil {
@@ -24,6 +27,11 @@ func DownloadLogs(incremental bool) error {
 	if err != nil {
 		return err
 	}
+	if err := FetchLock.Lock(false); err != nil {
+		return err
+	}
+	defer FetchLock.Unlock()
+
 	logfetch.New().DownloadAndWait(src, incremental)
 	return nil
 }
@@ -33,11 +41,14 @@ func Isync(db pg.ConnSpec) error {
 		return err
 	}
 
-	lock := flock.New(Root.Path(".isync.lock"))
-	if err := lock.Lock(false); err != nil {
+	if err := DBLock.Lock(false); err != nil {
 		return err
 	}
-	defer lock.Unlock()
+	defer DBLock.Unlock()
+	if err := FetchLock.Lock(false); err != nil {
+		return err
+	}
+	defer FetchLock.Unlock()
 
 	sync, err := isync.New(db, LogCache)
 	if err != nil {

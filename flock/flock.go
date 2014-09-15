@@ -30,7 +30,7 @@ func (l *Lock) lockMode(blocking bool) int {
 func (l *Lock) Lock(blocking bool) error {
 	if l.File == nil {
 		var err error
-		l.File, err = os.OpenFile(l.Path, syscall.O_WRONLY|syscall.O_CREAT|syscall.O_TRUNC, os.ModePerm)
+		l.File, err = os.OpenFile(l.Path, syscall.O_WRONLY|syscall.O_CREAT|syscall.O_TRUNC, 0600)
 		if err != nil {
 			return ectx.Err(fmt.Sprintf("open %s", l.Path), err)
 		}
