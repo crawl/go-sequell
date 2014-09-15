@@ -13,6 +13,7 @@ import (
 
 	"github.com/greensnark/go-sequell/crawl/data"
 	"github.com/greensnark/go-sequell/crawl/db"
+	"github.com/greensnark/go-sequell/fnotify"
 	"github.com/greensnark/go-sequell/loader"
 	"github.com/greensnark/go-sequell/logfetch"
 	"github.com/greensnark/go-sequell/pg"
@@ -38,8 +39,8 @@ type Sync struct {
 	CrawlData qyaml.Yaml
 	Fetcher   *logfetch.Fetcher
 
-	logFileWatcher     *fsnotify.Watcher
-	configWatcher      *fsnotify.Watcher
+	logFileWatcher     *fnotify.Notifier
+	configWatcher      *fnotify.Notifier
 	slaveWaitGroup     sync.WaitGroup
 	masterWaitGroup    sync.WaitGroup
 	fetchRequests      chan bool
@@ -190,7 +191,6 @@ func (l *Sync) stopAllTasks() {
 
 func (l *Sync) stopMasterTasks() {
 	l.configWatcher.Close()
-	l.configWatcher = nil
 	l.changedConfigFiles <- ""
 	l.masterWaitGroup.Wait()
 }
@@ -200,8 +200,6 @@ func (l *Sync) stopSlaveTasks() {
 	l.changedLogFiles <- ""
 	l.fetchRequests <- false
 	l.logFileWatcher.Close()
-	l.logFileWatcher = nil
-
 	l.slaveWaitGroup.Wait()
 }
 
@@ -248,11 +246,22 @@ func (l *Sync) monitorConfigs() {
 		resource.Root.Path("config/sources.yml"),
 		resource.Root.Path("config/crawl-data.yml"),
 	}
-	l.configWatcher = l.monitorFiles("configs", configs, l.changedConfigFiles, &l.masterWaitGroup)
+	l.configWatcher = fnotify.New("config")
+	l.configWatcher.Debounce = time.Millisecond * 5000
+	go func() {
+		l.configWatcher.Notify(configs, l.changedConfigFiles)
+		log.Println("config monitor exiting")
+		l.masterWaitGroup.Done()
+	}()
 }
 
 func (l *Sync) monitorLogs() {
-	l.logFileWatcher = l.monitorFiles("logs", []string{l.CacheDir}, l.changedLogFiles, &l.slaveWaitGroup)
+	l.logFileWatcher = fnotify.New("logs")
+	go func() {
+		l.logFileWatcher.Notify([]string{l.CacheDir}, l.changedLogFiles)
+		log.Println("log monitor exiting")
+		l.slaveWaitGroup.Done()
+	}()
 }
 
 func (l *Sync) monitorFiles(name string, files []string, res chan<- string, waitGroup *sync.WaitGroup) *fsnotify.Watcher {
