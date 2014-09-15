@@ -163,9 +163,10 @@ func (h *Fetcher) FileGetResponse(url string, headers Headers) (*http.Response, 
 	resp, err := h.HTTPClient.Do(request)
 	h.Logf("FileGetResponse[%s]: connected: %v, %v", url, resp, err)
 	if err != nil {
-		return resp, err
+		return nil, err
 	}
 	if resp.StatusCode >= 400 {
+		resp.Body.Close()
 		return nil, &HTTPError{resp.StatusCode, resp}
 	}
 	return resp, err
