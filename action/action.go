@@ -33,7 +33,7 @@ func Isync(db pg.ConnSpec) error {
 		return err
 	}
 
-	lock := flock.New(Root.Path("isync.lock"))
+	lock := flock.New(Root.Path(".isync.lock"))
 	if err := lock.Lock(false); err != nil {
 		return err
 	}

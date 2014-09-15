@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/greensnark/go-sequell/crawl/data"
 	"github.com/greensnark/go-sequell/crawl/db"
@@ -59,7 +60,7 @@ func New(c pg.ConnSpec, cachedir string) (*Sync, error) {
 		Fetcher:            logfetch.New(),
 		changedLogFiles:    make(chan string),
 		changedConfigFiles: make(chan string),
-		fetchRequests:      make(chan bool),
+		fetchRequests:      make(chan bool, 1),
 	}
 	if err = l.init(); err != nil {
 		return nil, err
@@ -104,7 +105,6 @@ func (l *Sync) newLoader() *loader.Loader {
 func (l *Sync) Run() error {
 	l.startBackgroundTasks()
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Println("isync:")
 
 	normalShutdown := func() error {
 		fmt.Println("Cleaning up...")
@@ -113,6 +113,7 @@ func (l *Sync) Run() error {
 		return nil
 	}
 	for {
+		fmt.Print("isync: ")
 		line, err := reader.ReadString('\n')
 		if line != "" {
 			if err := l.runCommand(strings.TrimSpace(line)); err != nil {
@@ -140,7 +141,7 @@ func (l *Sync) runCommand(cmd string) error {
 	case "fetch":
 		select {
 		case l.fetchRequests <- true:
-			log.Println("Requested fetch")
+			fmt.Println("ack fetch")
 		default:
 		}
 	case "exit":
@@ -265,6 +266,17 @@ func (l *Sync) monitorFiles(name string, files []string, res chan<- string, wait
 		}
 	}
 	go func() {
+		pendingChanges := map[string]bool{}
+
+		throttleDelay := 250 * time.Millisecond
+		throttler := time.NewTimer(throttleDelay)
+		throttleChan := func() <-chan time.Time {
+			if len(pendingChanges) == 0 {
+				return nil
+			}
+			return throttler.C
+		}
+
 	selectLoop:
 		for {
 			select {
@@ -273,15 +285,23 @@ func (l *Sync) monitorFiles(name string, files []string, res chan<- string, wait
 					break selectLoop
 				}
 				if event.Op&(fsnotify.Create|fsnotify.Write) != 0 {
-					res <- event.Name
+					pendingChanges[event.Name] = true
+				}
+				throttler.Reset(throttleDelay)
+			case <-throttleChan():
+				for file := range pendingChanges {
+					delete(pendingChanges, file)
+					res <- file
 				}
 			case err := <-watcher.Errors:
 				if err != nil {
-					panic(err)
+					log.Println("watcher", name, "error:", err)
+					break
 				}
 				break selectLoop
 			}
 		}
+		throttler.Stop()
 		if waitGroup != nil {
 			log.Println("watcher", name, "exiting")
 			waitGroup.Done()
