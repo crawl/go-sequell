@@ -116,7 +116,7 @@ func ImportTV(db pg.ConnSpec) error {
 		}
 		for table, keyTVs := range tableTV {
 			query := tvUpdateQuery(table, len(keyTVs))
-			args := make([]interface{}, len(keyTVs)*2)
+			args := make([]interface{}, len(keyTVs)*3)
 			i := 0
 			for key, ntv := range keyTVs {
 				gameKey, ttime := splitUniqKey(key)
