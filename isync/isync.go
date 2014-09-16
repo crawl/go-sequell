@@ -114,7 +114,6 @@ func (l *Sync) Run() error {
 		return nil
 	}
 	for {
-		fmt.Print("isync: ")
 		line, err := reader.ReadString('\n')
 		if line != "" {
 			if err := l.runCommand(strings.TrimSpace(line)); err != nil {
@@ -142,7 +141,7 @@ func (l *Sync) runCommand(cmd string) error {
 	case "fetch":
 		select {
 		case l.fetchRequests <- true:
-			fmt.Println("ack fetch")
+			log.Println("Fetch requested")
 		default:
 		}
 	case "exit":
