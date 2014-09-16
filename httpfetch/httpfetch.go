@@ -378,7 +378,7 @@ func (h *Fetcher) monitorHostQueue(host string, incoming <-chan *FetchRequest) {
 		delete(inProgress, reqKey(res.Req))
 		if res.Err != nil {
 			log.Printf("ERR %s (%s)\n", res.Req, res.Err)
-		} else {
+		} else if res.DownloadSize > 0 {
 			log.Printf("ok %s [%d]\n", res.Req, res.DownloadSize)
 		}
 	}
