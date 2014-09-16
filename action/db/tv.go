@@ -27,8 +27,17 @@ func ExportTV(db pg.ConnSpec) error {
 	return nil
 }
 
+func extraIdentField(table string) string {
+	if strings.Index(table, "milestone") != -1 {
+		return "rtime"
+	}
+	return "rend"
+}
+
 func writeTVData(c pg.DB, table string) error {
-	q := "select g.game_key, t.ntv from " + table + " as t " +
+	extraField := extraIdentField(table)
+	q := "select g.game_key, t.ntv, t." + extraField + " from " + table +
+		" as t " +
 		`inner join l_game_key g on t.game_key_id = g.id
               where t.ntv > 0`
 	rows, err := c.Query(q)
@@ -36,13 +45,13 @@ func writeTVData(c pg.DB, table string) error {
 		return err
 	}
 	defer rows.Close()
-	var gameKey string
+	var gameKey, rowTime string
 	var ntv int
 	for rows.Next() {
-		if err := rows.Scan(&gameKey, &ntv); err != nil {
+		if err := rows.Scan(&gameKey, &ntv, &rowTime); err != nil {
 			return err
 		}
-		fmt.Printf("%s\t%s\t%d\n", table, gameKey, ntv)
+		fmt.Printf("%s\t%s\t%s\t%d\n", table, gameKey, rowTime, ntv)
 	}
 	return rows.Err()
 }
@@ -56,6 +65,15 @@ func ImportTV(db pg.ConnSpec) error {
 	type keyTV map[string]string
 	type tableKeyTV map[string]keyTV
 
+	uniqKey := func(gameKey, time string) string {
+		return gameKey + "/" + time
+	}
+
+	splitUniqKey := func(key string) (string, string) {
+		split := strings.SplitN(key, "/", 2)
+		return split[0], split[1]
+	}
+
 	tableTV := tableKeyTV{}
 	pendingCount := 0
 	const flushAt = 50000
@@ -67,25 +85,28 @@ func ImportTV(db pg.ConnSpec) error {
 			"update " + table + " as t set ntv = c.ntv " +
 				"from (values ")
 		nbind := 1
+		bindStr := func() string {
+			s := "$" + strconv.Itoa(nbind)
+			nbind++
+			return s
+		}
 		for i := 0; i < nupdates; i++ {
 			if i > 0 {
 				buf.WriteString(",")
 			}
 			buf.WriteString("(")
-			buf.WriteString("$")
-			buf.WriteString(strconv.Itoa(nbind))
-			nbind++
+			buf.WriteString(bindStr())
 			buf.WriteString(",")
-			buf.WriteString("$")
-			buf.WriteString(strconv.Itoa(nbind))
-			buf.WriteString("::int")
-			nbind++
+			buf.WriteString(bindStr() + "::int")
+			buf.WriteString(",")
+			buf.WriteString(bindStr())
 			buf.WriteString(")")
 		}
 		buf.WriteString(
-			`) as c (game_key, ntv), l_game_key as k
+			`) as c (game_key, ntv, ttime), l_game_key as k
              where t.game_key_id = k.id
-               and c.game_key = k.game_key`)
+               and c.game_key = k.game_key 
+			   and c.ttime = t.` + extraIdentField(table))
 		return buf.String()
 	}
 
@@ -98,9 +119,11 @@ func ImportTV(db pg.ConnSpec) error {
 			args := make([]interface{}, len(keyTVs)*2)
 			i := 0
 			for key, ntv := range keyTVs {
-				args[i] = key
+				gameKey, ttime := splitUniqKey(key)
+				args[i] = gameKey
 				args[i+1] = ntv
-				i += 2
+				args[i+2] = ttime
+				i += 3
 			}
 			log.Printf("%s: updating %d ntv rows\n", table, len(keyTVs))
 			_, err := c.Exec(query, args...)
@@ -113,13 +136,13 @@ func ImportTV(db pg.ConnSpec) error {
 		return nil
 	}
 
-	addTableKeyTV := func(table, key, ntv string) {
+	addTableKeyTV := func(table, key, ntv, ttime string) {
 		tableMap := tableTV[table]
 		if tableMap == nil {
 			tableMap = keyTV{}
 			tableTV[table] = tableMap
 		}
-		tableMap[key] = ntv
+		tableMap[uniqKey(key, ttime)] = ntv
 		pendingCount++
 		if pendingCount >= flushAt {
 			updateTV()
@@ -136,13 +159,13 @@ func ImportTV(db pg.ConnSpec) error {
 		}
 		line = strings.TrimSpace(line)
 		parts := strings.Split(line, "\t")
-		if len(parts) != 3 {
+		if len(parts) != 4 {
 			fmt.Fprintf(os.Stderr, "Rejecting malformed line: %s\n", line)
 			continue
 		}
 
-		table, key, ntv := parts[0], parts[1], parts[2]
-		addTableKeyTV(table, key, ntv)
+		table, key, ttime, ntv := parts[0], parts[1], parts[2], parts[3]
+		addTableKeyTV(table, key, ntv, ttime)
 	}
 
 	return updateTV()
