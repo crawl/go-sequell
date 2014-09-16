@@ -105,7 +105,7 @@ func NormalizeLog(log xlog.Xlog) (xlog.Xlog, error) {
 		log["oplace"] = text.FirstNotEmpty(log["oplace"], log["place"])
 		NormalizeMilestoneFields(log)
 	} else {
-		log["vmsg"] = text.FirstNotEmpty(log["vsmg"], log["tmsg"])
+		log["vmsg"] = text.FirstNotEmpty(log["vmsg"], log["tmsg"])
 		log["map"] = NormalizeMapName(log["map"])
 		log["killermap"] = NormalizeMapName(log["killermap"])
 		log["ikiller"] = text.FirstNotEmpty(log["ikiller"], log["killer"])
