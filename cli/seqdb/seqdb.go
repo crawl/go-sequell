@@ -294,5 +294,12 @@ func defineCommands(app *cli.App) {
 				reportError(db.ImportTV(dbSpec(c)))
 			},
 		},
+		{
+			Name:  "vrenum",
+			Usage: "recomputes version numbers for l_version, l_cversion and l_vlong. Use this to update these tables if/when the version number algorithm changes.",
+			Action: func(c *cli.Context) {
+				reportError(db.RenumberVersions(dbSpec(c)))
+			},
+		},
 	}
 }
