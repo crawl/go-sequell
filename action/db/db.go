@@ -1,11 +1,13 @@
 package db
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"path"
+	"strconv"
 
 	"github.com/greensnark/go-sequell/action"
 	"github.com/greensnark/go-sequell/crawl/data"
@@ -297,6 +299,61 @@ func CreateIndexes(db pg.ConnSpec) error {
 		if _, err = c.Exec(index); err != nil {
 			log.Printf("Error creating index: %s\n", err)
 		}
+	}
+	return nil
+}
+
+func DeleteFileRows(db pg.ConnSpec, files []string) error {
+	if len(files) == 0 {
+		log.Println("No files specified.")
+		return nil
+	}
+	c, err := db.Open()
+	if err != nil {
+		return err
+	}
+
+	binds := func(nbind int) string {
+		buf := bytes.Buffer{}
+		for i := 0; i < nbind; i++ {
+			if i > 0 {
+				buf.WriteString(",")
+			}
+			buf.WriteString("$")
+			buf.WriteString(strconv.Itoa(i + 1))
+		}
+		return buf.String()
+	}
+
+	fileArgs := func(s []string) []interface{} {
+		res := make([]interface{}, len(s))
+		for i, v := range s {
+			res[i] = path.Base(v)
+		}
+		return res
+	}
+
+	fileStr := func(files []interface{}) string {
+		buf := bytes.Buffer{}
+		for i, f := range files {
+			if i > 0 {
+				buf.WriteString(", ")
+			}
+			buf.WriteString(f.(string))
+		}
+		return buf.String()
+	}
+
+	ifiles := fileArgs(files)
+	log.Printf("Deleting rows from %d files: %s\n",
+		len(ifiles), fileStr(ifiles))
+	query := "delete from l_file where file in (" + binds(len(files)) + ")"
+	res, err := c.Exec(query, ifiles...)
+	if err != nil {
+		return err
+	}
+	if rowsAffected, err := res.RowsAffected(); err == nil {
+		log.Println("Deleted", rowsAffected, "rows")
 	}
 	return nil
 }

@@ -274,6 +274,13 @@ func defineCommands(app *cli.App) {
 			},
 		},
 		{
+			Name:  "rm-file",
+			Usage: "deletes rows inserted from the specified file(s)",
+			Action: func(c *cli.Context) {
+				reportError(db.DeleteFileRows(dbSpec(c), c.Args()))
+			},
+		},
+		{
 			Name:  "export-tv",
 			Usage: "export ntv data (writes to stdout)",
 			Action: func(c *cli.Context) {
