@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/greensnark/go-sequell/ectx"
 	"github.com/greensnark/go-sequell/pg"
 )
 
@@ -76,7 +77,7 @@ func ImportTV(db pg.ConnSpec) error {
 
 	tableTV := tableKeyTV{}
 	pendingCount := 0
-	const flushAt = 50000
+	const flushAt = 1000
 	reader := bufio.NewReader(os.Stdin)
 
 	tvUpdateQuery := func(table string, nupdates int) string {
@@ -110,8 +111,15 @@ func ImportTV(db pg.ConnSpec) error {
 		return buf.String()
 	}
 
+	tx, err := c.Begin()
+	if err != nil {
+		return err
+	}
+
+	total := 0
 	updateTV := func() error {
 		if len(tableTV) == 0 {
+			pendingCount = 0
 			return nil
 		}
 		for table, keyTVs := range tableTV {
@@ -125,10 +133,13 @@ func ImportTV(db pg.ConnSpec) error {
 				args[i+2] = ttime
 				i += 3
 			}
-			log.Printf("%s: updating %d ntv rows\n", table, len(keyTVs))
-			_, err := c.Exec(query, args...)
+			total += len(keyTVs)
+			log.Printf("%s: updating %d (total: %d) ntv rows\n", table,
+				len(keyTVs), total)
+			_, err := tx.Exec(query, args...)
 			if err != nil {
-				return err
+				return ectx.Err(
+					fmt.Sprintf("Query (%d binds): %s", len(args), query), err)
 			}
 		}
 		tableTV = tableKeyTV{}
@@ -136,7 +147,7 @@ func ImportTV(db pg.ConnSpec) error {
 		return nil
 	}
 
-	addTableKeyTV := func(table, key, ntv, ttime string) {
+	addTableKeyTV := func(table, key, ntv, ttime string) error {
 		tableMap := tableTV[table]
 		if tableMap == nil {
 			tableMap = keyTV{}
@@ -145,8 +156,9 @@ func ImportTV(db pg.ConnSpec) error {
 		tableMap[uniqKey(key, ttime)] = ntv
 		pendingCount++
 		if pendingCount >= flushAt {
-			updateTV()
+			return updateTV()
 		}
+		return nil
 	}
 
 	for {
@@ -155,6 +167,7 @@ func ImportTV(db pg.ConnSpec) error {
 			if err == io.EOF {
 				break
 			}
+			tx.Rollback()
 			return err
 		}
 		line = strings.TrimSpace(line)
@@ -165,8 +178,15 @@ func ImportTV(db pg.ConnSpec) error {
 		}
 
 		table, key, ttime, ntv := parts[0], parts[1], parts[2], parts[3]
-		addTableKeyTV(table, key, ntv, ttime)
+		if err := addTableKeyTV(table, key, ntv, ttime); err != nil {
+			tx.Rollback()
+			return err
+		}
 	}
 
-	return updateTV()
+	if err = updateTV(); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
