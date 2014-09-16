@@ -117,7 +117,7 @@ type ForeignKeyConstraint struct {
 func (f ForeignKeyConstraint) Sql() string {
 	return constraintNamed(f.ConstraintName) +
 		"foreign key (" + f.SourceTableField + ") references " +
-		f.TargetTable + " (" + f.TargetTableField + ")"
+		f.TargetTable + " (" + f.TargetTableField + ") on delete cascade"
 }
 
 func (f ForeignKeyConstraint) Name() string {
