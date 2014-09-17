@@ -70,11 +70,16 @@ func SplitVersionQualifier(ver string) (string, string) {
 }
 
 var rQualifierPrefixMajorMinor = regexp.MustCompile(`^([a-z]+)([0-9]*)(?:-(\d+))?`)
+var rUnqualifiedRevCount = regexp.MustCompile(`^(\d+)-`)
 
 func SplitQualifierPrefixMajorMinor(qual string) (string, string, string) {
 	match := rQualifierPrefixMajorMinor.FindStringSubmatch(qual)
 	if match == nil {
-		return qual, "", ""
+		unqualifiedMatch := rUnqualifiedRevCount.FindStringSubmatch(qual)
+		if unqualifiedMatch == nil {
+			return qual, "", ""
+		}
+		return "", "", unqualifiedMatch[1]
 	}
 	return match[1], match[2], match[3]
 }

@@ -5,12 +5,32 @@ import (
 	"testing"
 )
 
+func TestVnumOrder(t *testing.T) {
+	var vnumOrderTests = [][]string{
+		{"0.15.0-9-g1a96a59", "0.15.0-34-g666c3a1", "0.15.1"},
+	}
+	for _, vnumOrder := range vnumOrderTests {
+		var lastNum uint64
+		for i, ver := range vnumOrder {
+			verNum := VersionNumericId(ver)
+			if verNum <= lastNum {
+				t.Errorf("Version %s < %s (%d < %d), expected %s > %s",
+					ver, vnumOrder[i-1],
+					verNum, lastNum,
+					vnumOrder[i-1], ver)
+			}
+			lastNum = verNum
+		}
+	}
+}
+
 var qualSplitTests = [][]string{
 	{"", "", "", ""},
 	{"a", "a", "", ""},
 	{"a0", "a", "0", ""},
 	{"a0-263", "a", "0", "263"},
 	{"pow2-263", "pow", "2", "263"},
+	{"34-g666c3a1", "", "", "34"},
 }
 
 func TestSplitQualifier(t *testing.T) {
@@ -99,6 +119,22 @@ func TestExpandVersionKey(t *testing.T) {
 		if actual != test[1] {
 			t.Errorf("ExpandVersionKey(%s) = %s, expected %s",
 				test[0], actual, test[1])
+		}
+	}
+}
+
+func TestSplitVersionQualifier(t *testing.T) {
+	var tests = [][]string{
+		{"0.15.0-34-g666c3a1", "0.15.0", "34-g666c3a1"},
+		{"0.8.0-rc1", "0.8.0", "rc1"},
+		{"0.1.7", "0.1.7", ""},
+	}
+	for _, test := range tests {
+		v := test[0]
+		a, b := SplitVersionQualifier(v)
+		if a != test[1] || b != test[2] {
+			t.Errorf("SplitVersionQualifier(%#v) = (%#v, %#v); want (%#v, %#v)",
+				v, a, b, test[1], test[2])
 		}
 	}
 }
