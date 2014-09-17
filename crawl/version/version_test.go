@@ -8,6 +8,7 @@ import (
 func TestVnumOrder(t *testing.T) {
 	var vnumOrderTests = [][]string{
 		{"0.15.0-9-g1a96a59", "0.15.0-34-g666c3a1", "0.15.1"},
+		{"0.15.0", "0.15.0-9-g1a96a59", "0.15.0-34-g666c3a1"},
 	}
 	for _, vnumOrder := range vnumOrderTests {
 		var lastNum uint64
@@ -17,7 +18,7 @@ func TestVnumOrder(t *testing.T) {
 				t.Errorf("Version %s < %s (%d < %d), expected %s > %s",
 					ver, vnumOrder[i-1],
 					verNum, lastNum,
-					vnumOrder[i-1], ver)
+					ver, vnumOrder[i-1])
 			}
 			lastNum = verNum
 		}
@@ -66,12 +67,12 @@ func TestFullVersion(t *testing.T) {
 }
 
 var versionNumericIds = [][]string{
-	{"0.1.7", "100799999999"},
+	{"0.1.7", "100799000000"},
 	{"0.8.0-a0", "800001000000"},
 	{"0.8.0-rc1", "800018010000"},
-	{"0.9.0", "900099999999"},
-	{"0.9", "900099999999"},
-	{"0.10.4", "1000499999999"},
+	{"0.9.0", "900099000000"},
+	{"0.9", "900099000000"},
+	{"0.10.4", "1000499000000"},
 }
 
 func TestVersionNumericId(t *testing.T) {

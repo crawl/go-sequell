@@ -115,7 +115,7 @@ func versionNumberize(versionParts []string) uint64 {
 
 func versionQualifierNumberize(qualifier string) uint64 {
 	if qualifier == "" {
-		return 1e8 - 1
+		return 99 * 1e6
 	}
 
 	prefix, major, minor := SplitQualifierPrefixMajorMinor(qualifier)
@@ -127,7 +127,7 @@ func versionQualifierNumberize(qualifier string) uint64 {
 
 func alphaPrefixNumberize(prefix string) uint64 {
 	if prefix == "" {
-		return 0
+		return 99
 	}
 	return uint64(prefix[0] - 'a' + 1)
 }
