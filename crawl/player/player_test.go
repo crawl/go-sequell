@@ -1,19 +1,28 @@
 package player
 
-import "testing"
+import (
+	"testing"
 
-var raceNormTests = [][]string{
-	{"Ogre", "Ogre"},
-	{"Red Draconian", "Draconian"},
-}
+	"github.com/greensnark/go-sequell/crawl/data"
+)
 
-func TestNormalizeRace(t *testing.T) {
-	for _, raceNorm := range raceNormTests {
-		race, normalized := raceNorm[0], raceNorm[1]
-		res := NormalizeRace(race)
-		if res != normalized {
-			t.Errorf("NormalizeRace(%#v) == %#v, expected %#v",
-				race, res, normalized)
+var norm = NewCharNormalizer(
+	data.Crawl.Map("species"),
+	data.Crawl.Map("classes"))
+
+func TestNormalizeChar(t *testing.T) {
+	var tests = []struct {
+		race, class, expected string
+	}{
+		{"Draconian", "Reaver", "DrRe"},
+		{"Ghoul", "Skald", "GhSk"},
+		{"Gherkin", "Fighter", ""},
+	}
+	for _, test := range tests {
+		actual := norm.NormalizeChar(test.race, test.class, "")
+		if actual != test.expected {
+			t.Errorf("NormalizeChar(%#v,%#v,%#v) = %#v; want %#v",
+				test.race, test.class, "", actual, test.expected)
 		}
 	}
 }

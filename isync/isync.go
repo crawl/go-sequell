@@ -13,6 +13,7 @@ import (
 
 	"github.com/greensnark/go-sequell/crawl/data"
 	"github.com/greensnark/go-sequell/crawl/db"
+	"github.com/greensnark/go-sequell/crawl/xlogtools"
 	"github.com/greensnark/go-sequell/fnotify"
 	"github.com/greensnark/go-sequell/loader"
 	"github.com/greensnark/go-sequell/logfetch"
@@ -99,7 +100,8 @@ func (l *Sync) gameTypePrefixes() map[string]string {
 }
 
 func (l *Sync) newLoader() *loader.Loader {
-	return loader.New(l.DB, l.Servers, l.Schema, l.gameTypePrefixes())
+	norm := xlogtools.MustBuildNormalizer(l.CrawlData)
+	return loader.New(l.DB, l.Servers, l.Schema, norm, l.gameTypePrefixes())
 }
 
 // Run monitors stdin for commands.

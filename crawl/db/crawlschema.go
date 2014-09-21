@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/greensnark/go-sequell/conv"
 	"github.com/greensnark/go-sequell/qyaml"
 	"github.com/greensnark/go-sequell/schema"
 )
@@ -153,7 +154,7 @@ func (s *CrawlSchema) ParseCompositeIndexes(name string, fields []*Field, schema
 	}
 
 	for i, def := range indexDefs {
-		fields := qyaml.IStringSlice(def)
+		fields := conv.IStringSlice(def)
 		if len(fields) == 0 {
 			return nil, fmt.Errorf("No fields defined for index on %s with spec %#v\n",
 				name, def)
@@ -172,18 +173,18 @@ func (s *CrawlSchema) ParseCompositeIndexes(name string, fields []*Field, schema
 func (s *CrawlSchema) ParseLookupTable(name string, defn interface{}) error {
 	switch tdef := defn.(type) {
 	case []interface{}:
-		fields, err := s.ParseFields(qyaml.IStringSlice(tdef))
+		fields, err := s.ParseFields(conv.IStringSlice(tdef))
 		if err != nil {
 			return err
 		}
 		s.AddLookupTable(name, s.markReferenceFields(fields), nil)
 	case map[interface{}]interface{}:
-		fields, err := s.ParseFields(qyaml.IStringSlice(tdef["fields"]))
+		fields, err := s.ParseFields(conv.IStringSlice(tdef["fields"]))
 		if err != nil {
 			return err
 		}
 		generatedFields, err := s.ParseFields(
-			qyaml.IStringSlice(tdef["generated-fields"]))
+			conv.IStringSlice(tdef["generated-fields"]))
 		if err != nil {
 			return err
 		}

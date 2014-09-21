@@ -301,5 +301,12 @@ func defineCommands(app *cli.App) {
 				reportError(db.RenumberVersions(dbSpec(c)))
 			},
 		},
+		{
+			Name:  "fix-char",
+			Usage: "fix incorrcet `char` fields using crace and cls",
+			Action: func(c *cli.Context) {
+				reportError(db.FixCharFields(dbSpec(c)))
+			},
+		},
 	}
 }

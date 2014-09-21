@@ -4,9 +4,9 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/greensnark/go-sequell/conv"
 	"github.com/greensnark/go-sequell/crawl/data"
 	"github.com/greensnark/go-sequell/crawl/version"
-	"github.com/greensnark/go-sequell/qyaml"
 )
 
 var gameTypeMatcher = createTextTypeMatcher(data.Crawl.Map("game-type-tags"))
@@ -105,7 +105,7 @@ func createTextTypeMatcher(typeTagsMap map[interface{}]interface{}) TextTypeLook
 		case string:
 			matchers = append(matchers, createTypeMatcher([]string{tags}, textType))
 		case []interface{}:
-			matchers = append(matchers, createTypeMatcher(qyaml.IStringSlice(tags), textType))
+			matchers = append(matchers, createTypeMatcher(conv.IStringSlice(tags), textType))
 		}
 	}
 	lookup.TypeMatchers = matchers

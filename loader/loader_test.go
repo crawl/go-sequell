@@ -1,6 +1,7 @@
 package loader
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/greensnark/go-sequell/crawl/data"
@@ -16,6 +17,7 @@ func createLoader() (*Loader, error) {
 		return nil, err
 	}
 	return New(testConn(), srv, testSchema,
+		xlogtools.MustBuildNormalizer(data.Crawl),
 		data.Crawl.StringMap("game-type-prefixes")), nil
 }
 
@@ -66,8 +68,8 @@ func createSingleFileLoader(file string) (*Loader, error) {
 		Type:        xlogtools.Log,
 		TargetPath:  file,
 	}
-	ldr.Readers = []Reader{
-		Reader{
+	ldr.Readers = []*Reader{
+		&Reader{
 			XlogReader: xlog.Reader(src.TargetPath),
 			XlogSrc:    src,
 			Table:      ldr.TableName(src),
@@ -77,6 +79,7 @@ func createSingleFileLoader(file string) (*Loader, error) {
 }
 
 func purgeTables(db pg.DB) error {
+	fmt.Println("Purging tables")
 	sch := testSchema.Schema().Sort()
 	for i := len(sch.Tables) - 1; i >= 0; i-- {
 		t := sch.Tables[i]
@@ -84,6 +87,7 @@ func purgeTables(db pg.DB) error {
 			return err
 		}
 	}
+	fmt.Println("Done purging tables")
 	return nil
 }
 
@@ -98,6 +102,7 @@ func TestLoader(t *testing.T) {
 		t.Errorf("Error purging tables: %s", err)
 	}
 
+	fmt.Println("Loading logs")
 	if err := ldr.LoadCommit(); err != nil {
 		t.Errorf("Error loading logs: %s\n", err)
 	}

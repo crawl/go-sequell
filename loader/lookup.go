@@ -117,7 +117,7 @@ func (t *TableLookup) Add(x xlog.Xlog) {
 		}
 	}
 	for _, f := range t.fieldNames {
-		t.AddLookup(x[f], derivedFieldValues, x)
+		t.AddLookup(x[f], derivedFieldValues)
 	}
 }
 
@@ -129,7 +129,7 @@ func (t *TableLookup) LookupKey(lookup string) string {
 	return lookup
 }
 
-func (t *TableLookup) AddLookup(lookup string, derivedValues []string, x xlog.Xlog) {
+func (t *TableLookup) AddLookup(lookup string, derivedValues []string) {
 	key := t.LookupKey(lookup)
 	if _, ok := t.idCache.Get(key); ok {
 		return

@@ -3,6 +3,7 @@ package xlogtools
 import (
 	"testing"
 
+	"github.com/greensnark/go-sequell/crawl/data"
 	"github.com/greensnark/go-sequell/xlog"
 )
 
@@ -31,12 +32,57 @@ var normXlogTest = [][]xlog.Xlog{
 			"start":     "20140001123755S",
 		},
 	},
+	{
+		xlog.Xlog{
+			"race": "Red Draconian",
+		},
+		xlog.Xlog{
+			"crace": "Draconian",
+			"race":  "Red Draconian",
+		},
+	},
+	{
+		xlog.Xlog{
+			"sk": "Transmigration",
+		},
+		xlog.Xlog{
+			"sk": "Transmutations",
+		},
+	},
+	{
+		xlog.Xlog{
+			"sk": "Translocations",
+		},
+		xlog.Xlog{
+			"sk": "Translocations",
+		},
+	},
+	{
+		xlog.Xlog{
+			"race": "Grotesk",
+		},
+		xlog.Xlog{
+			"race":  "Grotesk",
+			"crace": "Gargoyle",
+		},
+	},
+	{
+		xlog.Xlog{
+			"race": "Kenku",
+		},
+		xlog.Xlog{
+			"race":  "Kenku",
+			"crace": "Tengu",
+		},
+	},
 }
+
+var norm = MustBuildNormalizer(data.Crawl)
 
 func TestNormalizeLog(t *testing.T) {
 	for _, test := range normXlogTest {
 		log, expected := test[0], test[1]
-		normalized, err := NormalizeLog(log.Clone())
+		normalized, err := norm.NormalizeLog(log.Clone())
 		if err != nil {
 			t.Errorf("NormalizeLog(%v) failed: %v\n", log, err)
 			continue

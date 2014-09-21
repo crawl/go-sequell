@@ -220,7 +220,8 @@ func LoadLogs(db pg.ConnSpec, sourceDir string) error {
 	}
 	defer action.DBLock.Unlock()
 
-	ldr := loader.New(c, sources, CrawlSchema(),
+	logNorm := xlogtools.MustBuildNormalizer(data.Crawl)
+	ldr := loader.New(c, sources, CrawlSchema(), logNorm,
 		data.Crawl.StringMap("game-type-prefixes"))
 
 	if sourceDir != "" {

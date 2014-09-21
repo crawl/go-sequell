@@ -1,7 +1,6 @@
 package xlogtools
 
 import (
-	"errors"
 	"regexp"
 	"strconv"
 	"strings"
@@ -12,6 +11,8 @@ import (
 	"github.com/greensnark/go-sequell/crawl/place"
 	"github.com/greensnark/go-sequell/crawl/player"
 	"github.com/greensnark/go-sequell/crawl/version"
+	"github.com/greensnark/go-sequell/qyaml"
+	"github.com/greensnark/go-sequell/stringnorm"
 	"github.com/greensnark/go-sequell/text"
 	"github.com/greensnark/go-sequell/xlog"
 )
@@ -23,8 +24,6 @@ const (
 	Log
 	Milestone
 )
-
-var ErrNoSrc = errors.New("`src` field is not set")
 
 func (x XlogType) String() string {
 	switch x {
@@ -65,10 +64,38 @@ func ValidXlog(log xlog.Xlog) bool {
 		(log["end"] != "" || log["time"] != "")
 }
 
-func NormalizeLog(log xlog.Xlog) (xlog.Xlog, error) {
-	if _, exists := log["src"]; !exists {
-		return log, ErrNoSrc
+type Normalizer struct {
+	CrawlData qyaml.Yaml
+	GodNorm   stringnorm.Normalizer
+	PlaceNorm stringnorm.Normalizer
+	CharNorm  *player.CharNormalizer
+	FieldGens []*FieldGen
+}
+
+func MustBuildNormalizer(crawlData qyaml.Yaml) *Normalizer {
+	norm, err := BuildNormalizer(crawlData)
+	if err != nil {
+		panic(err)
 	}
+	return norm
+}
+
+func BuildNormalizer(crawlData qyaml.Yaml) (*Normalizer, error) {
+	fieldGen, err := ParseFieldGenerators(crawlData.Map("field-input-transforms"))
+	if err != nil {
+		return nil, err
+	}
+	return &Normalizer{
+		CrawlData: crawlData,
+		GodNorm:   god.Normalizer(crawlData.StringMap("god-aliases")),
+		PlaceNorm: place.Normalizer(crawlData.StringMap("place-fixups")),
+		CharNorm:  player.StockCharNormalizer(crawlData),
+		FieldGens: fieldGen,
+	}, nil
+}
+
+func (n *Normalizer) NormalizeLog(log xlog.Xlog) (xlog.Xlog, error) {
+	n.CanonicalizeFields(log)
 
 	log["v"] = version.FullVersion(log["v"])
 	log["cv"] = version.MajorVersion(log["v"])
@@ -87,11 +114,13 @@ func NormalizeLog(log xlog.Xlog) (xlog.Xlog, error) {
 	if log["ntv"] == "" {
 		log["ntv"] = "0"
 	}
-	log["place"] = place.CanonicalPlace(log["place"])
-	log["oplace"] = place.CanonicalPlace(log["oplace"])
-	log["br"] = place.CanonicalPlace(log["br"])
-	log["god"] = god.CanonicalGod(log["god"])
-	log["crace"] = player.NormalizeRace(log["race"])
+	log["place"] = stringnorm.NormalizeNoErr(n.PlaceNorm, log["place"])
+	log["oplace"] = stringnorm.NormalizeNoErr(n.PlaceNorm, log["oplace"])
+	log["br"] = stringnorm.NormalizeNoErr(n.PlaceNorm, log["br"])
+	if god, err := n.GodNorm.Normalize(log["god"]); err == nil {
+		log["god"] = god
+	}
+	log["char"] = n.CharNorm.NormalizeChar(log["crace"], log["cls"], log["char"])
 	log["rstart"] = log["start"]
 	log["game_key"] = log["name"] + ":" + log["src"] + ":" + log["rstart"]
 
@@ -117,8 +146,6 @@ func NormalizeLog(log xlog.Xlog) (xlog.Xlog, error) {
 		log["ckaux"] = killer.NormalizeKaux(log["kaux"])
 		log["rend"] = log["end"]
 	}
-
-	CanonicalizeFields(log)
 	sanitizeGold(log)
 
 	return log, nil
@@ -250,22 +277,9 @@ func ShaftedPlace(shaftMsg string) string {
 	return textReSubmatch(shaftMsg, rShaftedPlace, 1)
 }
 
-var fieldInputTransforms = data.Crawl.Map("field-input-transforms")
-
-func CanonicalizeFields(log xlog.Xlog) {
-	for field, transforms := range fieldInputTransforms {
-		fieldname := field.(string)
-		if value, ok := log[fieldname]; ok {
-			transformMap := transforms.(map[interface{}]interface{})
-			for isearch, ireplace := range transformMap {
-				search := isearch.(string)
-				replace := ireplace.(string)
-				if value == search {
-					value = replace
-				}
-			}
-			log[fieldname] = value
-		}
+func (n *Normalizer) CanonicalizeFields(log xlog.Xlog) {
+	for _, gen := range n.FieldGens {
+		gen.Apply(log)
 	}
 }
 

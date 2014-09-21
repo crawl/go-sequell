@@ -1,11 +1,12 @@
 package unique
 
 import (
-	"github.com/greensnark/go-sequell/crawl/data"
-	"github.com/greensnark/go-sequell/qyaml"
 	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/greensnark/go-sequell/conv"
+	"github.com/greensnark/go-sequell/crawl/data"
 )
 
 var dataLock = &sync.Mutex{}
@@ -19,7 +20,7 @@ func uniqueMap() map[string]bool {
 	defer dataLock.Unlock()
 
 	if uniqueMapData == nil {
-		uniqueMapData = qyaml.StringSliceSet(data.Uniques())
+		uniqueMapData = conv.StringSliceSet(data.Uniques())
 	}
 	return uniqueMapData
 }
@@ -29,7 +30,7 @@ func orcMap() map[string]bool {
 	defer dataLock.Unlock()
 
 	if orcMapData == nil {
-		orcMapData = qyaml.StringSliceSet(data.Orcs())
+		orcMapData = conv.StringSliceSet(data.Orcs())
 	}
 	return orcMapData
 }

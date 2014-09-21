@@ -28,6 +28,7 @@ type Loader struct {
 	Readers          []*Reader
 	GameTypePrefixes map[string]string
 	RowCount         int64
+	LogNorm          *xlogtools.Normalizer
 
 	tableLookups        map[string][]*TableLookup
 	tableInsertFields   map[string][]*db.Field
@@ -44,12 +45,13 @@ type Reader struct {
 	Table string
 }
 
-func New(db pg.DB, srv *sources.Servers, sch *db.CrawlSchema, gameTypePrefixes map[string]string) *Loader {
+func New(db pg.DB, srv *sources.Servers, sch *db.CrawlSchema, norm *xlogtools.Normalizer, gameTypePrefixes map[string]string) *Loader {
 	l := &Loader{
 		Servers:          srv,
 		DB:               db,
 		Schema:           sch,
 		GameTypePrefixes: gameTypePrefixes,
+		LogNorm:          norm,
 	}
 	l.init()
 	return l
@@ -260,7 +262,7 @@ func (l *Loader) NormalizeLog(x xlog.Xlog, reader *Reader) error {
 	delete(x, ":offset")
 
 	var err error
-	_, err = xlogtools.NormalizeLog(x)
+	_, err = l.LogNorm.NormalizeLog(x)
 	if err != nil {
 		return err
 	}

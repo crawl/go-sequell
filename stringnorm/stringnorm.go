@@ -37,6 +37,21 @@ func Normalize(normalizers []Normalizer, text string) (string, error) {
 	return List(normalizers).Normalize(text)
 }
 
+// Combine combines a list of normalizers into a single Normalizer
+// instance that applies each normalizer in order as a List does.
+func Combine(normalizers ...Normalizer) Normalizer {
+	combined := make(List, 0, len(normalizers))
+	for _, norm := range normalizers {
+		if norm != nil {
+			combined = append(combined, norm)
+		}
+	}
+	if len(combined) == 1 {
+		return combined[0]
+	}
+	return combined
+}
+
 func NormalizeNoErr(normalizer Normalizer, text string) string {
 	res, err := normalizer.Normalize(text)
 	if err != nil {

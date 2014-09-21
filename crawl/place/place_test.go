@@ -2,7 +2,12 @@ package place
 
 import (
 	"testing"
+
+	"github.com/greensnark/go-sequell/crawl/data"
+	"github.com/greensnark/go-sequell/stringnorm"
 )
+
+var norm = Normalizer(data.Crawl.StringMap("place-fixups"))
 
 func TestCanonicalPlace(t *testing.T) {
 	cases := [][]string{
@@ -13,7 +18,7 @@ func TestCanonicalPlace(t *testing.T) {
 		{"Labyrinth", "Lab"},
 	}
 	for _, test := range cases {
-		actual := CanonicalPlace(test[0])
+		actual := stringnorm.NormalizeNoErr(norm, test[0])
 		if actual != test[1] {
 			t.Errorf("CanonicalPlace(%v) == %v, expected %v",
 				test[0], actual, test[1])

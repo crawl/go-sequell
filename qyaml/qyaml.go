@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/greensnark/go-sequell/conv"
 	"github.com/greensnark/go-sequell/text"
 	"gopkg.in/v1/yaml"
 )
@@ -63,43 +64,11 @@ func (y Yaml) Slice(key string) []interface{} {
 }
 
 func (y Yaml) StringSlice(key string) []string {
-	return IStringSlice(y.Key(key))
+	return conv.IStringSlice(y.Key(key))
 }
 
 func (y Yaml) StringMap(key string) map[string]string {
-	return IStringMap(y.Key(key))
-}
-
-func IStringMap(v interface{}) map[string]string {
-	res := map[string]string{}
-	if keyMap, ok := v.(map[interface{}]interface{}); ok {
-		for key, value := range keyMap {
-			res[text.Str(key)] = text.Str(value)
-		}
-	}
-	return res
-}
-
-func IStringSlice(islice interface{}) []string {
-	if islice == nil {
-		return nil
-	}
-	if slice, ok := islice.([]interface{}); ok {
-		sarr := make([]string, len(slice))
-		for i, v := range slice {
-			sarr[i] = text.Str(v)
-		}
-		return sarr
-	}
-	return nil
-}
-
-func StringSliceSet(slice []string) map[string]bool {
-	res := make(map[string]bool)
-	for _, val := range slice {
-		res[val] = true
-	}
-	return res
+	return conv.IStringMap(y.Key(key))
 }
 
 func ResolveMapKey(m map[interface{}]interface{}, key string) interface{} {
