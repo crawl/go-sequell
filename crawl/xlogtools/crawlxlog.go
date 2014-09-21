@@ -132,6 +132,7 @@ var milestoneVerbMap = data.Crawl.StringMap("milestone-verb-mappings")
 var rActionWord = regexp.MustCompile(`(\w+) (.*?)\.?$`)
 var rGhostWord = regexp.MustCompile(`(\w+) the ghost of (\S+)`)
 var rAbyssCause = regexp.MustCompile(`\((.*?)\)$`)
+var rSacrificedThing = regexp.MustCompile(`sacrificed (?:an? )?(.*)[!.]$`)
 
 func NormalizeMilestoneFields(log xlog.Xlog) {
 	verb := log["verb"]
@@ -142,6 +143,11 @@ func NormalizeMilestoneFields(log xlog.Xlog) {
 
 	noun := log["noun"]
 	switch verb {
+	case "sacrifice":
+		sacMatch := rSacrificedThing.FindStringSubmatch(noun)
+		if sacMatch != nil {
+			noun = strings.TrimSpace(sacMatch[1])
+		}
 	case "uniq":
 		actionMatch := rActionWord.FindStringSubmatch(noun)
 		if actionMatch != nil {
