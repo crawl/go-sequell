@@ -132,7 +132,7 @@ var milestoneVerbMap = data.Crawl.StringMap("milestone-verb-mappings")
 var rActionWord = regexp.MustCompile(`(\w+) (.*?)\.?$`)
 var rGhostWord = regexp.MustCompile(`(\w+) the ghost of (\S+)`)
 var rAbyssCause = regexp.MustCompile(`\((.*?)\)$`)
-var rSacrificedThing = regexp.MustCompile(`sacrificed (?:an? )?(.*)[!.]$`)
+var rSacrificedThing = regexp.MustCompile(`sacrificed (?:an? )?(\w+)`)
 
 func NormalizeMilestoneFields(log xlog.Xlog) {
 	verb := log["verb"]
