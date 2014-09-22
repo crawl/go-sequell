@@ -1,9 +1,10 @@
 package killer
 
 import (
+	"regexp"
+
 	"github.com/greensnark/go-sequell/crawl/unique"
 	"github.com/greensnark/go-sequell/grammar"
-	"regexp"
 )
 
 type uniqueNormalizer struct{}
@@ -14,6 +15,10 @@ var reProperName = regexp.MustCompile(`^(\p{Lu}[\p{L}\p{N}']*(?: \p{Lu}[\p{L}\p{
 var reNameWithTitle = regexp.MustCompile(` the (.*)$`)
 
 func (u uniqueNormalizer) NormalizeKiller(killer string, killerName string, killerFlags string) (string, error) {
+	// Reject ghosts and illusions:
+	if killer == "a player ghost" || killer == "a player illusion" {
+		return killer, nil
+	}
 	if killerName != "" && reStartsWithUppercase.FindString(killerName) != "" {
 		properName := reProperName.FindString(killer)
 		titleMatch := reNameWithTitle.FindStringSubmatch(killer)

@@ -11,7 +11,7 @@ var killerTests = []struct {
 	{"a two-headed hydra", "a hydra"},
 	{"a 12-headed hydra", "a hydra"},
 	{"the 27-headed Lernaean hydra zombie", "the Lernaean hydra zombie"},
-	{"foobar's ghost", "a player ghost"},
+	{"Foobar's ghost", "a player ghost"},
 	{"ackbar's illusion", "a player illusion"},
 	{"a red draconian shifter", "a draconian shifter"},
 	{"a yak (shapeshifter)", "a shapeshifter"},
