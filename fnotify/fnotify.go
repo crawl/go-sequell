@@ -63,7 +63,7 @@ selectLoop:
 
 				if (event.Op & fsnotify.Remove) != 0 {
 					if err := watcher.Add(event.Name); err != nil {
-						log.Println("watcher", n.name, "cannot re-monitor", event.Name, "abandoning it")
+						log.Println("watcher", n.name, "cannot re-monitor", event.Name, err)
 					}
 				}
 			}
