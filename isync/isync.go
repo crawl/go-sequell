@@ -158,16 +158,16 @@ func (l *Sync) startBackgroundTasks() {
 }
 
 func (l *Sync) startMasterTasks() {
-	l.masterWaitGroup.Add(2)
 	l.monitorConfigs()
+	l.masterWaitGroup.Add(1)
 	go l.reloadConfigs()
 }
 
 func (l *Sync) startSlaveTasks() {
 	// The three main goroutines that need to be restarted when a
 	// config changes:
-	l.slaveWaitGroup.Add(3)
 	l.monitorLogs()
+	l.slaveWaitGroup.Add(2)
 	go l.readLogs()
 	go l.monitorFetchRequests()
 }
@@ -247,6 +247,7 @@ func (l *Sync) monitorConfigs() {
 	}
 	l.configWatcher = fnotify.New("config")
 	l.configWatcher.Debounce = time.Millisecond * 5000
+	l.masterWaitGroup.Add(1)
 	go func() {
 		l.configWatcher.Notify(configs, l.changedConfigFiles)
 		log.Println("config monitor exiting")
@@ -256,6 +257,7 @@ func (l *Sync) monitorConfigs() {
 
 func (l *Sync) monitorLogs() {
 	l.logFileWatcher = fnotify.New("logs")
+	l.slaveWaitGroup.Add(1)
 	go func() {
 		l.logFileWatcher.Notify([]string{l.CacheDir}, l.changedLogFiles)
 		log.Println("log monitor exiting")

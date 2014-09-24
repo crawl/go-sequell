@@ -57,13 +57,20 @@ selectLoop:
 			if event.Name == "" {
 				break selectLoop
 			}
-			if event.Op&(fsnotify.Create|fsnotify.Write|fsnotify.Rename) != 0 {
-				pendingChanges[event.Name] = true
-			}
 			throttler.Reset(n.Debounce)
+			if event.Op&(fsnotify.Create|fsnotify.Write|fsnotify.Rename|fsnotify.Remove) != 0 {
+				pendingChanges[event.Name] = true
+
+				if (event.Op & fsnotify.Remove) != 0 {
+					if err := watcher.Add(event.Name); err != nil {
+						log.Println("watcher", n.name, "cannot re-monitor", event.Name, "abandoning it")
+					}
+				}
+			}
 		case <-throttleChan():
 			for file := range pendingChanges {
 				delete(pendingChanges, file)
+				log.Println("Firing pending change for", file)
 				res <- file
 			}
 		case err := <-watcher.Errors:
