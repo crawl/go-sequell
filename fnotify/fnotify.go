@@ -57,7 +57,7 @@ selectLoop:
 			if event.Name == "" {
 				break selectLoop
 			}
-			if event.Op&(fsnotify.Create|fsnotify.Write) != 0 {
+			if event.Op&(fsnotify.Create|fsnotify.Write|fsnotify.Rename) != 0 {
 				pendingChanges[event.Name] = true
 			}
 			throttler.Reset(n.Debounce)
