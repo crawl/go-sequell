@@ -8,19 +8,22 @@ import (
 )
 
 type Notifier struct {
-	name     string
-	watcher  *fsnotify.Watcher
-	Debounce time.Duration
-	shutdown chan bool
+	name           string
+	watcher        *fsnotify.Watcher
+	Debounce       time.Duration
+	RemonitorDelay time.Duration
+	shutdown       chan bool
 }
 
 const DefaultDebounce = 250 * time.Millisecond
+const DefaultRemonitorDelay = 500 * time.Millisecond
 
 func New(name string) *Notifier {
 	return &Notifier{
-		name:     name,
-		Debounce: DefaultDebounce,
-		shutdown: make(chan bool, 1),
+		name:           name,
+		Debounce:       DefaultDebounce,
+		RemonitorDelay: DefaultRemonitorDelay,
+		shutdown:       make(chan bool, 1),
 	}
 }
 
@@ -41,13 +44,21 @@ func (n *Notifier) Notify(files []string, res chan<- string) error {
 	}
 
 	pendingChanges := map[string]bool{}
+	filesToRemonitor := map[string]bool{}
 
 	throttler := time.NewTimer(n.Debounce)
+	remonitorTimer := time.NewTimer(n.RemonitorDelay)
 	throttleChan := func() <-chan time.Time {
 		if len(pendingChanges) == 0 {
 			return nil
 		}
 		return throttler.C
+	}
+	remonitorChan := func() <-chan time.Time {
+		if len(filesToRemonitor) == 0 {
+			return nil
+		}
+		return remonitorTimer.C
 	}
 
 selectLoop:
@@ -62,10 +73,16 @@ selectLoop:
 				pendingChanges[event.Name] = true
 
 				if (event.Op & fsnotify.Remove) != 0 {
-					if err := watcher.Add(event.Name); err != nil {
-						log.Println("watcher", n.name, "cannot re-monitor", event.Name, err)
-					}
+					filesToRemonitor[event.Name] = true
+					remonitorTimer.Reset(n.RemonitorDelay)
 				}
+			}
+		case <-remonitorChan():
+			for file := range filesToRemonitor {
+				if err := watcher.Add(file); err != nil {
+					log.Println("watcher", n.name, "cannot re-monitor", file, err)
+				}
+				delete(filesToRemonitor, file)
 			}
 		case <-throttleChan():
 			for file := range pendingChanges {
