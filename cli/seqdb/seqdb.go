@@ -303,9 +303,20 @@ func defineCommands(app *cli.App) {
 		},
 		{
 			Name:  "fix-char",
-			Usage: "fix incorrcet `char` fields using crace and cls",
+			Usage: "fix incorrect `char` fields using crace and cls",
 			Action: func(c *cli.Context) {
 				reportError(db.FixCharFields(dbSpec(c)))
+			},
+		},
+		{
+			Name:  "fix-field",
+			Usage: "fix incorrect field",
+			Action: func(c *cli.Context) {
+				if len(c.Args()) <= 0 {
+					reportError(fmt.Errorf("field to fix not specified"))
+					return
+				}
+				reportError(db.FixField(dbSpec(c), c.Args()[0]))
 			},
 		},
 	}

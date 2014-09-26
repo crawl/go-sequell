@@ -4,13 +4,13 @@ import (
 	"regexp"
 )
 
-type regexpNormalizer struct {
-	regexp      *regexp.Regexp
-	replacement string
+type RegexpNormalizer struct {
+	Regexp      *regexp.Regexp
+	Replacement string
 }
 
 func Reg(regexp *regexp.Regexp, replacement string) Normalizer {
-	return &regexpNormalizer{regexp: regexp, replacement: replacement}
+	return &RegexpNormalizer{Regexp: regexp, Replacement: replacement}
 }
 
 func StaticReg(re, replacement string) Normalizer {
@@ -21,6 +21,6 @@ func SR(re, replacement string) Normalizer {
 	return StaticReg(re, replacement)
 }
 
-func (r *regexpNormalizer) Normalize(text string) (string, error) {
-	return r.regexp.ReplaceAllString(text, r.replacement), nil
+func (r *RegexpNormalizer) Normalize(text string) (string, error) {
+	return r.Regexp.ReplaceAllString(text, r.Replacement), nil
 }

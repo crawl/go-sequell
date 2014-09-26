@@ -64,6 +64,20 @@ func LoadSchema(schemaDef qyaml.Yaml) (*CrawlSchema, error) {
 	return &schema, nil
 }
 
+func (s *CrawlSchema) PrefixedTablesWithField(field string) []*CrawlTable {
+	res := []*CrawlTable{}
+	for _, t := range s.Tables {
+		if t.FindField(field) != nil {
+			for _, variant := range s.TableVariantPrefixes {
+				copy := *t
+				copy.Name = variant + copy.Name
+				res = append(res, &copy)
+			}
+		}
+	}
+	return res
+}
+
 func (s *CrawlSchema) LookupTable(name string) *LookupTable {
 	for _, lt := range s.LookupTables {
 		if lt.Name == name {
@@ -291,6 +305,15 @@ func (s *CrawlSchema) SchemaTables() []*schema.Table {
 	}
 
 	return tables
+}
+
+func (t *CrawlTable) FindField(name string) *Field {
+	for _, f := range t.Fields {
+		if f.Name == name {
+			return f
+		}
+	}
+	return nil
 }
 
 func (t *CrawlTable) SchemaTablePrefixed(prefix string) *schema.Table {
