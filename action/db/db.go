@@ -241,7 +241,6 @@ func forceSourceDir(srv *sources.Servers, dir string) error {
 	// Zap all logs and milestones
 	for _, server := range srv.Servers {
 		server.Logfiles = nil
-		server.Milestones = nil
 	}
 
 	sourceMap := map[string][]*sources.XlogSrc{}
@@ -274,17 +273,7 @@ func forceSourceDir(srv *sources.Servers, dir string) error {
 
 	for src, xlogs := range sourceMap {
 		server := srv.Server(src)
-		logs := []*sources.XlogSrc{}
-		milestones := []*sources.XlogSrc{}
-		for _, x := range xlogs {
-			if x.Type == xlogtools.Milestone {
-				milestones = append(milestones, x)
-			} else {
-				logs = append(logs, x)
-			}
-		}
-		server.Logfiles = logs
-		server.Milestones = milestones
+		server.Logfiles = xlogs
 	}
 	return nil
 }

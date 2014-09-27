@@ -18,6 +18,20 @@ func Sources(sources qyaml.Yaml, cachedir string) (*Servers, error) {
 	}.Parse()
 }
 
+func DuplicateXlogTargets(xlogs []*XlogSrc) []string {
+	pathCounts := map[string][]string{}
+	for _, x := range xlogs {
+		pathCounts[x.TargetPath] = append(pathCounts[x.TargetPath], x.Url)
+	}
+	dupes := []string{}
+	for path, urls := range pathCounts {
+		if len(urls) > 1 {
+			dupes = append(dupes, path+" ("+strings.Join(urls, ", ")+")")
+		}
+	}
+	return dupes
+}
+
 type sourceYamlParser struct {
 	sources  []interface{}
 	cachedir string
@@ -62,11 +76,7 @@ func (s serverParser) Parse() (*Server, error) {
 	}
 
 	if server.Logfiles, err =
-		s.ParseXlogRefs(&server, s.server.Slice("logfiles"), xlogtools.Log); err != nil {
-		return nil, err
-	}
-	if server.Milestones, err =
-		s.ParseXlogRefs(&server, s.server.Slice("milestones"), xlogtools.Milestone); err != nil {
+		s.ParseXlogRefs(&server, s.server.Slice("logs")); err != nil {
 		return nil, err
 	}
 	return &server, nil
@@ -78,18 +88,24 @@ func (s serverParser) ParseTimeZones(tzdst map[string]string) (ctime.DstLocation
 
 func (s serverParser) ParseXlogRefs(
 	server *Server,
-	logfiles []interface{},
-	logtype xlogtools.XlogType) ([]*XlogSrc, error) {
-	return xlogSpecParser{
+	logfiles []interface{}) ([]*XlogSrc, error) {
+	xlogs, err := xlogSpecParser{
 		server:   server,
-		logtype:  logtype,
 		cachedir: s.cachedir,
 	}.Parse(logfiles)
+	if err != nil {
+		return nil, err
+	}
+	dupes := DuplicateXlogTargets(xlogs)
+	if len(dupes) > 0 {
+		return nil, fmt.Errorf("Duplicate xlog targets: %s",
+			strings.Join(dupes, ", "))
+	}
+	return xlogs, nil
 }
 
 type xlogSpecParser struct {
 	server   *Server
-	logtype  xlogtools.XlogType
 	cachedir string
 }
 
@@ -141,14 +157,11 @@ func (p xlogSpecParser) ParseXlogAliased(aliased map[interface{}]interface{}) ([
 	return res, nil
 }
 
-func (p xlogSpecParser) Table(game string, logtype xlogtools.XlogType) {
-
-}
-
 func (p xlogSpecParser) NewXlogSrc(name, qualifier string, mustSync bool) *XlogSrc {
 	game := xlogtools.XlogGame(name)
 	gameVersion := xlogtools.XlogGameVersion(name)
-	qualifiedName := xlogtools.XlogQualifiedName(p.server.Name, game, gameVersion, qualifier, p.logtype)
+	logtype := xlogtools.FileType(name)
+	qualifiedName := xlogtools.XlogQualifiedName(p.server.Name, game, gameVersion, qualifier, logtype)
 	localPath := ""
 	if p.server.LocalPathBase != "" {
 		localPath = path.Join(p.server.LocalPathBase, name)
@@ -161,7 +174,7 @@ func (p xlogSpecParser) NewXlogSrc(name, qualifier string, mustSync bool) *XlogS
 		Url:         UrlJoin(p.server.BaseURL, name),
 		LocalPath:   localPath,
 		Live:        mustSync,
-		Type:        p.logtype,
+		Type:        logtype,
 		Game:        game,
 		GameVersion: gameVersion,
 	}

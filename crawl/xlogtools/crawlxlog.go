@@ -45,6 +45,13 @@ func (x XlogType) BaseTable() string {
 	return ""
 }
 
+func FileType(filename string) XlogType {
+	if strings.Index(strings.ToLower(filename), "milestone") != -1 {
+		return Milestone
+	}
+	return Log
+}
+
 func Type(line xlog.Xlog) XlogType {
 	if _, ok := line["type"]; ok {
 		return Milestone

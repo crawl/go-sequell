@@ -23,7 +23,6 @@ func (x *Servers) XlogSources() []*XlogSrc {
 	}
 	for _, s := range x.Servers {
 		addAll(s.Logfiles)
-		addAll(s.Milestones)
 	}
 	return sources
 }
@@ -58,7 +57,6 @@ type Server struct {
 	TimeZoneMap   ctime.DstLocation
 	UtcEpoch      time.Time
 	Logfiles      []*XlogSrc
-	Milestones    []*XlogSrc
 }
 
 func (s *Server) ParseLogTime(logtime string) (time.Time, error) {
@@ -67,9 +65,9 @@ func (s *Server) ParseLogTime(logtime string) (time.Time, error) {
 
 func (s *Server) String() string {
 	return fmt.Sprintf(
-		"%s(aliases=%#v base=%s local=%s tz=%s epoch=%s nlog=%d nmile=%d",
+		"%s(aliases=%#v base=%s local=%s tz=%s epoch=%s nlog=%d",
 		s.Name, s.Aliases, s.BaseURL, s.LocalPathBase, s.TimeZoneMap.String(),
-		s.UtcEpoch, len(s.Logfiles), len(s.Milestones))
+		s.UtcEpoch, len(s.Logfiles))
 }
 
 type XlogSrc struct {

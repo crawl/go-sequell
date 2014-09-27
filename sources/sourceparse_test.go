@@ -64,9 +64,5 @@ func TestSources(t *testing.T) {
 		for i, log := range srv.Logfiles {
 			fmt.Printf("%02d) %s\n", i+1, log)
 		}
-		n := len(cao.Logfiles)
-		for i, log := range srv.Milestones {
-			fmt.Printf("%02d) %s\n", i+1+n, log)
-		}
 	}
 }
