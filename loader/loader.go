@@ -464,8 +464,8 @@ func (l *Loader) updateFileOffsetSql(noffset int) string {
 	return buf.String()
 }
 
-// Replaces underscores in value with spaces for text values that must
-// be accessible through Sequell's query interface.
+// NormalizeValue replaces underscores in value with spaces for text
+// values that must be accessible through Sequell's query interface.
 func NormalizeValue(value string) string {
 	return strings.Replace(value, "_", " ", -1)
 }
