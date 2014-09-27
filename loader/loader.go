@@ -430,7 +430,7 @@ func (l *Loader) updateFileOffsets(tx *sql.Tx, offsets map[string]string) error 
 	values := make([]interface{}, noffsets*2)
 	i := 0
 	for file, offsetText := range offsets {
-		values[i] = file
+		values[i] = NormalizeValue(file)
 		offset, err := strconv.ParseInt(offsetText, 10, 64)
 		if err != nil {
 			return err
@@ -464,6 +464,8 @@ func (l *Loader) updateFileOffsetSql(noffset int) string {
 	return buf.String()
 }
 
+// Replaces underscores in value with spaces for text values that must
+// be accessible through Sequell's query interface.
 func NormalizeValue(value string) string {
 	return strings.Replace(value, "_", " ", -1)
 }
@@ -482,7 +484,7 @@ func loadXlogRow(row []interface{}, keys []string, defaults []string, x xlog.Xlo
 // the table, or -1 if the file is not referenced in the table.
 func (l *Loader) QuerySeekOffset(file, table string) (int64, error) {
 	var offset sql.NullInt64
-	if err := l.offsetQuery.QueryRow(file).Scan(&offset); err != nil {
+	if err := l.offsetQuery.QueryRow(NormalizeValue(file)).Scan(&offset); err != nil {
 		if err == sql.ErrNoRows {
 			return -1, nil
 		}
