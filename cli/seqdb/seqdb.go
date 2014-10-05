@@ -73,7 +73,7 @@ func reportError(err error) {
 }
 
 func fatal(msg string) {
-	fmt.Println(os.Stderr, msg)
+	fmt.Fprintln(os.Stderr, msg)
 	os.Exit(1)
 }
 
@@ -135,7 +135,7 @@ func defineCommands(app *cli.App) {
 			Flags: []cli.Flag{
 				cli.BoolFlag{
 					Name:  "only-live",
-					Usage: "fetch only logs that are believe to be live",
+					Usage: "fetch only logs that are believed to be live",
 				},
 			},
 			Action: func(c *cli.Context) {
