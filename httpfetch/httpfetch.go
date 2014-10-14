@@ -229,6 +229,10 @@ func (h *Fetcher) ResumeFileDownload(req *FetchRequest, complete chan<- *FetchRe
 
 	headers, resumePoint := fileResumeHeaders(req, file)
 	resp, err := h.FileGetResponse(req.Url, headers)
+	if err == nil && resp.StatusCode != 206 {
+		resp.Body.Close()
+		err = fmt.Errorf("expected http 206 (partial content), got %d", resp.StatusCode)
+	}
 
 	var copied int64 = 0
 	if err != nil {
