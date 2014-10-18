@@ -15,13 +15,10 @@ const DefaultUserAgent = "Sequell httpfetch/1.0"
 
 type Fetcher struct {
 	HTTPClient                   *http.Client
-	Quiet                        bool
 	ConnectTimeout               time.Duration
 	ReadTimeout                  time.Duration
 	UserAgent                    string
 	MaxConcurrentRequestsPerHost int
-	Logger                       *log.Logger
-	logWriter                    Logger
 
 	// Queues for each host, monitored by the service goroutine.
 	hostQueues       map[string]chan<- *FetchRequest
@@ -32,15 +29,12 @@ type Fetcher struct {
 // New returns a new Fetcher for parallel downloads. Fetcher
 // methods are not threadsafe.
 func New() *Fetcher {
-	writer := CreateLogger()
 	return &Fetcher{
 		HTTPClient:                   DefaultHTTPClient,
 		ConnectTimeout:               DefaultConnectTimeout,
 		ReadTimeout:                  DefaultReadTimeout,
 		UserAgent:                    DefaultUserAgent,
 		MaxConcurrentRequestsPerHost: 5,
-		logWriter:                    writer,
-		Logger:                       log.New(writer, "", log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile),
 		hostQueues:                   map[string]chan<- *FetchRequest{},
 	}
 }
@@ -55,10 +49,6 @@ var DefaultHTTPClient = &http.Client{
 	Transport: &DefaultHTTPTransport,
 }
 
-func (h *Fetcher) SetLogWriter(writer io.Writer) {
-	h.logWriter.SetWriter(writer)
-}
-
 type unbufferedWriter struct {
 	file *os.File
 }
@@ -69,14 +59,6 @@ func (uw unbufferedWriter) Write(b []byte) (n int, err error) {
 		_ = uw.file.Sync()
 	}
 	return
-}
-
-func (h *Fetcher) SetLogFile(file *os.File) {
-	h.SetLogWriter(unbufferedWriter{file: file})
-}
-
-func (h *Fetcher) Logf(format string, rest ...interface{}) {
-	h.Logger.Printf(format, rest...)
 }
 
 func (h *Fetcher) GetConcurrentRequestCount(count int) int {
@@ -159,9 +141,7 @@ func (h *Fetcher) FileGetResponse(url string, headers Headers) (*http.Response, 
 	if headers != nil {
 		headers.AddHeaders(&request.Header)
 	}
-	h.Logf("FileGetResponse[%s]: pre-connect", url)
 	resp, err := h.HTTPClient.Do(request)
-	h.Logf("FileGetResponse[%s]: connected: %v, %v", url, resp, err)
 	if err != nil {
 		return nil, err
 	}
@@ -173,18 +153,13 @@ func (h *Fetcher) FileGetResponse(url string, headers Headers) (*http.Response, 
 }
 
 func (h *Fetcher) FetchFile(req *FetchRequest, complete chan<- *FetchResult) {
-	h.Logf("FetchFile[%s] -> %s (full download: %v)", req.Url, req.Filename,
-		req.FullDownload)
 	if !req.FullDownload {
 		finf, err := os.Stat(req.Filename)
 		if err == nil && finf != nil && finf.Size() > 0 {
-			h.Logf("FetchFile[%s]: resuming download for %s",
-				req.Url, req.Filename)
 			h.ResumeFileDownload(req, complete)
 			return
 		}
 	}
-	h.Logf("FetchFile[%s]: new file download %s", req.Url, req.Filename)
 	h.NewFileDownload(req, complete)
 }
 
@@ -206,18 +181,9 @@ func fileResumeHeaders(req *FetchRequest, file *os.File) (Headers, int64) {
 }
 
 func (h *Fetcher) ResumeFileDownload(req *FetchRequest, complete chan<- *FetchResult) {
-	h.Logf("ResumeFileDownload[%s] -> %s", req.Url, req.Filename)
 	var err error
 	handleError := func() {
-		if err != nil && !h.Quiet {
-			h.Logf("Download of %s failed: %s\n", req, err)
-		}
-		h.Logf("handleError[%s] -> %s, err: %v", req.Url, req.Filename, err)
 		complete <- fetchError(req, err)
-	}
-
-	if !h.Quiet {
-		h.Logf("ResumeFileDownload(%s)\n", req)
 	}
 	file, err := os.OpenFile(req.Filename,
 		os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
@@ -227,7 +193,7 @@ func (h *Fetcher) ResumeFileDownload(req *FetchRequest, complete chan<- *FetchRe
 	}
 	defer file.Close()
 
-	headers, resumePoint := fileResumeHeaders(req, file)
+	headers, _ := fileResumeHeaders(req, file)
 	resp, err := h.FileGetResponse(req.Url, headers)
 	if err == nil && resp.StatusCode != 206 {
 		resp.Body.Close()
@@ -244,27 +210,14 @@ func (h *Fetcher) ResumeFileDownload(req *FetchRequest, complete chan<- *FetchRe
 		err = nil
 	} else {
 		defer resp.Body.Close()
-		h.Logf("ResumeFileDownload[%s]: Copying bytes to %s from response",
-			req.Url, req.Filename)
-
 		copied, err = io.Copy(file, resp.Body)
 	}
-	if !h.Quiet {
-		h.Logf("[DONE:%d] ResumeFileDownload (at %d) %s\n", copied, resumePoint, req)
-	}
-	h.Logf("ResumeFileDownload[%s] -> %s: completed, bytes copied: %v, err: %v",
-		req.Url, req.Filename, copied, err)
 	complete <- &FetchResult{req, err, copied}
 }
 
 func (h *Fetcher) NewFileDownload(req *FetchRequest, complete chan<- *FetchResult) {
-	h.Logf("NewFileDownload[%s] -> %s", req.Url, req.Filename)
-	if !h.Quiet {
-		h.Logf("NewFileDownload ", req)
-	}
 	resp, err := h.FileGetResponse(req.Url, req.RequestHeaders)
 	if err != nil {
-		h.Logf("NewFileDownload[%s] -> %s: error: %v (http)", req.Url, req.Filename, err)
 		complete <- fetchError(req, err)
 		return
 	}
@@ -272,18 +225,12 @@ func (h *Fetcher) NewFileDownload(req *FetchRequest, complete chan<- *FetchResul
 
 	file, err := os.Create(req.Filename)
 	if err != nil {
-		h.Logf("NewFileDownload[%s] -> %s: error: %v (fopen)", req.Url, req.Filename, err)
 		complete <- fetchError(req, err)
 		return
 	}
 	defer file.Close()
 
-	h.Logf("NewFileDownload[%s] -> %s: copying bytes", req.Url, req.Filename)
 	copied, err := io.Copy(file, resp.Body)
-	if !h.Quiet {
-		h.Logf("[DONE:%d] NewFileDownload %s\n", copied, req)
-	}
-	h.Logf("NewFileDownload[%s] -> %s: completed copy:%v, err:%v", req.Url, req.Filename, copied, err)
 	complete <- &FetchResult{req, err, copied}
 }
 

@@ -12,6 +12,7 @@ type timedOutConnection struct {
 
 func (t *timedOutConnection) Read(b []byte) (n int, err error) {
 	if t.timeout > 0 {
+		// Reset deadline for each read.
 		deadline := time.Now().Add(t.timeout)
 		t.Conn.SetReadDeadline(deadline)
 	}
@@ -24,6 +25,9 @@ func dialer(connectTimeout, readTimeout time.Duration) func(string, string) (net
 		if err != nil {
 			return
 		}
-		return &timedOutConnection{readTimeout, conn}, nil
+		return &timedOutConnection{
+			timeout: readTimeout,
+			Conn:    conn,
+		}, nil
 	}
 }
