@@ -17,7 +17,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "seqdb"
 	app.Usage = "Sequell db ops"
-	app.Version = "1.0.0"
+	app.Version = "1.1.0"
 	app.Action = func(c *cli.Context) {
 		cli.ShowAppHelp(c)
 	}
