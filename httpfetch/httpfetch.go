@@ -143,13 +143,18 @@ func (h *Fetcher) FileGetResponse(url string, headers Headers) (*http.Response, 
 	}
 	resp, err := h.HTTPClient.Do(request)
 	if err != nil {
+		// resp may be non-nil if the server has redirect fail.
+		// See http://golang.org/src/pkg/net/http/client.go#L377
+		if resp != nil {
+			resp.Body.Close()
+		}
 		return nil, err
 	}
 	if resp.StatusCode >= 400 {
 		resp.Body.Close()
 		return nil, &HTTPError{resp.StatusCode, resp}
 	}
-	return resp, err
+	return resp, nil
 }
 
 func (h *Fetcher) FetchFile(req *FetchRequest, complete chan<- *FetchResult) {
