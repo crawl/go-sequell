@@ -233,7 +233,6 @@ func (l *Sync) readLogs() {
 		if file == "" {
 			break
 		}
-		log.Println("Reading changed log", file)
 		if err := l.Loader.LoadCommitLog(file); err != nil {
 			log.Printf("Error reading changed log %s: %s\n", file, err)
 		}
