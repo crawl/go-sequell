@@ -49,18 +49,6 @@ var DefaultHTTPClient = &http.Client{
 	Transport: &DefaultHTTPTransport,
 }
 
-type unbufferedWriter struct {
-	file *os.File
-}
-
-func (uw unbufferedWriter) Write(b []byte) (n int, err error) {
-	n, err = uw.file.Write(b)
-	if err != nil {
-		_ = uw.file.Sync()
-	}
-	return
-}
-
 func (h *Fetcher) GetConcurrentRequestCount(count int) int {
 	if count > h.MaxConcurrentRequestsPerHost {
 		return h.MaxConcurrentRequestsPerHost
