@@ -58,12 +58,27 @@ type killerNormalizer interface {
 	NormalizeKiller(killer, killerRawValue, killerFlags string) (string, error)
 }
 
+type killerNormFunc func(string, string, string) (string, error)
+
+func (k killerNormFunc) NormalizeKiller(killer, killerRaw, killerFlags string) (string, error) {
+	return k(killer, killerRaw, killerFlags)
+}
+
 var normalizers = []killerNormalizer{
 	reNorm(`^an? \w+-headed (hydra.*)$`, "a $1"),
 	reNorm(`^the \w+-headed ((?:Lernaean )?hydra.*)$`, "the $1"),
 	reNorm(`^.*'s? ghost$`, "a player ghost"),
 	reNorm(`^.*'s? illusion$`, "a player illusion"),
 	reNorm(`^an? \w+ (draconian.*)`, "a $1"),
+	killerNormFunc(func(killer, raw, flags string) (string, error) {
+		if strings.Index(killer, "very ugly thing") != -1 {
+			return "a very ugly thing", nil
+		}
+		if strings.Index(killer, "ugly thing") != -1 {
+			return "an ugly thing", nil
+		}
+		return killer, nil
+	}),
 	reNorm(`^an? .* \(((?:glowing )?shapeshifter)\)$`, "a $1"),
 	reNorm(`^the .* shaped (.*)$`, "the $1"),
 	&uniqueNormalizer{},

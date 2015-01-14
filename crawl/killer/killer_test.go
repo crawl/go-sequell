@@ -16,6 +16,8 @@ var killerTests = []struct {
 	{"a red draconian shifter", "a draconian shifter"},
 	{"a yak (shapeshifter)", "a shapeshifter"},
 	{"a camel (glowing shapeshifter)", "a glowing shapeshifter"},
+	{"a red ugly thing", "an ugly thing"},
+	{"a green very ugly thing", "a very ugly thing"},
 	{"Grum", "Grum"},
 	{"Bogdan the orc", "an orc"},
 	{"Ghib", "a pandemonium lord"},
