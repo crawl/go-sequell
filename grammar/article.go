@@ -2,7 +2,7 @@ package grammar
 
 import "regexp"
 
-var reStartsWithArticle = regexp.MustCompile(`^an? `)
+var reStartsWithArticle = regexp.MustCompile(`^(?:an?|the) `)
 
 func Article(thing string) string {
 	if reStartsWithArticle.FindString(thing) != "" {
