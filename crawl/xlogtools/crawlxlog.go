@@ -11,7 +11,6 @@ import (
 	"github.com/greensnark/go-sequell/crawl/place"
 	"github.com/greensnark/go-sequell/crawl/player"
 	"github.com/greensnark/go-sequell/crawl/version"
-	"github.com/greensnark/go-sequell/grammar"
 	"github.com/greensnark/go-sequell/qyaml"
 	"github.com/greensnark/go-sequell/stringnorm"
 	"github.com/greensnark/go-sequell/text"
@@ -139,7 +138,7 @@ func (n *Normalizer) NormalizeLog(log xlog.Xlog) (xlog.Xlog, error) {
 		log["rtime"] = log["time"]
 		log["oplace"] = text.FirstNotEmpty(log["oplace"], log["place"])
 		if banisher, ok := log["banisher"]; ok {
-			banisher = grammar.Article(banisher)
+			banisher = killer.Article(banisher)
 			log["banisher"] = banisher
 			log["cbanisher"] = killer.NormalizeKiller(banisher, banisher, "")
 		}

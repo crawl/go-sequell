@@ -4,9 +4,20 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/greensnark/go-sequell/grammar"
 	"github.com/greensnark/go-sequell/stringnorm"
 	"github.com/greensnark/go-sequell/text"
 )
+
+// Article prefixes the given killer name with "a" or "an" if it seems
+// appropriate. Similar to grammar.Article, but returns apostrophised
+// names unmodified.
+func Article(killer string) string {
+	if strings.IndexRune(killer, '\'') == -1 {
+		killer = grammar.Article(killer)
+	}
+	return killer
+}
 
 func NormalizeKiller(killer, rawKiller, killerFlags string) string {
 	var err error
