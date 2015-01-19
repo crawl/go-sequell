@@ -133,20 +133,21 @@ func (n *Normalizer) NormalizeLog(log xlog.Xlog) (xlog.Xlog, error) {
 	log["rstart"] = log["start"]
 	log["game_key"] = log["name"] + ":" + log["src"] + ":" + log["rstart"]
 
+	if banisher, ok := log["banisher"]; ok {
+		var err error
+		if banisher, err = n.KillerArticle.Normalize(banisher); err != nil {
+			return nil, err
+		}
+		log["banisher"] = banisher
+		log["cbanisher"] = killer.NormalizeKiller(banisher, banisher, "")
+	}
+
 	milestone := Type(log) == Milestone
 	if milestone {
 		log["verb"] = log["type"]
 		log["noun"] = text.FirstNotEmpty(log["milestone"], "?")
 		log["rtime"] = log["time"]
 		log["oplace"] = text.FirstNotEmpty(log["oplace"], log["place"])
-		if banisher, ok := log["banisher"]; ok {
-			var err error
-			if banisher, err = n.KillerArticle.Normalize(banisher); err != nil {
-				return nil, err
-			}
-			log["banisher"] = banisher
-			log["cbanisher"] = killer.NormalizeKiller(banisher, banisher, "")
-		}
 		NormalizeMilestoneFields(log)
 	} else {
 		log["vmsg"] = text.FirstNotEmpty(log["vmsg"], log["tmsg"])
