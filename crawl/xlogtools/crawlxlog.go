@@ -72,11 +72,12 @@ func ValidXlog(log xlog.Xlog) bool {
 }
 
 type Normalizer struct {
-	CrawlData qyaml.Yaml
-	GodNorm   stringnorm.Normalizer
-	PlaceNorm stringnorm.Normalizer
-	CharNorm  *player.CharNormalizer
-	FieldGens []*FieldGen
+	CrawlData     qyaml.Yaml
+	GodNorm       stringnorm.Normalizer
+	PlaceNorm     stringnorm.Normalizer
+	CharNorm      *player.CharNormalizer
+	KillerArticle stringnorm.Normalizer
+	FieldGens     []*FieldGen
 }
 
 func MustBuildNormalizer(crawlData qyaml.Yaml) *Normalizer {
@@ -93,11 +94,12 @@ func BuildNormalizer(crawlData qyaml.Yaml) (*Normalizer, error) {
 		return nil, err
 	}
 	return &Normalizer{
-		CrawlData: crawlData,
-		GodNorm:   god.Normalizer(crawlData.StringMap("god-aliases")),
-		PlaceNorm: place.Normalizer(crawlData.StringMap("place-fixups")),
-		CharNorm:  player.StockCharNormalizer(crawlData),
-		FieldGens: fieldGen,
+		CrawlData:     crawlData,
+		GodNorm:       god.Normalizer(crawlData.StringMap("god-aliases")),
+		PlaceNorm:     place.Normalizer(crawlData.StringMap("place-fixups")),
+		CharNorm:      player.StockCharNormalizer(crawlData),
+		KillerArticle: killer.ArticleNormalizer(crawlData.StringSlice("special-killer-phrases")),
+		FieldGens:     fieldGen,
 	}, nil
 }
 
@@ -138,7 +140,10 @@ func (n *Normalizer) NormalizeLog(log xlog.Xlog) (xlog.Xlog, error) {
 		log["rtime"] = log["time"]
 		log["oplace"] = text.FirstNotEmpty(log["oplace"], log["place"])
 		if banisher, ok := log["banisher"]; ok {
-			banisher = killer.Article(banisher)
+			var err error
+			if banisher, err = n.KillerArticle.Normalize(banisher); err != nil {
+				return nil, err
+			}
 			log["banisher"] = banisher
 			log["cbanisher"] = killer.NormalizeKiller(banisher, banisher, "")
 		}

@@ -76,6 +76,39 @@ var normXlogTest = [][]xlog.Xlog{
 	},
 	{
 		xlog.Xlog{
+			"type":     "yak",
+			"banisher": "you",
+		},
+		xlog.Xlog{
+			"type":      "yak",
+			"banisher":  "you",
+			"cbanisher": "you",
+		},
+	},
+	{
+		xlog.Xlog{
+			"type":     "yak",
+			"banisher": "miscasting Shatter",
+		},
+		xlog.Xlog{
+			"type":      "yak",
+			"banisher":  "miscasting Shatter",
+			"cbanisher": "miscast",
+		},
+	},
+	{
+		xlog.Xlog{
+			"type":     "yak",
+			"banisher": "distortion unwield",
+		},
+		xlog.Xlog{
+			"type":      "yak",
+			"banisher":  "distortion unwield",
+			"cbanisher": "unwield",
+		},
+	},
+	{
+		xlog.Xlog{
 			"sk": "Transmigration",
 		},
 		xlog.Xlog{

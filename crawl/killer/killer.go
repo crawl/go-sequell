@@ -9,14 +9,27 @@ import (
 	"github.com/greensnark/go-sequell/text"
 )
 
-// Article prefixes the given killer name with "a" or "an" if it seems
+type articleNorm struct {
+	specialCases []string
+}
+
+func ArticleNormalizer(specialCases []string) *articleNorm {
+	return &articleNorm{specialCases: specialCases}
+}
+
+// Normalize prefixes the given killer name with "a" or "an" if it seems
 // appropriate. Similar to grammar.Article, but returns apostrophised
-// names unmodified.
-func Article(killer string) string {
-	if strings.IndexRune(killer, '\'') == -1 {
-		killer = grammar.Article(killer)
+// names and other special-cases unmodified.
+func (a *articleNorm) Normalize(killer string) (string, error) {
+	if strings.IndexRune(killer, '\'') != -1 {
+		return killer, nil
 	}
-	return killer
+	for _, specialCase := range a.specialCases {
+		if strings.Index(killer, specialCase) != -1 {
+			return killer, nil
+		}
+	}
+	return grammar.Article(killer), nil
 }
 
 func NormalizeKiller(killer, rawKiller, killerFlags string) string {
@@ -92,6 +105,8 @@ var normalizers = []killerNormalizer{
 	}),
 	reNorm(`^an? .* \(((?:glowing )?shapeshifter)\)$`, "a $1"),
 	reNorm(`^the .* shaped (.*)$`, "the $1"),
+	reNorm(`.*\bmiscasting\b.*$`, "miscast"),
+	reNorm(`.*\bunwield\b.*`, "unwield"),
 	&uniqueNormalizer{},
 }
 
