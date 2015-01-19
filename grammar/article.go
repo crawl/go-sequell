@@ -1,6 +1,9 @@
 package grammar
 
-import "regexp"
+import (
+	"regexp"
+	"unicode"
+)
 
 var reStartsWithArticle = regexp.MustCompile(`^(?:an?|the) `)
 
@@ -9,6 +12,9 @@ func Article(thing string) string {
 		return thing
 	}
 	for _, rune := range thing {
+		if unicode.IsUpper(rune) {
+			return thing
+		}
 		if IsVowel(rune) {
 			return "an " + thing
 		} else {

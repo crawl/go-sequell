@@ -65,6 +65,17 @@ var normXlogTest = [][]xlog.Xlog{
 	},
 	{
 		xlog.Xlog{
+			"type":     "yak",
+			"banisher": "Peony",
+		},
+		xlog.Xlog{
+			"type":      "yak",
+			"banisher":  "Peony",
+			"cbanisher": "a pandemonium lord",
+		},
+	},
+	{
+		xlog.Xlog{
 			"sk": "Transmigration",
 		},
 		xlog.Xlog{
