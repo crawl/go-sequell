@@ -248,6 +248,9 @@ func qualifyVerbAction(verb string, actionWord string) string {
 	if actionWord == "enslaved" {
 		return verb + ".ens"
 	}
+	if actionWord == "slimified" {
+		return verb + ".slime"
+	}
 	return verb
 }
 

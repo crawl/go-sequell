@@ -141,6 +141,18 @@ var normXlogTest = [][]xlog.Xlog{
 			"crace": "Tengu",
 		},
 	},
+	{
+		xlog.Xlog{
+			"type":      "unique",
+			"milestone": "slimified Maurice",
+		},
+		xlog.Xlog{
+			"type":      "unique",
+			"verb":      "uniq.slime",
+			"milestone": "slimified Maurice",
+			"noun":      "Maurice",
+		},
+	},
 }
 
 var norm = MustBuildNormalizer(data.Crawl)
