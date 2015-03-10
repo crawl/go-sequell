@@ -166,6 +166,7 @@ func (l *Sync) startMasterTasks() {
 }
 
 func (l *Sync) startSlaveTasks() {
+	log.Printf("startSlaveTasks...\n")
 	// The three main goroutines that need to be restarted when a
 	// config changes:
 	l.monitorLogs()
@@ -197,6 +198,7 @@ func (l *Sync) stopMasterTasks() {
 }
 
 func (l *Sync) stopSlaveTasks() {
+	log.Printf("stopSlaveTasks...\n")
 	// Sentinel to shut down the log reader and fetch monitor:
 	l.changedLogFiles <- ""
 	l.fetchRequests <- false

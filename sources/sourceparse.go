@@ -171,7 +171,7 @@ func (p xlogSpecParser) NewXlogSrc(name, qualifier string, mustSync bool) *XlogS
 		Name:        name,
 		Qualifier:   qualifier,
 		TargetPath:  path.Join(p.cachedir, qualifiedName),
-		Url:         UrlJoin(p.server.BaseURL, name),
+		Url:         URLJoin(p.server.BaseURL, name),
 		LocalPath:   localPath,
 		Live:        mustSync,
 		Type:        logtype,
@@ -180,8 +180,11 @@ func (p xlogSpecParser) NewXlogSrc(name, qualifier string, mustSync bool) *XlogS
 	}
 }
 
-// UrlJoin joins two URL path segments.
-func UrlJoin(base, path string) string {
+// URLJoin joins two URL path segments.
+func URLJoin(base, path string) string {
+	if strings.Index(path, "://") != -1 {
+		return path
+	}
 	if base == "" {
 		return path
 	}

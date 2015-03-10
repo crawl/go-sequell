@@ -4,34 +4,39 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/greensnark/go-sequell/resource"
+	"github.com/greensnark/go-sequell/qyaml"
 )
 
-func TestUrlJoin(t *testing.T) {
+func TestURLJoin(t *testing.T) {
 	var testCases = []struct {
 		base, path string
 		expected   string
 	}{
 		{"http://crawl.berotato.org/crawl", "meta/nostalgia/logfile",
 			"http://crawl.berotato.org/crawl/meta/nostalgia/logfile"},
+		{"http://yak.foo", "http://bar.foo", "http://bar.foo"},
 	}
 	for _, test := range testCases {
-		actual := UrlJoin(test.base, test.path)
+		actual := URLJoin(test.base, test.path)
 		if actual != test.expected {
-			t.Errorf("UrlJoin(%#v, %#v) = %#v, expected %#v",
+			t.Errorf("URLJoin(%#v, %#v) = %#v, expected %#v",
 				test.base, test.path, actual, test.expected)
 		}
 	}
 }
 
 func TestSources(t *testing.T) {
-	schema := resource.YamlMustParse("config/sources.yml")
+	schema, err := qyaml.Parse("test-sources.yml")
+	if err != nil {
+		t.Errorf("Error parsing yaml: %s", err)
+		return
+	}
 	src, err := Sources(schema, "test")
 	if err != nil {
 		t.Errorf("Error parsing sources: %s", err)
 		return
 	}
-	expectedCount := 8
+	expectedCount := 11
 	if len(src.Servers) != expectedCount {
 		t.Errorf("Expected %d sources, got %d", expectedCount, len(src.Servers))
 		return
