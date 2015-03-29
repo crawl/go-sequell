@@ -153,6 +153,22 @@ var normXlogTest = [][]xlog.Xlog{
 			"noun":      "Maurice",
 		},
 	},
+	{
+		xlog.Xlog{
+			"explbr": "HEAD",
+		},
+		xlog.Xlog{
+			"explbr": "",
+		},
+	},
+	{
+		xlog.Xlog{
+			"explbr": "crawl-0.16",
+		},
+		xlog.Xlog{
+			"explbr": "",
+		},
+	},
 }
 
 var norm = MustBuildNormalizer(data.Crawl)
