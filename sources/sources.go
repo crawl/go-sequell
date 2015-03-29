@@ -15,6 +15,19 @@ type Servers struct {
 	Servers []*Server
 }
 
+// MkdirTargets creates all directories needed for all copies of
+// remote logs.
+func (x *Servers) MkdirTargets() error {
+	for _, server := range x.Servers {
+		for _, log := range server.Logfiles {
+			if err := log.MkdirTarget(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (x *Servers) XlogSources() []*XlogSrc {
 	sources := []*XlogSrc{}
 	addAll := func(logs []*XlogSrc) {
@@ -26,6 +39,22 @@ func (x *Servers) XlogSources() []*XlogSrc {
 		addAll(s.Logfiles)
 	}
 	return sources
+}
+
+// TargetLogDirs returns the set of target (local copy) log directories
+// for all log files.
+func (x *Servers) TargetLogDirs() []string {
+	targetDirs := []string{}
+	seenDirs := map[string]bool{}
+	for _, server := range x.Servers {
+		for _, log := range server.Logfiles {
+			if dir := log.TargetDir(); !seenDirs[dir] {
+				seenDirs[dir] = true
+				targetDirs = append(targetDirs, dir)
+			}
+		}
+	}
+	return targetDirs
 }
 
 func (x *Servers) Server(alias string) *Server {
@@ -97,9 +126,13 @@ func (x *XlogSrc) liveAsterisk() string {
 	return ""
 }
 
+func (x *XlogSrc) TargetDir() string {
+	return filepath.Dir(x.TargetPath)
+}
+
 // MakeTargetDir creates the parent directory of x.TargetPath.
 func (x *XlogSrc) MkdirTarget() error {
-	return os.MkdirAll(filepath.Dir(x.TargetPath), os.ModeDir|0755)
+	return os.MkdirAll(x.TargetDir(), os.ModeDir|0755)
 }
 
 func (x *XlogSrc) Local() bool {

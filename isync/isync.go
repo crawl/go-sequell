@@ -261,8 +261,9 @@ func (l *Sync) monitorConfigs() {
 func (l *Sync) monitorLogs() {
 	l.logFileWatcher = fnotify.New("logs")
 	l.slaveWaitGroup.Add(1)
+	l.Servers.MkdirTargets()
 	go func() {
-		l.logFileWatcher.Notify([]string{l.CacheDir}, l.changedLogFiles)
+		l.logFileWatcher.Notify(l.Servers.TargetLogDirs(), l.changedLogFiles)
 		log.Println("log monitor exiting")
 		l.slaveWaitGroup.Done()
 	}()
