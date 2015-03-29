@@ -46,7 +46,7 @@ func TestTableLookup(t *testing.T) {
 	DB := testConn()
 	lookup := createLookup()
 	file := "cszo-git.log"
-	reader := xlog.Reader(file)
+	reader := xlog.Reader(file, file)
 
 	purgeTables(DB)
 	rows := []xlog.Xlog{}

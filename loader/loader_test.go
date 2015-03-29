@@ -61,16 +61,17 @@ func createSingleFileLoader(file string) (*Loader, error) {
 		Server: &sources.Server{
 			Name: "cszo",
 		},
-		Name:        file,
-		Live:        true,
-		Game:        "",
-		GameVersion: "git",
-		Type:        xlogtools.Log,
-		TargetPath:  file,
+		Name:          file,
+		Live:          true,
+		Game:          "",
+		GameVersion:   "git",
+		Type:          xlogtools.Log,
+		TargetPath:    file,
+		TargetRelPath: file,
 	}
 	ldr.Readers = []*Reader{
 		&Reader{
-			XlogReader: xlog.Reader(src.TargetPath),
+			XlogReader: xlog.Reader(src.TargetPath, src.TargetRelPath),
 			XlogSrc:    src,
 			Table:      ldr.TableName(src),
 		},

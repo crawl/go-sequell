@@ -52,6 +52,11 @@ func TestSources(t *testing.T) {
 			cao.Logfiles[0].URL)
 	}
 
+	if cao.Logfiles[0].TargetRelPath != "cao/allgames.txt" {
+		t.Errorf("Expected CAO first rel path to be cao/allgames.txt, got %s",
+			cao.Logfiles[0].TargetRelPath)
+	}
+
 	if cao.TimeZoneMap.IsZero() {
 		t.Errorf("CAO has no tz map")
 	} else {

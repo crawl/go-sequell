@@ -72,17 +72,18 @@ func (s *Server) String() string {
 }
 
 type XlogSrc struct {
-	Server      *Server
-	Name        string
-	Qualifier   string
-	LocalPath   string
-	URL         string
-	TargetPath  string
-	CName       string
-	Live        bool
-	Type        xlogtools.XlogType
-	Game        string
-	GameVersion string
+	Server        *Server
+	Name          string
+	Qualifier     string
+	LocalPath     string
+	URL           string
+	TargetPath    string
+	TargetRelPath string
+	CName         string
+	Live          bool
+	Type          xlogtools.XlogType
+	Game          string
+	GameVersion   string
 }
 
 func (x *XlogSrc) String() string {

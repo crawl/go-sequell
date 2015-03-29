@@ -162,23 +162,26 @@ func (p xlogSpecParser) NewXlogSrc(name, qualifier string, mustSync bool) *XlogS
 	gameVersion := xlogtools.XlogGameVersion(name)
 	logtype := xlogtools.FileType(name)
 	qualifiedName := xlogtools.XlogQualifiedName(p.server.Name, game, gameVersion, qualifier, logtype)
-	targetPath := path.Join(p.cachedir, URLTargetPath(p.server.Name, p.server.BaseURL, name))
+
+	targetRelPath := URLTargetPath(p.server.Name, p.server.BaseURL, name)
+	targetPath := path.Join(p.cachedir, targetRelPath)
 	localPath := ""
 	if p.server.LocalPathBase != "" {
 		localPath = path.Join(p.server.LocalPathBase, name)
 	}
 	return &XlogSrc{
-		Server:      p.server,
-		Name:        name,
-		Qualifier:   qualifier,
-		TargetPath:  targetPath,
-		CName:       qualifiedName,
-		URL:         URLJoin(p.server.BaseURL, name),
-		LocalPath:   localPath,
-		Live:        mustSync,
-		Type:        logtype,
-		Game:        game,
-		GameVersion: gameVersion,
+		Server:        p.server,
+		Name:          name,
+		Qualifier:     qualifier,
+		TargetRelPath: targetRelPath,
+		TargetPath:    targetPath,
+		CName:         qualifiedName,
+		URL:           URLJoin(p.server.BaseURL, name),
+		LocalPath:     localPath,
+		Live:          mustSync,
+		Type:          logtype,
+		Game:          game,
+		GameVersion:   gameVersion,
 	}
 }
 

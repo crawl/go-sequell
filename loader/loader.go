@@ -66,7 +66,7 @@ func (l *Loader) init() {
 	l.Readers = make([]*Reader, len(xlogs))
 	for i, x := range xlogs {
 		l.Readers[i] = &Reader{
-			XlogReader: xlog.Reader(x.TargetPath),
+			XlogReader: xlog.Reader(x.TargetPath, x.TargetRelPath),
 			XlogSrc:    x,
 			Table:      l.TableName(x),
 		}

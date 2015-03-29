@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"path"
 	"strconv"
 	"strings"
 	"syscall"
@@ -23,8 +22,11 @@ type XlogReader struct {
 	Reader   *bufio.Reader
 }
 
-func Reader(filepath string) *XlogReader {
-	return &XlogReader{Path: filepath, Filename: path.Base(filepath)}
+// Reader creates a new Xlog reader for the given absolute path, and
+// the given dbFilename. The dbFilename will be saved as the filename
+// in the database.
+func Reader(filepath, dbFilename string) *XlogReader {
+	return &XlogReader{Path: filepath, Filename: dbFilename}
 }
 
 func translateErr(e error) error {
