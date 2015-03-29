@@ -21,7 +21,7 @@ func Sources(sources qyaml.Yaml, cachedir string) (*Servers, error) {
 func DuplicateXlogTargets(xlogs []*XlogSrc) []string {
 	pathCounts := map[string][]string{}
 	for _, x := range xlogs {
-		pathCounts[x.TargetPath] = append(pathCounts[x.TargetPath], x.Url)
+		pathCounts[x.TargetPath] = append(pathCounts[x.TargetPath], x.URL)
 	}
 	dupes := []string{}
 	for path, urls := range pathCounts {
@@ -162,6 +162,7 @@ func (p xlogSpecParser) NewXlogSrc(name, qualifier string, mustSync bool) *XlogS
 	gameVersion := xlogtools.XlogGameVersion(name)
 	logtype := xlogtools.FileType(name)
 	qualifiedName := xlogtools.XlogQualifiedName(p.server.Name, game, gameVersion, qualifier, logtype)
+	targetPath := path.Join(p.cachedir, URLTargetPath(p.server.Name, p.server.BaseURL, name))
 	localPath := ""
 	if p.server.LocalPathBase != "" {
 		localPath = path.Join(p.server.LocalPathBase, name)
@@ -170,28 +171,15 @@ func (p xlogSpecParser) NewXlogSrc(name, qualifier string, mustSync bool) *XlogS
 		Server:      p.server,
 		Name:        name,
 		Qualifier:   qualifier,
-		TargetPath:  path.Join(p.cachedir, qualifiedName),
-		Url:         URLJoin(p.server.BaseURL, name),
+		TargetPath:  targetPath,
+		CName:       qualifiedName,
+		URL:         URLJoin(p.server.BaseURL, name),
 		LocalPath:   localPath,
 		Live:        mustSync,
 		Type:        logtype,
 		Game:        game,
 		GameVersion: gameVersion,
 	}
-}
-
-// URLJoin joins two URL path segments.
-func URLJoin(base, path string) string {
-	if strings.Index(path, "://") != -1 {
-		return path
-	}
-	if base == "" {
-		return path
-	}
-	if base[len(base)-1] == '/' {
-		return base + path
-	}
-	return base + "/" + path
 }
 
 // SplitFilenamesMustSync takes a name like "foo{bar,baz}*", strips

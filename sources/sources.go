@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/greensnark/go-sequell/crawl/ctime"
@@ -75,8 +76,9 @@ type XlogSrc struct {
 	Name        string
 	Qualifier   string
 	LocalPath   string
-	Url         string
+	URL         string
 	TargetPath  string
+	CName       string
 	Live        bool
 	Type        xlogtools.XlogType
 	Game        string
@@ -84,7 +86,7 @@ type XlogSrc struct {
 }
 
 func (x *XlogSrc) String() string {
-	return "Src" + x.liveAsterisk() + "[" + x.Type.String() + ": " + x.Url + " > " + x.TargetPath + "]"
+	return "Src" + x.liveAsterisk() + "[" + x.Type.String() + ": " + x.URL + " > " + x.TargetPath + "]"
 }
 
 func (x *XlogSrc) liveAsterisk() string {
@@ -92,6 +94,11 @@ func (x *XlogSrc) liveAsterisk() string {
 		return "*"
 	}
 	return ""
+}
+
+// MakeTargetDir creates the parent directory of x.TargetPath.
+func (x *XlogSrc) MkdirTarget() error {
+	return os.MkdirAll(filepath.Dir(x.TargetPath), os.ModeDir|0755)
 }
 
 func (x *XlogSrc) Local() bool {
@@ -132,7 +139,7 @@ func (x *XlogSrc) LinkLocal() error {
 
 func (x *XlogSrc) DownloadURL() string {
 	if x.Local() {
-		return x.Url
+		return x.URL
 	}
 	return ""
 }

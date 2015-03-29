@@ -319,5 +319,12 @@ func defineCommands(app *cli.App) {
 				reportError(db.FixField(dbSpec(c), c.Args()[0]))
 			},
 		},
+		{
+			Name:  "xlog-link",
+			Usage: "link old remote.* to new URL-based paths",
+			Action: func(c *cli.Context) {
+				reportError(action.LinkLogs())
+			},
+		},
 	}
 }

@@ -31,8 +31,12 @@ func sourceFetchRequests(incremental bool, src []*sources.XlogSrc) []*httpfetch.
 		if incremental && !s.Live && s.TargetExists() {
 			continue
 		}
+
+		if err := s.MkdirTarget(); err != nil {
+			panic(err)
+		}
 		res = append(res, &httpfetch.FetchRequest{
-			Url:      s.Url,
+			URL:      s.URL,
 			Filename: s.TargetPath,
 		})
 	}

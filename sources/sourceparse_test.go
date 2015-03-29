@@ -47,9 +47,9 @@ func TestSources(t *testing.T) {
 		t.Errorf("Couldn't find source cao in %s", src)
 	}
 	expectedUrl := "http://crawl.akrasiac.org/allgames.txt"
-	if cao.Logfiles[0].Url != expectedUrl {
+	if cao.Logfiles[0].URL != expectedUrl {
 		t.Errorf("Expected CAO first URL to be %s, was %s", expectedUrl,
-			cao.Logfiles[0].Url)
+			cao.Logfiles[0].URL)
 	}
 
 	if cao.TimeZoneMap.IsZero() {

@@ -69,7 +69,7 @@ func (err *HTTPError) Error() string {
 }
 
 type FetchRequest struct {
-	Url      string
+	URL      string
 	Filename string
 
 	// Don't try to resume downloads if this is set.
@@ -78,7 +78,7 @@ type FetchRequest struct {
 }
 
 func (req *FetchRequest) Host() (string, error) {
-	reqUrl, err := url.Parse(req.Url)
+	reqUrl, err := url.Parse(req.URL)
 	if err != nil {
 		return "", err
 	}
@@ -86,7 +86,7 @@ func (req *FetchRequest) Host() (string, error) {
 }
 
 func (req *FetchRequest) String() string {
-	return fmt.Sprint(req.Url, " -> ", req.Filename)
+	return fmt.Sprint(req.URL, " -> ", req.Filename)
 }
 
 type FetchResult struct {
@@ -187,7 +187,7 @@ func (h *Fetcher) ResumeFileDownload(req *FetchRequest, complete chan<- *FetchRe
 	defer file.Close()
 
 	headers, _ := fileResumeHeaders(req, file)
-	resp, err := h.FileGetResponse(req.Url, headers)
+	resp, err := h.FileGetResponse(req.URL, headers)
 	if err == nil && resp.StatusCode != 206 {
 		resp.Body.Close()
 		err = fmt.Errorf("expected http 206 (partial content), got %d", resp.StatusCode)
@@ -209,7 +209,7 @@ func (h *Fetcher) ResumeFileDownload(req *FetchRequest, complete chan<- *FetchRe
 }
 
 func (h *Fetcher) NewFileDownload(req *FetchRequest, complete chan<- *FetchResult) {
-	resp, err := h.FileGetResponse(req.Url, req.RequestHeaders)
+	resp, err := h.FileGetResponse(req.URL, req.RequestHeaders)
 	if err != nil {
 		complete <- fetchError(req, err)
 		return
@@ -304,14 +304,14 @@ func (h *Fetcher) monitorHostQueue(host string, incoming <-chan *FetchRequest) {
 	queue := []*FetchRequest{}
 	inProgress := map[string]bool{}
 	reqKey := func(req *FetchRequest) string {
-		return req.Url + " | " + req.Filename
+		return req.URL + " | " + req.Filename
 	}
 
 	queueRequest := func(req *FetchRequest) {
 		// Suppress duplicate fetch requests:
 		key := reqKey(req)
 		if inProgress[key] {
-			log.Printf("%s: ignoring duplicate download %s\n", host, req.Url)
+			log.Printf("%s: ignoring duplicate download %s\n", host, req.URL)
 			return
 		}
 		inProgress[key] = true
