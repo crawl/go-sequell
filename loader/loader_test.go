@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/greensnark/go-sequell/crawl/data"
-	"github.com/greensnark/go-sequell/crawl/xlogtools"
-	"github.com/greensnark/go-sequell/pg"
-	"github.com/greensnark/go-sequell/sources"
-	"github.com/greensnark/go-sequell/xlog"
+	"github.com/crawl/go-sequell/crawl/data"
+	"github.com/crawl/go-sequell/crawl/xlogtools"
+	"github.com/crawl/go-sequell/pg"
+	"github.com/crawl/go-sequell/sources"
+	"github.com/crawl/go-sequell/xlog"
 )
 
 func createLoader() (*Loader, error) {

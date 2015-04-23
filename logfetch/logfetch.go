@@ -3,8 +3,8 @@ package logfetch
 import (
 	"bytes"
 
-	"github.com/greensnark/go-sequell/httpfetch"
-	"github.com/greensnark/go-sequell/sources"
+	"github.com/crawl/go-sequell/httpfetch"
+	"github.com/crawl/go-sequell/sources"
 )
 
 type FetchErrors []error

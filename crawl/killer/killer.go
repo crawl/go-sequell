@@ -4,9 +4,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/greensnark/go-sequell/grammar"
-	"github.com/greensnark/go-sequell/stringnorm"
-	"github.com/greensnark/go-sequell/text"
+	"github.com/crawl/go-sequell/grammar"
+	"github.com/crawl/go-sequell/stringnorm"
+	"github.com/crawl/go-sequell/text"
 )
 
 type articleNorm struct {

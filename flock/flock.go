@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/greensnark/go-sequell/ectx"
+	"github.com/crawl/go-sequell/ectx"
 )
 
 type Lock struct {

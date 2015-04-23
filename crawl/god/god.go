@@ -3,7 +3,7 @@ package god
 import (
 	"strings"
 
-	"github.com/greensnark/go-sequell/crawl/data"
+	"github.com/crawl/go-sequell/crawl/data"
 )
 
 type Normalizer map[string]string

@@ -1,6 +1,6 @@
 package conv
 
-import "github.com/greensnark/go-sequell/text"
+import "github.com/crawl/go-sequell/text"
 
 func IStringMap(v interface{}) map[string]string {
 	res := map[string]string{}

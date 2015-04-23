@@ -4,9 +4,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/greensnark/go-sequell/conv"
-	"github.com/greensnark/go-sequell/crawl/data"
-	"github.com/greensnark/go-sequell/crawl/version"
+	"github.com/crawl/go-sequell/conv"
+	"github.com/crawl/go-sequell/crawl/data"
+	"github.com/crawl/go-sequell/crawl/version"
 )
 
 var gameTypeMatcher = createTextTypeMatcher(data.Crawl.Map("game-type-tags"))

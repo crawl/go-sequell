@@ -4,8 +4,8 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/greensnark/go-sequell/conv"
-	"github.com/greensnark/go-sequell/text"
+	"github.com/crawl/go-sequell/conv"
+	"github.com/crawl/go-sequell/text"
 	"gopkg.in/v1/yaml"
 )
 

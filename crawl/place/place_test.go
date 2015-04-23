@@ -3,8 +3,8 @@ package place
 import (
 	"testing"
 
-	"github.com/greensnark/go-sequell/crawl/data"
-	"github.com/greensnark/go-sequell/stringnorm"
+	"github.com/crawl/go-sequell/crawl/data"
+	"github.com/crawl/go-sequell/stringnorm"
 )
 
 var norm = Normalizer(data.Crawl.StringMap("place-fixups"))

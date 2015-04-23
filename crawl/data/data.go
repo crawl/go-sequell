@@ -1,8 +1,8 @@
 package data
 
 import (
-	"github.com/greensnark/go-sequell/qyaml"
-	"github.com/greensnark/go-sequell/resource"
+	"github.com/crawl/go-sequell/qyaml"
+	"github.com/crawl/go-sequell/resource"
 )
 
 var Crawl qyaml.Yaml = CrawlData()

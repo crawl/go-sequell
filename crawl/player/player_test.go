@@ -3,7 +3,7 @@ package player
 import (
 	"testing"
 
-	"github.com/greensnark/go-sequell/crawl/data"
+	"github.com/crawl/go-sequell/crawl/data"
 )
 
 var norm = NewCharNormalizer(

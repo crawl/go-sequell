@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/greensnark/go-sequell/ectx"
-	"github.com/greensnark/go-sequell/schema"
+	"github.com/crawl/go-sequell/ectx"
+	"github.com/crawl/go-sequell/schema"
 )
 
 type PID int

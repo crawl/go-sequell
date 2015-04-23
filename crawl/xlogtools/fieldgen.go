@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/greensnark/go-sequell/conv"
-	"github.com/greensnark/go-sequell/stringnorm"
-	"github.com/greensnark/go-sequell/text"
-	"github.com/greensnark/go-sequell/xlog"
+	"github.com/crawl/go-sequell/conv"
+	"github.com/crawl/go-sequell/stringnorm"
+	"github.com/crawl/go-sequell/text"
+	"github.com/crawl/go-sequell/xlog"
 )
 
 type FieldGenCondition interface {

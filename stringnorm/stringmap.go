@@ -1,8 +1,8 @@
 package stringnorm
 
 import (
-	"github.com/greensnark/go-sequell/conv"
-	"github.com/greensnark/go-sequell/text"
+	"github.com/crawl/go-sequell/conv"
+	"github.com/crawl/go-sequell/text"
 )
 
 type MultiMapper map[string][]string

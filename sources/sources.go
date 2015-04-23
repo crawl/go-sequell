@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/greensnark/go-sequell/crawl/ctime"
-	"github.com/greensnark/go-sequell/crawl/xlogtools"
+	"github.com/crawl/go-sequell/crawl/ctime"
+	"github.com/crawl/go-sequell/crawl/xlogtools"
 )
 
 type Servers struct {

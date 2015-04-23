@@ -9,15 +9,15 @@ import (
 	"path"
 	"strconv"
 
-	"github.com/greensnark/go-sequell/action"
-	"github.com/greensnark/go-sequell/crawl/data"
-	cdb "github.com/greensnark/go-sequell/crawl/db"
-	"github.com/greensnark/go-sequell/crawl/xlogtools"
-	"github.com/greensnark/go-sequell/ectx"
-	"github.com/greensnark/go-sequell/loader"
-	"github.com/greensnark/go-sequell/pg"
-	"github.com/greensnark/go-sequell/schema"
-	"github.com/greensnark/go-sequell/sources"
+	"github.com/crawl/go-sequell/action"
+	"github.com/crawl/go-sequell/crawl/data"
+	cdb "github.com/crawl/go-sequell/crawl/db"
+	"github.com/crawl/go-sequell/crawl/xlogtools"
+	"github.com/crawl/go-sequell/ectx"
+	"github.com/crawl/go-sequell/loader"
+	"github.com/crawl/go-sequell/pg"
+	"github.com/crawl/go-sequell/schema"
+	"github.com/crawl/go-sequell/sources"
 )
 
 var DBExtensions = []string{"citext", "orafce"}

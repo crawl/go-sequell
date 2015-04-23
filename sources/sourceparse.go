@@ -5,10 +5,10 @@ import (
 	"path"
 	"strings"
 
-	"github.com/greensnark/go-sequell/crawl/ctime"
-	"github.com/greensnark/go-sequell/crawl/xlogtools"
-	"github.com/greensnark/go-sequell/qyaml"
-	"github.com/greensnark/go-sequell/text"
+	"github.com/crawl/go-sequell/crawl/ctime"
+	"github.com/crawl/go-sequell/crawl/xlogtools"
+	"github.com/crawl/go-sequell/qyaml"
+	"github.com/crawl/go-sequell/text"
 )
 
 func Sources(sources qyaml.Yaml, cachedir string) (*Servers, error) {

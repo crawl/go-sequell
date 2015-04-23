@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/greensnark/go-sequell/conv"
-	"github.com/greensnark/go-sequell/qyaml"
-	"github.com/greensnark/go-sequell/schema"
+	"github.com/crawl/go-sequell/conv"
+	"github.com/crawl/go-sequell/qyaml"
+	"github.com/crawl/go-sequell/schema"
 )
 
 type CrawlSchema struct {

@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/greensnark/go-sequell/ectx"
-	"github.com/greensnark/go-sequell/pg"
+	"github.com/crawl/go-sequell/ectx"
+	"github.com/crawl/go-sequell/pg"
 )
 
 func ExportTV(db pg.ConnSpec) error {

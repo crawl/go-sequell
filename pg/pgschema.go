@@ -1,7 +1,7 @@
 package pg
 
 import (
-	"github.com/greensnark/go-sequell/schema"
+	"github.com/crawl/go-sequell/schema"
 )
 
 func (p DB) ApplyDiff(s *schema.Schema) error {

@@ -9,13 +9,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/greensnark/go-sequell/crawl/ctime"
-	"github.com/greensnark/go-sequell/crawl/db"
-	"github.com/greensnark/go-sequell/crawl/xlogtools"
-	"github.com/greensnark/go-sequell/ectx"
-	"github.com/greensnark/go-sequell/pg"
-	"github.com/greensnark/go-sequell/sources"
-	"github.com/greensnark/go-sequell/xlog"
+	"github.com/crawl/go-sequell/crawl/ctime"
+	"github.com/crawl/go-sequell/crawl/db"
+	"github.com/crawl/go-sequell/crawl/xlogtools"
+	"github.com/crawl/go-sequell/ectx"
+	"github.com/crawl/go-sequell/pg"
+	"github.com/crawl/go-sequell/sources"
+	"github.com/crawl/go-sequell/xlog"
 	"github.com/lib/pq"
 )
 

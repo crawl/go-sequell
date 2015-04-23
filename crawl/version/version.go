@@ -5,7 +5,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/greensnark/go-sequell/text"
+	"github.com/crawl/go-sequell/text"
 )
 
 var canonicalVersionRegex = regexp.MustCompile(`(\d+\.\d+)`)

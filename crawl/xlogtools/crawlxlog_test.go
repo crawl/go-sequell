@@ -3,8 +3,8 @@ package xlogtools
 import (
 	"testing"
 
-	"github.com/greensnark/go-sequell/crawl/data"
-	"github.com/greensnark/go-sequell/xlog"
+	"github.com/crawl/go-sequell/crawl/data"
+	"github.com/crawl/go-sequell/xlog"
 )
 
 var normXlogTest = [][]xlog.Xlog{

@@ -3,8 +3,8 @@ package player
 import (
 	"strings"
 
-	"github.com/greensnark/go-sequell/qyaml"
-	"github.com/greensnark/go-sequell/stringnorm"
+	"github.com/crawl/go-sequell/qyaml"
+	"github.com/crawl/go-sequell/stringnorm"
 )
 
 type CharNormalizer struct {

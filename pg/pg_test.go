@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/greensnark/go-sequell/schema"
+	"github.com/crawl/go-sequell/schema"
 )
 
 func TestOpenDBUser(t *testing.T) {

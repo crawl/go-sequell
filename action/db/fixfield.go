@@ -5,13 +5,13 @@ import (
 	dsql "database/sql"
 	"fmt"
 
-	"github.com/greensnark/go-sequell/crawl/data"
-	"github.com/greensnark/go-sequell/crawl/db"
-	"github.com/greensnark/go-sequell/crawl/xlogtools"
-	"github.com/greensnark/go-sequell/loader"
-	"github.com/greensnark/go-sequell/pg"
-	"github.com/greensnark/go-sequell/sql"
-	"github.com/greensnark/go-sequell/stringnorm"
+	"github.com/crawl/go-sequell/crawl/data"
+	"github.com/crawl/go-sequell/crawl/db"
+	"github.com/crawl/go-sequell/crawl/xlogtools"
+	"github.com/crawl/go-sequell/loader"
+	"github.com/crawl/go-sequell/pg"
+	"github.com/crawl/go-sequell/sql"
+	"github.com/crawl/go-sequell/stringnorm"
 )
 
 type FieldFixer struct {

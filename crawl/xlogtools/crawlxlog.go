@@ -5,16 +5,16 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/greensnark/go-sequell/crawl/data"
-	"github.com/greensnark/go-sequell/crawl/god"
-	"github.com/greensnark/go-sequell/crawl/killer"
-	"github.com/greensnark/go-sequell/crawl/place"
-	"github.com/greensnark/go-sequell/crawl/player"
-	"github.com/greensnark/go-sequell/crawl/version"
-	"github.com/greensnark/go-sequell/qyaml"
-	"github.com/greensnark/go-sequell/stringnorm"
-	"github.com/greensnark/go-sequell/text"
-	"github.com/greensnark/go-sequell/xlog"
+	"github.com/crawl/go-sequell/crawl/data"
+	"github.com/crawl/go-sequell/crawl/god"
+	"github.com/crawl/go-sequell/crawl/killer"
+	"github.com/crawl/go-sequell/crawl/place"
+	"github.com/crawl/go-sequell/crawl/player"
+	"github.com/crawl/go-sequell/crawl/version"
+	"github.com/crawl/go-sequell/qyaml"
+	"github.com/crawl/go-sequell/stringnorm"
+	"github.com/crawl/go-sequell/text"
+	"github.com/crawl/go-sequell/xlog"
 )
 
 type XlogType int

@@ -3,7 +3,7 @@ package place
 import (
 	"regexp"
 
-	"github.com/greensnark/go-sequell/stringnorm"
+	"github.com/crawl/go-sequell/stringnorm"
 )
 
 func Normalizer(placeFixups map[string]string) stringnorm.List {

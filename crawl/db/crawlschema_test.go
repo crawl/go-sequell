@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/greensnark/go-sequell/crawl/data"
-	"github.com/greensnark/go-sequell/schema"
+	"github.com/crawl/go-sequell/crawl/data"
+	"github.com/crawl/go-sequell/schema"
 )
 
 func TestLoadSchema(t *testing.T) {

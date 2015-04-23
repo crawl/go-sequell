@@ -5,13 +5,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/greensnark/go-sequell/crawl/data"
-	"github.com/greensnark/go-sequell/flock"
-	"github.com/greensnark/go-sequell/isync"
-	"github.com/greensnark/go-sequell/logfetch"
-	"github.com/greensnark/go-sequell/pg"
-	"github.com/greensnark/go-sequell/resource"
-	"github.com/greensnark/go-sequell/sources"
+	"github.com/crawl/go-sequell/crawl/data"
+	"github.com/crawl/go-sequell/flock"
+	"github.com/crawl/go-sequell/isync"
+	"github.com/crawl/go-sequell/logfetch"
+	"github.com/crawl/go-sequell/pg"
+	"github.com/crawl/go-sequell/resource"
+	"github.com/crawl/go-sequell/sources"
 )
 
 var Root = resource.Root

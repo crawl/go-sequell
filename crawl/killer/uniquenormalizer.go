@@ -3,8 +3,8 @@ package killer
 import (
 	"regexp"
 
-	"github.com/greensnark/go-sequell/crawl/unique"
-	"github.com/greensnark/go-sequell/grammar"
+	"github.com/crawl/go-sequell/crawl/unique"
+	"github.com/crawl/go-sequell/grammar"
 )
 
 type uniqueNormalizer struct{}

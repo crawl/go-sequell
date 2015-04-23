@@ -6,9 +6,9 @@ import (
 	"os"
 
 	"github.com/codegangsta/cli"
-	"github.com/greensnark/go-sequell/action"
-	"github.com/greensnark/go-sequell/action/db"
-	"github.com/greensnark/go-sequell/pg"
+	"github.com/crawl/go-sequell/action"
+	"github.com/crawl/go-sequell/action/db"
+	"github.com/crawl/go-sequell/pg"
 )
 
 var Error error

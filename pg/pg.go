@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"strconv"
 
-	"github.com/greensnark/go-sequell/ectx"
+	"github.com/crawl/go-sequell/ectx"
 	_ "github.com/lib/pq"
 )
 

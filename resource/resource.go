@@ -1,9 +1,9 @@
 package resource
 
 import (
-	"github.com/greensnark/go-sequell/ectx"
-	"github.com/greensnark/go-sequell/qyaml"
-	"github.com/greensnark/go-sequell/root"
+	"github.com/crawl/go-sequell/ectx"
+	"github.com/crawl/go-sequell/qyaml"
+	"github.com/crawl/go-sequell/root"
 )
 
 var Root = root.New("", "SEQUELL_ROOT", "HENZELL_ROOT")

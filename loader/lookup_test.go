@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/greensnark/go-sequell/crawl/data"
-	cdb "github.com/greensnark/go-sequell/crawl/db"
-	"github.com/greensnark/go-sequell/pg"
-	"github.com/greensnark/go-sequell/xlog"
+	"github.com/crawl/go-sequell/crawl/data"
+	cdb "github.com/crawl/go-sequell/crawl/db"
+	"github.com/crawl/go-sequell/pg"
+	"github.com/crawl/go-sequell/xlog"
 )
 
 var testSchema = cdb.MustLoadSchema(data.CrawlData())

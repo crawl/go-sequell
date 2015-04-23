@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/golang/groupcache/lru"
-	cdb "github.com/greensnark/go-sequell/crawl/db"
-	"github.com/greensnark/go-sequell/ectx"
-	"github.com/greensnark/go-sequell/xlog"
+	cdb "github.com/crawl/go-sequell/crawl/db"
+	"github.com/crawl/go-sequell/ectx"
+	"github.com/crawl/go-sequell/xlog"
 )
 
 type TableLookup struct {

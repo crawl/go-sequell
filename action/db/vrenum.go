@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/greensnark/go-sequell/crawl/version"
-	"github.com/greensnark/go-sequell/ectx"
-	"github.com/greensnark/go-sequell/pg"
+	"github.com/crawl/go-sequell/crawl/version"
+	"github.com/crawl/go-sequell/ectx"
+	"github.com/crawl/go-sequell/pg"
 )
 
 func RenumberVersions(dbc pg.ConnSpec) error {

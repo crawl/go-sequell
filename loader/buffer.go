@@ -1,7 +1,7 @@
 package loader
 
 import (
-	"github.com/greensnark/go-sequell/xlog"
+	"github.com/crawl/go-sequell/xlog"
 )
 
 type XlogBuffer struct {

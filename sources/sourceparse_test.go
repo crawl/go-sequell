@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/greensnark/go-sequell/qyaml"
+	"github.com/crawl/go-sequell/qyaml"
 )
 
 func TestURLJoin(t *testing.T) {
