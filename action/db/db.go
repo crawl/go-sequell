@@ -208,6 +208,8 @@ func LoadLogs(db pg.ConnSpec, sourceDir string) error {
 	if err != nil {
 		return err
 	}
+	defer c.Close()
+
 	sources := Sources()
 	if sourceDir != "" {
 		if err = forceSourceDir(sources, sourceDir); err != nil {
@@ -262,11 +264,12 @@ func forceSourceDir(srv *sources.Servers, dir string) error {
 		}
 
 		xl := sources.XlogSrc{
-			Server:     server,
-			Name:       filename,
-			TargetPath: path.Join(dir, filename),
-			Type:       xtype,
-			Game:       game,
+			Server:        server,
+			Name:          filename,
+			TargetPath:    path.Join(dir, filename),
+			TargetRelPath: filename,
+			Type:          xtype,
+			Game:          game,
 		}
 		sourceMap[src] = append(sourceMap[src], &xl)
 	}
@@ -293,6 +296,28 @@ func CreateIndexes(db pg.ConnSpec) error {
 	return nil
 }
 
+func ListFiles(db pg.ConnSpec) error {
+	c, err := db.Open()
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+
+	rows, err := c.Query("select file from l_file")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var file string
+		if err = rows.Scan(&file); err != nil {
+			return err
+		}
+		fmt.Println(file)
+	}
+	return rows.Err()
+}
+
 func DeleteFileRows(db pg.ConnSpec, files []string) error {
 	if len(files) == 0 {
 		log.Println("No files specified.")
@@ -302,6 +327,7 @@ func DeleteFileRows(db pg.ConnSpec, files []string) error {
 	if err != nil {
 		return err
 	}
+	defer c.Close()
 
 	binds := func(nbind int) string {
 		buf := bytes.Buffer{}
