@@ -344,7 +344,7 @@ func DeleteFileRows(db pg.ConnSpec, files []string) error {
 	fileArgs := func(s []string) []interface{} {
 		res := make([]interface{}, len(s))
 		for i, v := range s {
-			res[i] = path.Base(v)
+			res[i] = v
 		}
 		return res
 	}
