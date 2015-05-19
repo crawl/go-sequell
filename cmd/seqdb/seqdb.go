@@ -274,6 +274,13 @@ func defineCommands(app *cli.App) {
 			},
 		},
 		{
+			Name:  "ls-files",
+			Usage: "lists all files known to Sequell",
+			Action: func(c *cli.Context) {
+				reportError(db.ListFiles(dbSpec(c)))
+			},
+		},
+		{
 			Name:  "rm-file",
 			Usage: "deletes rows inserted from the specified file(s)",
 			Action: func(c *cli.Context) {
