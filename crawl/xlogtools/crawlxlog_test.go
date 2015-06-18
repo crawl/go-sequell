@@ -134,6 +134,16 @@ var normXlogTest = [][]xlog.Xlog{
 	},
 	{
 		xlog.Xlog{
+			"type": "god.ecumenical",
+			"god":  "Makhleb",
+		},
+		xlog.Xlog{
+			"verb": "god.ecumenical",
+			"noun": "Makhleb",
+		},
+	},
+	{
+		xlog.Xlog{
 			"race": "Kenku",
 		},
 		xlog.Xlog{

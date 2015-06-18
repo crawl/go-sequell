@@ -219,6 +219,8 @@ func NormalizeMilestoneFields(log xlog.Xlog) {
 		noun = FoundRuneName(noun)
 	case "orb":
 		noun = "orb"
+	case "god.ecumenical":
+		noun = log["god"]
 	case "god.mollify":
 		noun = MollifiedGodName(noun)
 	case "god.renounce":
