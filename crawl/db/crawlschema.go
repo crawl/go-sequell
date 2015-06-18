@@ -289,6 +289,15 @@ func (s *CrawlSchema) PrimaryTableNames() []string {
 	return names
 }
 
+func (s *CrawlSchema) Table(name string) *CrawlTable {
+	for _, table := range s.Tables {
+		if table.Name == name {
+			return table
+		}
+	}
+	return nil
+}
+
 func (s *CrawlSchema) SchemaTables() []*schema.Table {
 	tables := make([]*schema.Table,
 		len(s.LookupTables)+len(s.Tables)*len(s.TableVariantPrefixes))

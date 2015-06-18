@@ -327,6 +327,13 @@ func defineCommands(app *cli.App) {
 			},
 		},
 		{
+			Name:  "fix-god-ecumenical",
+			Usage: "fix nouns for god.ecumenical milestones",
+			Action: func(c *cli.Context) {
+				reportError(db.FixGodEcumenical(dbSpec(c)))
+			},
+		},
+		{
 			Name:  "xlog-link",
 			Usage: "link old remote.* to new URL-based paths",
 			Action: func(c *cli.Context) {

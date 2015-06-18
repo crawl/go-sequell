@@ -39,7 +39,7 @@ func FixCharFields(dbc pg.ConnSpec) error {
 
 func updateMismatchedCharRows(c pg.DB, norm *player.CharNormalizer, sch *db.CrawlSchema, table string, rows *sql.Rows) error {
 	type MismatchRow struct {
-		id                int
+		id                int64
 		race, class, abbr string
 	}
 
