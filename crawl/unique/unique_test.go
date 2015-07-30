@@ -28,18 +28,25 @@ func TestIsOrc(t *testing.T) {
 }
 
 func TestMaybePanLord(t *testing.T) {
-	for _, fake := range []string{"a Bogon", "an ufetubus", "the Lernaean Dogfish"} {
-		if MaybePanLord(fake, "") {
-			t.Errorf("MaybePanLord: %s flagged a panlord, but isn't", fake)
+	tests := []struct {
+		version string
+		name    string
+		panLord bool
+	}{
+		{"0.10", "a Bogon", false},
+		{"0.10", "an ufetubus", false},
+		{"0.10", "the Lernaean Dogfish", false},
+		{"0.10", "Hawl", false},
+		{"0.10", "Fruitfly", true},
+		{"0.11", "Fruitfly", false},
+		{"0.11", "Cow the pandemonium lord", true},
+		{"0.10", "Cow the pandemonium lord", true},
+	}
+	for _, test := range tests {
+		isPanLord := MaybePanLord(test.version, test.name, "")
+		if isPanLord != test.panLord {
+			t.Errorf("MaybePanLord(%#v, %#v, \"\") == %#v, want %#v", test.version, test.name, isPanLord, test.panLord)
 		}
-	}
-
-	if MaybePanLord("Hawl", "") {
-		t.Errorf("MaybePanLord: Hawl incorrectly flagged as a panlord")
-	}
-
-	if !MaybePanLord("Fruitfly", "") {
-		t.Errorf("Fruitfly not flagged as a panlord")
 	}
 }
 

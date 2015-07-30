@@ -14,7 +14,7 @@ var reProperName = regexp.MustCompile(`^(\p{Lu}[\p{L}\p{N}']*(?: \p{Lu}[\p{L}\p{
 
 var reNameWithTitle = regexp.MustCompile(` the (.*)$`)
 
-func (u uniqueNormalizer) NormalizeKiller(killer string, killerName string, killerFlags string) (string, error) {
+func (u uniqueNormalizer) NormalizeKiller(cv, killer, killerName, killerFlags string) (string, error) {
 	// Reject ghosts and illusions:
 	if killer == "a player ghost" || killer == "a player illusion" {
 		return killer, nil
@@ -30,7 +30,7 @@ func (u uniqueNormalizer) NormalizeKiller(killer string, killerName string, kill
 				killer = grammar.Article(titleMatch[1])
 			}
 		} else {
-			if unique.MaybePanLord(properName, killerFlags) {
+			if unique.MaybePanLord(cv, properName, killerFlags) {
 				return unique.GenericPanLordName(), nil
 			}
 		}

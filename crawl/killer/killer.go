@@ -32,10 +32,10 @@ func (a *articleNorm) Normalize(killer string) (string, error) {
 	return grammar.Article(killer), nil
 }
 
-func NormalizeKiller(killer, rawKiller, killerFlags string) string {
+func NormalizeKiller(cv, killer, rawKiller, killerFlags string) string {
 	var err error
 	for _, norm := range normalizers {
-		killer, err = norm.NormalizeKiller(killer, rawKiller, killerFlags)
+		killer, err = norm.NormalizeKiller(cv, killer, rawKiller, killerFlags)
 		if err != nil {
 			return killer
 		}
@@ -79,13 +79,13 @@ func NormalizeKaux(kaux string) string {
 }
 
 type killerNormalizer interface {
-	NormalizeKiller(killer, killerRawValue, killerFlags string) (string, error)
+	NormalizeKiller(cv, killer, killerRawValue, killerFlags string) (string, error)
 }
 
-type killerNormFunc func(string, string, string) (string, error)
+type killerNormFunc func(string, string, string, string) (string, error)
 
-func (k killerNormFunc) NormalizeKiller(killer, killerRaw, killerFlags string) (string, error) {
-	return k(killer, killerRaw, killerFlags)
+func (k killerNormFunc) NormalizeKiller(cv, killer, killerRaw, killerFlags string) (string, error) {
+	return k(cv, killer, killerRaw, killerFlags)
 }
 
 var normalizers = []killerNormalizer{
@@ -94,7 +94,7 @@ var normalizers = []killerNormalizer{
 	reNorm(`^.*'s? ghost$`, "a player ghost"),
 	reNorm(`^.*'s? illusion$`, "a player illusion"),
 	reNorm(`^an? \w+ (draconian.*)`, "a $1"),
-	killerNormFunc(func(killer, raw, flags string) (string, error) {
+	killerNormFunc(func(cv, killer, raw, flags string) (string, error) {
 		if strings.Index(killer, "very ugly thing") != -1 {
 			return "a very ugly thing", nil
 		}
@@ -114,7 +114,7 @@ type simpleKillerNormalizer struct {
 	norm stringnorm.Normalizer
 }
 
-func (n *simpleKillerNormalizer) NormalizeKiller(killer, rawKiller, killerFlags string) (string, error) {
+func (n *simpleKillerNormalizer) NormalizeKiller(cv, killer, rawKiller, killerFlags string) (string, error) {
 	return n.norm.Normalize(killer)
 }
 

@@ -107,15 +107,14 @@ func (n *Normalizer) NormalizeLog(log xlog.Xlog) (xlog.Xlog, error) {
 	n.CanonicalizeFields(log)
 
 	log["v"] = version.FullVersion(log["v"])
-	log["cv"] = version.MajorVersion(log["v"])
+	cv := version.MajorVersion(log["v"])
 	if version.IsAlpha(log["v"]) {
 		log["alpha"] = "t"
+		cv += "-a"
 	}
-	if log["alpha"] != "" {
-		log["cv"] += "-a"
-	}
+	log["cv"] = cv
 	log["vnum"] = strconv.FormatUint(version.VersionNumericId(log["v"]), 10)
-	log["cvnum"] = strconv.FormatUint(version.VersionNumericId(log["cv"]), 10)
+	log["cvnum"] = strconv.FormatUint(version.VersionNumericId(cv), 10)
 	log["vlongnum"] =
 		strconv.FormatUint(version.VersionNumericId(log["vlong"]), 10)
 	log["tiles"] = NormalizeBool(log["tiles"])
@@ -139,7 +138,7 @@ func (n *Normalizer) NormalizeLog(log xlog.Xlog) (xlog.Xlog, error) {
 			return nil, err
 		}
 		log["banisher"] = banisher
-		log["cbanisher"] = killer.NormalizeKiller(banisher, banisher, "")
+		log["cbanisher"] = killer.NormalizeKiller(cv, banisher, banisher, "")
 	}
 
 	milestone := Type(log) == Milestone
@@ -155,11 +154,11 @@ func (n *Normalizer) NormalizeLog(log xlog.Xlog) (xlog.Xlog, error) {
 		log["killermap"] = NormalizeMapName(log["killermap"])
 		log["ikiller"] = text.FirstNotEmpty(log["ikiller"], log["killer"])
 		log["ckiller"] =
-			killer.NormalizeKiller(
+			killer.NormalizeKiller(cv,
 				text.FirstNotEmpty(log["killer"], log["ktyp"]),
 				log["killer"], log["killer_flags"])
 		log["cikiller"] =
-			killer.NormalizeKiller(log["ikiller"], log["ikiller"], "")
+			killer.NormalizeKiller(cv, log["ikiller"], log["ikiller"], "")
 		log["kmod"] = killer.NormalizeKmod(log["killer"])
 		log["ckaux"] = killer.NormalizeKaux(log["kaux"])
 		log["rend"] = log["end"]
