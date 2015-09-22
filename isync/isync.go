@@ -180,7 +180,7 @@ func (l *Sync) monitorFetchRequests() {
 		if !fetch {
 			break
 		}
-		l.Fetcher.Download(l.Servers, true)
+		l.Fetcher.Download(l.Servers.XlogSources(), true)
 	}
 	log.Println("fetch request monitor exiting")
 	l.slaveWaitGroup.Done()

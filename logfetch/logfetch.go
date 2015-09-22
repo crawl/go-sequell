@@ -7,6 +7,10 @@ import (
 	"github.com/crawl/go-sequell/sources"
 )
 
+type XlogSourcePredicate interface {
+	Match(src *sources.XlogSrc) bool
+}
+
 type FetchErrors []error
 
 func (f FetchErrors) Error() string {
@@ -53,12 +57,12 @@ func New() *Fetcher {
 	}
 }
 
-func (f *Fetcher) DownloadAndWait(srv *sources.Servers, incremental bool) {
-	f.Download(srv, incremental)
+func (f *Fetcher) DownloadAndWait(files []*sources.XlogSrc, incremental bool) {
+	f.Download(files, incremental)
 	f.HTTPFetch.Shutdown()
 }
 
-func (f *Fetcher) Download(srv *sources.Servers, incremental bool) {
-	req := sourceFetchRequests(incremental, srv.XlogSources())
+func (f *Fetcher) Download(files []*sources.XlogSrc, incremental bool) {
+	req := sourceFetchRequests(incremental, files)
 	f.HTTPFetch.QueueFetch(req)
 }

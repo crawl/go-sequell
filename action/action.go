@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/crawl/go-sequell/crawl/data"
 	"github.com/crawl/go-sequell/flock"
@@ -60,7 +61,44 @@ func LinkLogs() error {
 	})
 }
 
-func DownloadLogs(incremental bool) error {
+func xlogFilter(filters []string) func([]*sources.XlogSrc) []*sources.XlogSrc {
+	accept := func(file *sources.XlogSrc) bool {
+		fileDesc := file.String()
+		for _, filter := range filters {
+			if strings.Index(fileDesc, filter) != -1 {
+				return true
+			}
+		}
+		return false
+	}
+	return func(files []*sources.XlogSrc) []*sources.XlogSrc {
+		if filters == nil || len(filters) == 0 {
+			return files
+		}
+		res := make([]*sources.XlogSrc, 0, len(files))
+		for _, file := range files {
+			if accept(file) {
+				res = append(res, file)
+			}
+		}
+		return res
+	}
+}
+
+// ShowSourceURLs shows all remote Xlog URLs, including Xlogs that are no
+// longer live.
+func ShowSourceURLs() error {
+	src, err := sources.Sources(data.Sources(), LogCache)
+	if err != nil {
+		return err
+	}
+	for _, xlog := range src.XlogSources() {
+		fmt.Println(xlog.URL, xlog.TargetPath)
+	}
+	return nil
+}
+
+func DownloadLogs(incremental bool, filters []string) error {
 	src, err := sources.Sources(data.Sources(), LogCache)
 	if err != nil {
 		return err
@@ -74,7 +112,7 @@ func DownloadLogs(incremental bool) error {
 	}
 	defer FetchLock.Unlock()
 
-	logfetch.New().DownloadAndWait(src, incremental)
+	logfetch.New().DownloadAndWait(xlogFilter(filters)(src.XlogSources()), incremental)
 	return nil
 }
 

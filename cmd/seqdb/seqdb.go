@@ -139,7 +139,7 @@ func defineCommands(app *cli.App) {
 				},
 			},
 			Action: func(c *cli.Context) {
-				reportError(action.DownloadLogs(c.Bool("only-live")))
+				reportError(action.DownloadLogs(c.Bool("only-live"), c.Args()))
 			},
 		},
 		{
@@ -285,6 +285,13 @@ func defineCommands(app *cli.App) {
 			Usage: "deletes rows inserted from the specified file(s)",
 			Action: func(c *cli.Context) {
 				reportError(db.DeleteFileRows(dbSpec(c), c.Args()))
+			},
+		},
+		{
+			Name:  "sources",
+			Usage: "show all remote source URLs",
+			Action: func(c *cli.Context) {
+				reportError(action.ShowSourceURLs())
 			},
 		},
 		{
