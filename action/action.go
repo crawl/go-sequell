@@ -44,7 +44,6 @@ func LinkLogs() error {
 			if fi, err := os.Stat(oldPath); err == nil && fi.Mode().IsRegular() {
 				// If target exists, skip.
 				if _, err := os.Stat(xl.TargetPath); err == nil {
-					fmt.Fprintln(os.Stderr, "Skipping target", xl.TargetPath)
 					continue
 				}
 
@@ -52,6 +51,7 @@ func LinkLogs() error {
 					return err
 				}
 
+				fmt.Fprintln(os.Stderr, "ln", oldPath, xl.TargetPath)
 				if err = os.Link(oldPath, xl.TargetPath); err != nil {
 					return err
 				}
