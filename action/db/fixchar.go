@@ -15,6 +15,9 @@ import (
 	"github.com/crawl/go-sequell/stringnorm"
 )
 
+// FixCharFields fixes the "char" field in the db if the species and class
+// fields disagree with the species and class mentioned in the char field (this
+// was a Crawl bug that was subsequently fixed).
 func FixCharFields(dbc pg.ConnSpec) error {
 	c, err := dbc.Open()
 	if err != nil {
@@ -98,7 +101,7 @@ func updateMismatchedCharRows(c pg.DB, norm *player.CharNormalizer, sch *db.Craw
 		binds := make([]interface{}, len(mismatchedRows)*2)
 		for i := 0; i < rowCount; i++ {
 			binds[i*2] = mismatchedRows[i].id
-			binds[i*2+1], err = charLookup.Id(mismatchedRows[i].abbr)
+			binds[i*2+1], err = charLookup.ID(mismatchedRows[i].abbr)
 			if err != nil {
 				tx.Rollback()
 				return err

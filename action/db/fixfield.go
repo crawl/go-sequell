@@ -119,7 +119,7 @@ func (f *FieldFixer) updateBrokenFields(t *db.CrawlTable, rows *dsql.Rows) error
 		fmt.Println("Updating", f.TargetFieldName(), "as", fixMap)
 		for start, finish := range fixMap {
 			delete(fixMap, start)
-			id, err := lookup.Id(finish)
+			id, err := lookup.ID(finish)
 			if err != nil {
 				txn.Rollback()
 				return err

@@ -7,12 +7,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/golang/groupcache/lru"
 	cdb "github.com/crawl/go-sequell/crawl/db"
 	"github.com/crawl/go-sequell/ectx"
 	"github.com/crawl/go-sequell/xlog"
+	"github.com/golang/groupcache/lru"
 )
 
+// A TableLookup collects a list of lookup field values that must be inserted
+// into a lookup table, and replaced by their corresponding foreign keys.
 type TableLookup struct {
 	Table         *cdb.LookupTable
 	Lookups       map[string]LookupValue
@@ -27,6 +29,8 @@ type TableLookup struct {
 	baseQuery         string
 }
 
+// A LookupValue is a string Value that belongs in a lookup table, along with
+// any derived values that can be calculated from the Value.
 type LookupValue struct {
 	Value         string
 	DerivedValues []string
@@ -49,6 +53,7 @@ func NewTableLookup(table *cdb.LookupTable, capacity int) *TableLookup {
 	return tl
 }
 
+// Name returns the name of the lookup table.
 func (t *TableLookup) Name() string {
 	return t.Table.Name
 }
@@ -83,12 +88,13 @@ func (t *TableLookup) constructBaseQuery() string {
 		` where ` + t.lookupField.SqlName + ` in `
 }
 
-// SetIds sets field_id to the lookup id for all lookup fields in the xlog.
+// SetIds sets [field]_id to the lookup id for all lookup fields in the xlog.
+// You must call ResolveAll before using SetIds.
 func (t *TableLookup) SetIds(x xlog.Xlog) error {
 	for i, f := range t.refFieldNames {
 		field := t.fieldNames[i]
 		value := x[field]
-		id, err := t.Id(value)
+		id, err := t.ID(value)
 		if err != nil {
 			return ectx.Err(fmt.Sprintf("SetId(%#v)/%#v [%#v]", value, field, x), err)
 		}
@@ -97,8 +103,12 @@ func (t *TableLookup) SetIds(x xlog.Xlog) error {
 	return nil
 }
 
-func (t *TableLookup) Id(value string) (int, error) {
-	if id, ok := t.idCache.Get(t.LookupKey(value)); ok {
+// ID retrieves the foreign key value for the given lookup value. Id must be
+// used after a call to ResolveAll to load lookup values into the lookup table,
+// or find the existing ids for lookup values that are already in the lookup
+// table.
+func (t *TableLookup) ID(value string) (int, error) {
+	if id, ok := t.idCache.Get(t.lookupKey(value)); ok {
 		return id.(int), nil
 	}
 	return 0, fmt.Errorf("value %#v not found in %s", value, t)
@@ -108,6 +118,8 @@ func (t *TableLookup) String() string {
 	return "Lookup[" + t.Table.Name + "]"
 }
 
+// Add adds the lookup fields for this table and any derived values from the
+// xlog to the list of values to be resolved/inserted to the lookup table.
 func (t *TableLookup) Add(x xlog.Xlog) {
 	var derivedFieldValues []string
 	if t.derivedFieldNames != nil {
@@ -121,7 +133,8 @@ func (t *TableLookup) Add(x xlog.Xlog) {
 	}
 }
 
-func (t *TableLookup) LookupKey(lookup string) string {
+// lookupKey transforms a lookup value into its canonical form in the id map.
+func (t *TableLookup) lookupKey(lookup string) string {
 	lookup = NormalizeValue(lookup)
 	if !t.CaseSensitive {
 		return strings.ToLower(lookup)
@@ -129,8 +142,10 @@ func (t *TableLookup) LookupKey(lookup string) string {
 	return lookup
 }
 
+// AddLookup adds the lookup value and the list of values derived from it to
+// t, to be resolved by the next call to ResolveAll.
 func (t *TableLookup) AddLookup(lookup string, derivedValues []string) {
-	key := t.LookupKey(lookup)
+	key := t.lookupKey(lookup)
 	if _, ok := t.idCache.Get(key); ok {
 		return
 	}
@@ -201,7 +216,7 @@ func (t *TableLookup) resolveRows(rows *sql.Rows, err error) error {
 }
 
 func (t *TableLookup) resolveSingleLookup(id int, lookup string) {
-	key := t.LookupKey(lookup)
+	key := t.lookupKey(lookup)
 	t.idCache.Add(key, id)
 	delete(t.Lookups, key)
 }
@@ -275,6 +290,8 @@ func (t *TableLookup) insertValues() []interface{} {
 	return res
 }
 
+// IsFull returns true if t is at its capacity (this is usually the point you'd
+// call ResolveAll())
 func (t *TableLookup) IsFull() bool {
 	return len(t.Lookups) >= t.Capacity
 }

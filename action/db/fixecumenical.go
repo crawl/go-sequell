@@ -12,6 +12,7 @@ import (
 
 const updateRowCount = 10000
 
+// FixGodEcumenical corrects the noun in god.ecumenical milestones.
 func FixGodEcumenical(dbc pg.ConnSpec) error {
 	c, err := dbc.Open()
 	if err != nil {
@@ -82,7 +83,7 @@ func fixTableGodEcumenical(c pg.DB, sch *db.CrawlSchema, lookup *loader.TableLoo
 		binds := make([]interface{}, godRowCount*2)
 		for i := 0; i < godRowCount; i++ {
 			binds[i*2] = godRows[i].id
-			binds[i*2+1], err = lookup.Id(godRows[i].god)
+			binds[i*2+1], err = lookup.ID(godRows[i].god)
 			if err != nil {
 				tx.Rollback()
 				return err
