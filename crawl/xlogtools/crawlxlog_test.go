@@ -1,9 +1,11 @@
 package xlogtools
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/crawl/go-sequell/crawl/data"
+	"github.com/crawl/go-sequell/crawl/version"
 	"github.com/crawl/go-sequell/xlog"
 )
 
@@ -30,6 +32,24 @@ var normXlogTest = [][]xlog.Xlog{
 			"noun":      "Sigmund",
 			"rstart":    "20140001123755S",
 			"start":     "20140001123755S",
+		},
+	},
+	{
+		xlog.Xlog{
+			"vsavrv": "Git::0.10.0-a0",
+		},
+		xlog.Xlog{
+			"vsavrv":    "0.10.0-a0",
+			"vsavrvnum": strconv.FormatUint(version.NumericID("0.10.0-a0"), 10),
+		},
+	},
+	{
+		xlog.Xlog{
+			"vsav": "34.150",
+		},
+		xlog.Xlog{
+			"vsav":    "34.150",
+			"vsavnum": strconv.FormatUint(version.NumericID("34.150"), 10),
 		},
 	},
 	{

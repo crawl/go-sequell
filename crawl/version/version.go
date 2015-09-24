@@ -19,24 +19,34 @@ var vnumCacheLock = sync.Mutex{}
 // never happen for real version numbers.
 const VnumCacheDumpThreshold = 1000
 
-func CachingVersionNumericId(ver string) uint64 {
+var rVCSPrefix = regexp.MustCompile(`^.*?::`)
+
+// StripVCSQualifier removes a VCS:: prefix from the head of ver.
+func StripVCSQualifier(ver string) string {
+	return rVCSPrefix.ReplaceAllString(ver, "")
+}
+
+// CachingNumericID returns a version ID given a Crawl version string.
+// The return value is identical to VersionNumericID, but calculated values
+// are cached for improved performance.
+func CachingNumericID(ver string) uint64 {
 	vnumCacheLock.Lock()
 	defer vnumCacheLock.Unlock()
-	if vnumId, exists := vnumCache[ver]; exists {
-		return vnumId
+	if vnumID, exists := vnumCache[ver]; exists {
+		return vnumID
 	}
 
 	if len(vnumCache) > VnumCacheDumpThreshold {
 		vnumCache = map[string]uint64{}
 	}
-	vnumId := VersionNumericId(ver)
-	vnumCache[ver] = vnumId
-	return vnumId
+	vnumID := NumericID(ver)
+	vnumCache[ver] = vnumID
+	return vnumID
 }
 
-// MajorVersion returns the first two segments (X.Y) of a long version
+// Major returns the first two segments (X.Y) of a long version
 // string in the form X.Y.Z
-func MajorVersion(ver string) string {
+func Major(ver string) string {
 	cv := canonicalVersionRegex.FindString(ver)
 	if cv == "" {
 		return ver
@@ -44,34 +54,37 @@ func MajorVersion(ver string) string {
 	return cv
 }
 
-// FullVersion expands a short version in the form X.Y to X.Y.0
-func FullVersion(ver string) string {
+// Full expands a short version in the form X.Y to X.Y.0
+func Full(ver string) string {
 	return fullVersionRegex.ReplaceAllString(ver, "$1.0$2")
 }
 
 var rAlphaQualifier = regexp.MustCompile(`-[a-z]`)
 
+// IsAlpha returns true if ver is a version with an alpha (-a, -b, etc.)
+// qualifier.
 func IsAlpha(ver string) bool {
 	return rAlphaQualifier.FindString(ver) != ""
 }
 
-// SplitVersionQualifier splits a hyphenated version into the parts
+// SplitQualifier splits a hyphenated version into the parts
 // before and after the first hyphen. If the string contains no
 // hyphen, the first part is the entire string and the second part is
 // empty.
-func SplitVersionQualifier(ver string) (string, string) {
+func SplitQualifier(ver string) (string, string) {
 	ver = strings.TrimSpace(ver)
 	hyphenatedParts := strings.SplitN(ver, "-", 2)
 	if len(hyphenatedParts) == 2 {
 		return hyphenatedParts[0], hyphenatedParts[1]
-	} else {
-		return ver, ""
 	}
+	return ver, ""
 }
 
 var rQualifierPrefixMajorMinor = regexp.MustCompile(`^([a-z]+)([0-9]*)(?:-(\d+))?`)
 var rUnqualifiedRevCount = regexp.MustCompile(`^(\d+)-`)
 
+// SplitQualifierPrefixMajorMinor splits a version qualifier into prefix,
+// major and minor parts.
 func SplitQualifierPrefixMajorMinor(qual string) (string, string, string) {
 	match := rQualifierPrefixMajorMinor.FindStringSubmatch(qual)
 	if match == nil {
@@ -84,6 +97,7 @@ func SplitQualifierPrefixMajorMinor(qual string) (string, string, string) {
 	return match[1], match[2], match[3]
 }
 
+// SplitDottedVersion splits a dotted version string into its parts.
 func SplitDottedVersion(ver string) []string {
 	return text.RightPadSlice(strings.Split(ver, "."), 3, "0")
 }
@@ -94,18 +108,18 @@ func ExpandVersionKey(verkey string) string {
 	return "0." + strings.TrimLeft(verkey, "0")
 }
 
-// VersionNumericId parses a Crawl version number and returns an int64
+// NumericID parses a Crawl version number and returns an int64
 // representing the version that can be used in numeric comparisons,
 // where later versions return higher numbers than older versions.
-func VersionNumericId(ver string) uint64 {
-	version, qualifier := SplitVersionQualifier(ver)
+func NumericID(ver string) uint64 {
+	version, qualifier := SplitQualifier(ver)
 	return versionNumberize(SplitDottedVersion(version)) +
 		versionQualifierNumberize(qualifier)
 }
 
 func versionNumberize(versionParts []string) uint64 {
 	var base uint64 = 1e8
-	var sum uint64 = 0
+	var sum uint64
 	for i := len(versionParts) - 1; i >= 0; i-- {
 		sum += uint64(text.ParseInt(versionParts[i], 0)) * base
 		base *= 1e3

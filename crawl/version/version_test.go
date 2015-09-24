@@ -13,7 +13,7 @@ func TestVnumOrder(t *testing.T) {
 	for _, vnumOrder := range vnumOrderTests {
 		var lastNum uint64
 		for i, ver := range vnumOrder {
-			verNum := VersionNumericId(ver)
+			verNum := NumericID(ver)
 			if verNum <= lastNum {
 				t.Errorf("Version %s < %s (%d < %d), expected %s > %s",
 					ver, vnumOrder[i-1],
@@ -44,29 +44,29 @@ func TestSplitQualifier(t *testing.T) {
 	}
 }
 
-func TestMajorVersion(t *testing.T) {
-	if MajorVersion("1.22.15") != "1.22" {
+func TestMajor(t *testing.T) {
+	if Major("1.22.15") != "1.22" {
 		t.Errorf("expected major version of 1.22.15 to be 1.22")
 	}
 
-	if MajorVersion("xz 0.14.2-g035434") != "0.14" {
+	if Major("xz 0.14.2-g035434") != "0.14" {
 		t.Errorf("expected major version of 0.14.2-g035434 to be 0.14")
 	}
 }
 
 func TestFullVersion(t *testing.T) {
-	if FullVersion("0.9") != "0.9.0" {
+	if Full("0.9") != "0.9.0" {
 		t.Errorf("expected full version of 0.9 to be 0.9.0")
 	}
-	if FullVersion("0.9-b1") != "0.9.0-b1" {
+	if Full("0.9-b1") != "0.9.0-b1" {
 		t.Errorf("expected full version of 0.9-b1 to be 0.9.0-b1")
 	}
-	if FullVersion("0.9.3-a0") != "0.9.3-a0" {
+	if Full("0.9.3-a0") != "0.9.3-a0" {
 		t.Errorf("expected full version of 0.9.3-a0 to be 0.9.3-a0")
 	}
 }
 
-var versionNumericIds = [][]string{
+var versionNumericIDs = [][]string{
 	{"0.1.7", "100799000000"},
 	{"0.8.0-a0", "800001000000"},
 	{"0.8.0-rc1", "800018010000"},
@@ -76,32 +76,32 @@ var versionNumericIds = [][]string{
 }
 
 func TestVersionNumericId(t *testing.T) {
-	testVersionId(t, VersionNumericId)
+	testVersionID(t, NumericID)
 }
 
 func TestCachingVersionNumericId(t *testing.T) {
-	testVersionId(t, CachingVersionNumericId)
+	testVersionID(t, CachingNumericID)
 }
 
 func BenchmarkVersionNumericId(b *testing.B) {
-	benchmarkVersionNumericId(b, VersionNumericId)
+	benchmarkNumericID(b, NumericID)
 }
 
 func BenchmarkCachingVersionNumericId(b *testing.B) {
-	benchmarkVersionNumericId(b, CachingVersionNumericId)
+	benchmarkNumericID(b, CachingNumericID)
 }
 
-func benchmarkVersionNumericId(b *testing.B, impl func(string) uint64) {
+func benchmarkNumericID(b *testing.B, impl func(string) uint64) {
 	for i := 0; i < b.N; i++ {
-		for _, versionStrId := range versionNumericIds {
-			impl(versionStrId[0])
+		for _, versionStrID := range versionNumericIDs {
+			impl(versionStrID[0])
 		}
 	}
 }
 
-func testVersionId(t *testing.T, impl func(string) uint64) {
-	for _, versionStrId := range versionNumericIds {
-		ver, id := versionStrId[0], versionStrId[1]
+func testVersionID(t *testing.T, impl func(string) uint64) {
+	for _, versionStrID := range versionNumericIDs {
+		ver, id := versionStrID[0], versionStrID[1]
 		res := strconv.FormatUint(impl(ver), 10)
 		if res != id {
 			t.Errorf("VersionNumericId(%s) == %s, expected %s\n",
@@ -132,9 +132,9 @@ func TestSplitVersionQualifier(t *testing.T) {
 	}
 	for _, test := range tests {
 		v := test[0]
-		a, b := SplitVersionQualifier(v)
+		a, b := SplitQualifier(v)
 		if a != test[1] || b != test[2] {
-			t.Errorf("SplitVersionQualifier(%#v) = (%#v, %#v); want (%#v, %#v)",
+			t.Errorf("SplitQualifier(%#v) = (%#v, %#v); want (%#v, %#v)",
 				v, a, b, test[1], test[2])
 		}
 	}

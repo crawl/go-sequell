@@ -36,10 +36,13 @@ func orcMap() map[string]bool {
 	return orcMapData
 }
 
+// GenericPanLordName gets the default name for generic pandemonium lords.
 func GenericPanLordName() string {
 	return data.Crawl.String("generic_panlord")
 }
 
+// IsUnique returns true if name refers to a unique monster; IsUnique will
+// return true always when killerFlags includes "unique".
 func IsUnique(name string, killerFlags string) bool {
 	if strings.Index(strings.ToLower(killerFlags), "unique") != -1 {
 		return true
@@ -47,15 +50,18 @@ func IsUnique(name string, killerFlags string) bool {
 	return uniqueMap()[name]
 }
 
+// IsOrc returns true if name refers to a named orc.
 func IsOrc(name string) bool {
 	return orcMap()[name]
 }
 
 var panLordSuffix = regexp.MustCompile(`the pandemonium lord`)
-var panLordSuffixVersion = version.VersionNumericId("0.11")
+var panLordSuffixVersion = version.NumericID("0.11")
 
+// MaybePanLord returns true if name looks like a pandemonium lord's name,
+// using cv (Crawl canonical version) and killerFlags to improve its guesses.
 func MaybePanLord(cv, name, killerFlags string) bool {
-	if version.CachingVersionNumericId(cv) >= panLordSuffixVersion {
+	if version.CachingNumericID(cv) >= panLordSuffixVersion {
 		return panLordSuffix.FindStringIndex(name) != nil
 	}
 	return reArticlePrefix.FindStringIndex(name) == nil && !IsUnique(name, killerFlags) && !IsOrc(name)

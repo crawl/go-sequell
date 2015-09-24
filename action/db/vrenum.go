@@ -10,6 +10,8 @@ import (
 	"github.com/crawl/go-sequell/pg"
 )
 
+// RenumberVersions updates all version numbers in Sequell's db, recalculating
+// version numberic ids using the current implementation of version.NumericID.
 func RenumberVersions(dbc pg.ConnSpec) error {
 	c, err := dbc.Open()
 	if err != nil {
@@ -21,8 +23,11 @@ func RenumberVersions(dbc pg.ConnSpec) error {
 		verCol, vnumCol string
 	}{
 		{"l_version", "v", "vnum"},
+		{"l_version", "v", "vnum"},
 		{"l_cversion", "cv", "cvnum"},
 		{"l_vlong", "vlong", "vlongnum"},
+		{"l_savercsversion", "vsavrv", "vsavrvnum"},
+		{"l_savever", "vsav", "vsavnum"},
 	}
 	for _, tab := range tables {
 		err = renumberVersionTable(c, tab.table, tab.verCol, tab.vnumCol)
@@ -65,7 +70,7 @@ func renumberVersionTable(c pg.DB, table, verCol, vnumCol string) error {
 		res := make([]interface{}, len(versionQueue)*2)
 		for i, ver := range versionQueue {
 			res[i*2] = ver
-			res[i*2+1] = version.CachingVersionNumericId(ver)
+			res[i*2+1] = version.CachingNumericID(ver)
 		}
 		return res
 	}
