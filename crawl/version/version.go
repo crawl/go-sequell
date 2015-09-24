@@ -19,9 +19,9 @@ var vnumCacheLock = sync.Mutex{}
 // never happen for real version numbers.
 const VnumCacheDumpThreshold = 1000
 
-var rVCSPrefix = regexp.MustCompile(`^.*?::`)
+var rVCSPrefix = regexp.MustCompile(`^.*?:`)
 
-// StripVCSQualifier removes a VCS:: prefix from the head of ver.
+// StripVCSQualifier removes a VCS: prefix from the head of ver.
 func StripVCSQualifier(ver string) string {
 	return rVCSPrefix.ReplaceAllString(ver, "")
 }
