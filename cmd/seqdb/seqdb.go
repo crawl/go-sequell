@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+
+	"gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/codegangsta/cli"
 	"github.com/crawl/go-sequell/action"
@@ -11,7 +14,7 @@ import (
 	"github.com/crawl/go-sequell/pg"
 )
 
-var Error error
+var cmdError error
 
 func main() {
 	app := cli.NewApp()
@@ -21,17 +24,36 @@ func main() {
 	app.Action = func(c *cli.Context) {
 		cli.ShowAppHelp(c)
 	}
+	app.Before = func(c *cli.Context) error {
+		if logPath := c.GlobalString("log"); logPath != "" {
+			if err := os.MkdirAll(filepath.Dir(logPath), 0755); err != nil {
+				return err
+			}
+			log.SetOutput(&lumberjack.Logger{
+				Filename:   logPath,
+				MaxSize:    10,
+				MaxBackups: 10,
+				MaxAge:     15,
+			})
+		}
+		return nil
+	}
 	defineFlags(app)
 	defineCommands(app)
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 	app.Run(os.Args)
-	if Error != nil {
+	if cmdError != nil {
 		os.Exit(1)
 	}
 }
 
 func defineFlags(app *cli.App) {
 	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:   "log",
+			Usage:  "Sequell log file path",
+			EnvVar: "SEQUELL_LOG",
+		},
 		cli.StringFlag{
 			Name:   "db",
 			Value:  "sequell",
@@ -68,7 +90,7 @@ func defineFlags(app *cli.App) {
 func reportError(err error) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
-		Error = err
+		cmdError = err
 	}
 }
 

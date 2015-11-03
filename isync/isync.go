@@ -143,7 +143,6 @@ func (l *Sync) runCommand(cmd string) error {
 	case "fetch":
 		select {
 		case l.fetchRequests <- true:
-			log.Println("Fetch requested")
 		default:
 		}
 	case "exit":

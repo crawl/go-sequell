@@ -6,7 +6,7 @@ import (
 
 	"github.com/crawl/go-sequell/conv"
 	"github.com/crawl/go-sequell/text"
-	"gopkg.in/v1/yaml"
+	"gopkg.in/yaml.v2"
 )
 
 type Yaml struct {

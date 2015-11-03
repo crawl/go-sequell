@@ -238,7 +238,6 @@ func groupFetchRequestsByHost(requests []*FetchRequest) map[string][]*FetchReque
 
 // QueueFetch enqueues the given download requests for asynchronous download.
 func (h *Fetcher) QueueFetch(req []*FetchRequest) {
-	log.Printf("QueueFetch: %d files\n", len(req))
 	for host, reqs := range groupFetchRequestsByHost(req) {
 		hostQueue := h.hostQueue(host)
 		h.enqueueWaitGroup.Add(1)

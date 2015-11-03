@@ -87,6 +87,7 @@ selectLoop:
 		case <-throttleChan():
 			for file := range pendingChanges {
 				delete(pendingChanges, file)
+				log.Println("file changed:", file)
 				res <- file
 			}
 		case err := <-watcher.Errors:
