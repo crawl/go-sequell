@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
+	"io"
 	"log"
 	"strconv"
 	"strings"
@@ -220,7 +221,11 @@ func (l *Loader) LoadReaderLogs(reader *Reader) error {
 				log.Printf("Ignoring missing file: %s\n", reader.Filename)
 				return nil
 			}
-			return ectx.Err("SeekNext", err)
+			var help string
+			if err == io.EOF {
+				help = " (did the file shrink?)"
+			}
+			return ectx.Err(fmt.Sprintf("SeekNext:%s:%d%s", reader.Filename, seekPos, help), err)
 		}
 	}
 
