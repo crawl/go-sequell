@@ -11,13 +11,18 @@ import (
 	"github.com/crawl/go-sequell/text"
 )
 
-func Sources(sources qyaml.Yaml, cachedir string) (*Servers, error) {
+// Sources reads a parsed sources.yml object and returns a Servers object
+// with metadata on the remote servers that supply xlogs to Sequell.
+func Sources(sources qyaml.YAML, cachedir string) (*Servers, error) {
 	return sourceYamlParser{
 		sources:  sources.Slice("sources"),
 		cachedir: cachedir,
 	}.Parse()
 }
 
+// DuplicateXlogTargets gets the list of duplicated xlog target paths.
+// Duplicate target paths are bad news (since they overwrite each other) and
+// indicate a broken configuration.
 func DuplicateXlogTargets(xlogs []*XlogSrc) []string {
 	pathCounts := map[string][]string{}
 	for _, x := range xlogs {
@@ -55,7 +60,7 @@ func (s sourceYamlParser) Parse() (*Servers, error) {
 }
 
 type serverParser struct {
-	server   qyaml.Yaml
+	server   qyaml.YAML
 	cachedir string
 }
 
@@ -82,8 +87,8 @@ func (s serverParser) Parse() (*Server, error) {
 	return &server, nil
 }
 
-func (s serverParser) ParseTimeZones(tzdst map[string]string) (ctime.DstLocation, error) {
-	return ctime.ParseDstLocation(tzdst["S"], tzdst["D"])
+func (s serverParser) ParseTimeZones(tzdst map[string]string) (ctime.DSTLocation, error) {
+	return ctime.ParseDSTLocation(tzdst["S"], tzdst["D"])
 }
 
 func (s serverParser) ParseXlogRefs(

@@ -2,6 +2,8 @@ package conv
 
 import "github.com/crawl/go-sequell/text"
 
+// IStringMap converts v into a map[string]string, provided v is really a
+// map[interface{}]interface{}. If not, returns an empty string map.
 func IStringMap(v interface{}) map[string]string {
 	res := map[string]string{}
 	if keyMap, ok := v.(map[interface{}]interface{}); ok {
@@ -12,6 +14,8 @@ func IStringMap(v interface{}) map[string]string {
 	return res
 }
 
+// IStringSlice converts islice into a []string, provided islice is a
+// []interface{}, or returns an empty slice if not.
 func IStringSlice(islice interface{}) []string {
 	if islice == nil {
 		return nil
@@ -26,6 +30,9 @@ func IStringSlice(islice interface{}) []string {
 	return nil
 }
 
+// IStringPairs converts islice into a [][]string, where each element is a
+// 2-pair []string. If islice is not a []interface{}, returns an empty
+// [][]string
 func IStringPairs(islice interface{}) [][]string {
 	if islice == nil {
 		return nil
@@ -45,6 +52,8 @@ func IStringPairs(islice interface{}) [][]string {
 	return nil
 }
 
+// StringSliceSet converts a []string into a map[string]bool where the keys
+// in the map are values in the []string mapped to true.
 func StringSliceSet(slice []string) map[string]bool {
 	res := make(map[string]bool)
 	for _, val := range slice {

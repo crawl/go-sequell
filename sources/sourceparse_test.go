@@ -46,9 +46,9 @@ func TestSources(t *testing.T) {
 	if cao == nil {
 		t.Errorf("Couldn't find source cao in %s", src)
 	}
-	expectedUrl := "http://crawl.akrasiac.org/allgames.txt"
-	if cao.Logfiles[0].URL != expectedUrl {
-		t.Errorf("Expected CAO first URL to be %s, was %s", expectedUrl,
+	expectedURL := "http://crawl.akrasiac.org/allgames.txt"
+	if cao.Logfiles[0].URL != expectedURL {
+		t.Errorf("Expected CAO first URL to be %s, was %s", expectedURL,
 			cao.Logfiles[0].URL)
 	}
 

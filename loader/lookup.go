@@ -83,9 +83,9 @@ func (t *TableLookup) init() {
 }
 
 func (t *TableLookup) constructBaseQuery() string {
-	return `select id, ` + t.lookupField.SqlName +
+	return `select id, ` + t.lookupField.SQLName +
 		` from ` + t.Table.TableName() +
-		` where ` + t.lookupField.SqlName + ` in `
+		` where ` + t.lookupField.SQLName + ` in `
 }
 
 // SetIds sets [field]_id to the lookup id for all lookup fields in the xlog.
@@ -249,10 +249,10 @@ func (t *TableLookup) lookupQuery(nbinds int) string {
 func (t *TableLookup) insertStatement(nrows int, bindsPerRow int) string {
 	var buf bytes.Buffer
 	buf.WriteString("insert into " + t.Table.TableName() + " (")
-	buf.WriteString(t.lookupField.SqlName)
+	buf.WriteString(t.lookupField.SQLName)
 	for _, g := range t.Table.DerivedFields {
 		buf.WriteString(",")
-		buf.WriteString(g.SqlName)
+		buf.WriteString(g.SQLName)
 	}
 	buf.WriteString(")\nvalues ")
 
@@ -272,7 +272,7 @@ func (t *TableLookup) insertStatement(nrows int, bindsPerRow int) string {
 		}
 		buf.WriteString(")\n")
 	}
-	buf.WriteString("returning id, " + t.lookupField.SqlName)
+	buf.WriteString("returning id, " + t.lookupField.SQLName)
 	return buf.String()
 }
 

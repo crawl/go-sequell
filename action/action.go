@@ -15,10 +15,17 @@ import (
 	"github.com/crawl/go-sequell/sources"
 )
 
+// Root is the root directory for Sequell's config
 var Root = resource.Root
+
+// LogCache is the cache directory that holds logfiles retrieved from remote
+// servers.
 var LogCache = Root.Path("server-xlogs")
 
+// DBLock is the lock file used to guard write access to the DB.
 var DBLock = flock.New(Root.Path(".seq.db.lock"))
+
+// FetchLock is the lock file used to guard files downloaded to the cache.
 var FetchLock = flock.New(Root.Path(".seq.fetch.lock"))
 
 func logProc(act func(*sources.Servers) error) error {
@@ -37,6 +44,7 @@ func logProc(act func(*sources.Servers) error) error {
 	return act(src)
 }
 
+// LinkLogs links cached logs to their correct modern locations.
 func LinkLogs() error {
 	return logProc(func(src *sources.Servers) error {
 		for _, xl := range src.XlogSources() {
@@ -98,6 +106,8 @@ func ShowSourceURLs() error {
 	return nil
 }
 
+// DownloadLogs downloads all logfiles, possibly filtered to a subset. If
+// incremental, ignores files that are no longer live.
 func DownloadLogs(incremental bool, filters []string) error {
 	src, err := sources.Sources(data.Sources(), LogCache)
 	if err != nil {
@@ -116,6 +126,8 @@ func DownloadLogs(incremental bool, filters []string) error {
 	return nil
 }
 
+// Isync runs the isync process that runs as a slave to Sequell and periodically
+// downloads and loads logs.
 func Isync(db pg.ConnSpec) error {
 	if err := os.MkdirAll(LogCache, os.ModePerm); err != nil {
 		return err

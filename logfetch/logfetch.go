@@ -7,10 +7,12 @@ import (
 	"github.com/crawl/go-sequell/sources"
 )
 
+// XlogSourcePredicate filters xlog sources.
 type XlogSourcePredicate interface {
 	Match(src *sources.XlogSrc) bool
 }
 
+// FetchErrors is an error representing a composite list of fetch errors.
 type FetchErrors []error
 
 func (f FetchErrors) Error() string {
@@ -47,21 +49,27 @@ func sourceFetchRequests(incremental bool, src []*sources.XlogSrc) []*httpfetch.
 	return res
 }
 
+// A Fetcher downloads files from remote servers.
 type Fetcher struct {
 	HTTPFetch *httpfetch.Fetcher
 }
 
+// New creates a fetcher.
 func New() *Fetcher {
 	return &Fetcher{
 		HTTPFetch: httpfetch.New(),
 	}
 }
 
+// DownloadAndWait downloads all xlog files, blocking until the download
+// completes. If incremental, skips files that are no longer active.
 func (f *Fetcher) DownloadAndWait(files []*sources.XlogSrc, incremental bool) {
 	f.Download(files, incremental)
 	f.HTTPFetch.Shutdown()
 }
 
+// Download triggers an async download of all xlog files. If incremental,
+// skips files that are no longer active.
 func (f *Fetcher) Download(files []*sources.XlogSrc, incremental bool) {
 	req := sourceFetchRequests(incremental, files)
 	f.HTTPFetch.QueueFetch(req)

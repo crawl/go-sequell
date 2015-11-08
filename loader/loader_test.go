@@ -71,9 +71,9 @@ func createSingleFileLoader(file string) (*Loader, error) {
 	}
 	ldr.Readers = []*Reader{
 		&Reader{
-			XlogReader: xlog.Reader(src.TargetPath, src.TargetRelPath),
-			XlogSrc:    src,
-			Table:      ldr.TableName(src),
+			Reader:  xlog.NewReader(src.TargetPath, src.TargetRelPath),
+			XlogSrc: src,
+			Table:   ldr.TableName(src),
 		},
 	}
 	return ldr, nil

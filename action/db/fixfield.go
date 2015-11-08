@@ -14,6 +14,7 @@ import (
 	"github.com/crawl/go-sequell/stringnorm"
 )
 
+// A FieldFixer transforms values in a database column.
 type FieldFixer struct {
 	c                pg.DB
 	schema           *db.CrawlSchema
@@ -22,6 +23,8 @@ type FieldFixer struct {
 	RegexpTransforms [][]string
 }
 
+// FixField creates a field fixer for field, based on simple normalization
+// rules loaded from crawl-data.yml
 func FixField(dbc pg.ConnSpec, field string) error {
 	c, err := dbc.Open()
 	if err != nil {
@@ -70,10 +73,12 @@ func (f *FieldFixer) init() error {
 	return nil
 }
 
+// TargetFieldName is the name of the target database column
 func (f *FieldFixer) TargetFieldName() string {
 	return f.fieldGen.TargetField
 }
 
+// FixFields transforms field values that have mismatched values.
 func (f *FieldFixer) FixFields() error {
 	for _, t := range f.schema.PrefixedTablesWithField(f.TargetFieldName()) {
 		query, binds, err := f.mismatchedFieldQuery(t)
@@ -185,7 +190,7 @@ func (f *FieldFixer) fieldUpdateQuery(t *db.CrawlTable, valids map[string]int) s
 	}
 	query.WriteString(") as c (value, id)")
 	query.WriteString(" where t." + field.RefName() + " = l.id")
-	query.WriteString(" and l." + field.SqlName + " = c.value")
+	query.WriteString(" and l." + field.SQLName + " = c.value")
 	return query.String()
 }
 
@@ -211,13 +216,13 @@ func (f *FieldFixer) mismatchedFieldQuery(t *db.CrawlTable) (string, []interface
 			"join")
 		selectTable = joinTable
 	}
-	query.AddColumnExpr(selectTable.QualifiedName(field.SqlName))
+	query.AddColumnExpr(selectTable.QualifiedName(field.SQLName))
 	return query.SQL() + " where " + f.whereClause(field, selectTable.Table), f.queryBinds(), nil
 }
 
 func (f *FieldFixer) whereClause(field *db.Field, table *sql.Table) string {
 	buf := bytes.Buffer{}
-	fieldExpr := table.QualifiedName(field.SqlName)
+	fieldExpr := table.QualifiedName(field.SQLName)
 	binder := pg.NewBinder()
 	for _ = range f.StringTransforms {
 		if binder.NotFirst() {

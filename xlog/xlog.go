@@ -7,8 +7,11 @@ import (
 	"unicode/utf8"
 )
 
+// An Xlog is a mapping of xlog keys to values, where both keys and values are
+// strings.
 type Xlog map[string]string
 
+// Clone returns a copy of x.
 func (x Xlog) Clone() Xlog {
 	res := make(Xlog)
 	for key, value := range x {
@@ -17,10 +20,12 @@ func (x Xlog) Clone() Xlog {
 	return res
 }
 
+// Get gets the xlog value for the field name.
 func (x Xlog) Get(name string) string {
 	return x[name]
 }
 
+// Contains checks if x contains key.
 func (x Xlog) Contains(key string) bool {
 	_, exists := x[key]
 	return exists
@@ -40,6 +45,7 @@ func (x Xlog) String() string {
 	return result
 }
 
+// IsKeyHidden checks if key is a *hidden* xlog fieldname
 func IsKeyHidden(key string) bool {
 	return key == "" || key[0] == ':'
 }
@@ -54,7 +60,7 @@ func Parse(line string) (Xlog, error) {
 	for startIndex < lineByteLen {
 		keyValueSeparator := strings.IndexRune(line[startIndex:], '=')
 		if keyValueSeparator == -1 {
-			return res, &XlogParseError{
+			return res, &ParseError{
 				Line:         line,
 				Cause:        "trailing characters",
 				ErrByteIndex: startIndex,
@@ -129,19 +135,20 @@ func IsPotentialXlogLine(line string) bool {
 	return len(line) > 0 && line[0] != ':'
 }
 
-// An XlogParseError is an error in parsing an xlog line.
-type XlogParseError struct {
+// A ParseError is an error in parsing an xlog line.
+type ParseError struct {
 	Line         string
 	Cause        string
 	ErrByteIndex int
 }
 
-func (e *XlogParseError) Error() string {
+func (e *ParseError) Error() string {
 	return fmt.Sprintf("malformed xlogline \"%s\": %s at %d", e.Line, e.Cause,
 		e.ErrRuneIndex())
 }
 
-func (e *XlogParseError) ErrRuneIndex() int {
+// ErrRuneIndex gets the rune index of the parse error in the xlog Line.
+func (e *ParseError) ErrRuneIndex() int {
 	if e.ErrByteIndex <= 0 {
 		return e.ErrByteIndex
 	}

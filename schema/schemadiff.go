@@ -5,12 +5,14 @@ import (
 	"io"
 )
 
+// PrintDelta writes the schema delta to out.
 func (s *Schema) PrintDelta(out io.Writer) {
 	for _, t := range s.Tables {
 		t.PrintDelta(out)
 	}
 }
 
+// PrintDelta writes the table delta to out.
 func (t *Table) PrintDelta(out io.Writer) {
 	switch t.Diff {
 	case Added, Removed:
@@ -22,7 +24,7 @@ func (t *Table) PrintDelta(out io.Writer) {
 			c.PrintDelta(out)
 		}
 		for _, c := range t.Constraints {
-			fmt.Fprintf(out, "\t%s: constraint: %s\n", Added.Sigil(), c.Sql())
+			fmt.Fprintf(out, "\t%s: constraint: %s\n", Added.Sigil(), c.SQL())
 		}
 		for _, i := range t.Indexes {
 			i.PrintDelta(out)
@@ -30,18 +32,21 @@ func (t *Table) PrintDelta(out io.Writer) {
 	}
 }
 
+// PrintDelta writes the column delta to out.
 func (c *Column) PrintDelta(out io.Writer) {
 	if c.Diff != NoDiff {
-		fmt.Fprintf(out, "\t%s: %s\n", c.Diff.Sigil(), c.Sql())
+		fmt.Fprintf(out, "\t%s: %s\n", c.Diff.Sigil(), c.SQL())
 	}
 }
 
+// PrintDelta writes the index delta to out.
 func (c *Index) PrintDelta(out io.Writer) {
 	if c.Diff != NoDiff {
-		fmt.Fprintf(out, "\t%s: %s\n", c.Diff.Sigil(), c.Sql())
+		fmt.Fprintf(out, "\t%s: %s\n", c.Diff.Sigil(), c.SQL())
 	}
 }
 
+// DiffSchema compares s to old and returns a diff schema.
 func (s *Schema) DiffSchema(old *Schema) *Schema {
 	diffSchema := Schema{}
 	for _, table := range s.Tables {
@@ -53,6 +58,7 @@ func (s *Schema) DiffSchema(old *Schema) *Schema {
 	return &diffSchema
 }
 
+// DiffSchema compares t to old and returns a diff table.
 func (t *Table) DiffSchema(old *Table) *Table {
 	if old == nil {
 		return &Table{
@@ -85,20 +91,23 @@ func (t *Table) DiffSchema(old *Table) *Table {
 	return nil
 }
 
+// DiffConstraints compares the constraints on t and old and returns the list of
+// constraint diffs.
 func (t *Table) DiffConstraints(old *Table) []Constraint {
 	cmap := map[string]bool{}
 	for _, c := range old.Constraints {
-		cmap[c.Sql()] = true
+		cmap[c.SQL()] = true
 	}
 	res := []Constraint(nil)
 	for _, c := range t.Constraints {
-		if !cmap[c.Sql()] {
+		if !cmap[c.SQL()] {
 			res = append(res, c)
 		}
 	}
 	return res
 }
 
+// DiffSchema compares c and old and returns a diff column.
 func (c *Column) DiffSchema(old *Column) *Column {
 	copyCol := func(change Diff) *Column {
 		col := *c
@@ -108,7 +117,7 @@ func (c *Column) DiffSchema(old *Column) *Column {
 	if old == nil {
 		return copyCol(Added)
 	}
-	if old.SqlType != c.SqlType || old.Default != c.Default {
+	if old.SQLType != c.SQLType || old.Default != c.Default {
 		return copyCol(Changed)
 	}
 	return nil

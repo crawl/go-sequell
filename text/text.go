@@ -33,10 +33,15 @@ func Str(any interface{}) string {
 
 var rSpaceRegexp = regexp.MustCompile(`\s+`)
 
+// NormalizeSpace normalizes whitespace in text, stripping leading and trailing
+// whitespace and replacing all internal whitespace sequences with a single
+// space " ".
 func NormalizeSpace(text string) string {
 	return rSpaceRegexp.ReplaceAllLiteralString(strings.TrimSpace(text), " ")
 }
 
+// FirstNotEmpty returns the first string in choices that is not the empty
+// string. If there is no such string, returns the empty string.
 func FirstNotEmpty(choices ...string) string {
 	for _, val := range choices {
 		if val != "" {

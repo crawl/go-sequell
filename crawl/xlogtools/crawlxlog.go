@@ -83,7 +83,7 @@ func ValidXlog(log xlog.Xlog) bool {
 // Normalizer is a set of normalizations that are applied to xlog fields to
 // canonicalize an xlog record
 type Normalizer struct {
-	CrawlData     qyaml.Yaml
+	CrawlData     qyaml.YAML
 	GodNorm       stringnorm.Normalizer
 	PlaceNorm     stringnorm.Normalizer
 	CharNorm      *player.CharNormalizer
@@ -93,7 +93,7 @@ type Normalizer struct {
 
 // MustBuildNormalizer creates an xlog normalizer given a crawlData config. It
 // panics when it cannot create a normalizer because of config or other errors.
-func MustBuildNormalizer(crawlData qyaml.Yaml) *Normalizer {
+func MustBuildNormalizer(crawlData qyaml.YAML) *Normalizer {
 	norm, err := BuildNormalizer(crawlData)
 	if err != nil {
 		panic(err)
@@ -103,7 +103,7 @@ func MustBuildNormalizer(crawlData qyaml.Yaml) *Normalizer {
 
 // BuildNormalizer creates an xlog Normalizer given the crawlData YAML
 // structure.
-func BuildNormalizer(crawlData qyaml.Yaml) (*Normalizer, error) {
+func BuildNormalizer(crawlData qyaml.YAML) (*Normalizer, error) {
 	fieldGen, err := ParseFieldGenerators(crawlData.Map("field-input-transforms"))
 	if err != nil {
 		return nil, err

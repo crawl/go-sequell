@@ -21,6 +21,7 @@ var rGitVersion = regexp.MustCompile(`(?i)\b(?:git|svn|master|trunk)\b`)
 var rEmbeddedVersion = regexp.MustCompile(`\d+[.]\d+`)
 var rEmbeddedVersionKey = regexp.MustCompile(`\d{2}\b`)
 
+// XlogGameVersion guesses the game version from an xlog filename.
 func XlogGameVersion(filename string) string {
 	if rGitVersion.MatchString(filename) {
 		return "git"
@@ -62,6 +63,8 @@ func XlogFileType(filename string) XlogType {
 	return Unknown
 }
 
+// XlogQualifiedName gets the canonical qualified name for an xlog file, given
+// the server, game, Crawl version, qualifier, and xlog type.
 func XlogQualifiedName(server, game, version, qualifier string, xlogtype XlogType) string {
 	base := "remote." + server + "-" + xlogtype.String() + "-" + version
 	if game != "" {
@@ -78,11 +81,13 @@ type typeMatcher struct {
 	typeName string
 }
 
+// TextTypeLookup guesses the type of a thing based on its name.
 type TextTypeLookup struct {
 	TypeMatchers []typeMatcher
 	DefaultType  string
 }
 
+// FindType guesses the type of filename based on its name.
 func (g TextTypeLookup) FindType(filename string) string {
 	for _, m := range g.TypeMatchers {
 		if m.MatchString(filename) {

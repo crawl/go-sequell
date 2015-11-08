@@ -2,19 +2,24 @@ package pg
 
 import "strconv"
 
-type PGBinder int
+// Binder tracks a postgres query bind variable.
+type Binder int
 
-func (p *PGBinder) NotFirst() bool {
+// NotFirst returns true if this is not the first bind variable.
+func (p *Binder) NotFirst() bool {
 	return *p > 1
 }
 
-func (p *PGBinder) Next() string {
+// Next gets the bind variable string "$1", "$2" etc. for the current bind
+// variable, and increments the binder.
+func (p *Binder) Next() string {
 	nv := "$" + strconv.Itoa(int(*p))
 	(*p)++
 	return nv
 }
 
-func NewBinder() *PGBinder {
-	var binder PGBinder = 1
+// NewBinder creates a bind variable generator initialized to 1.
+func NewBinder() *Binder {
+	var binder Binder = 1
 	return &binder
 }

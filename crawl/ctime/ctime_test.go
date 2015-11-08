@@ -51,7 +51,7 @@ var tzParseTests = []struct {
 func TestParseLogTime(t *testing.T) {
 	for _, test := range tzParseTests {
 		epoch := SafeParseUTCEpoch(test.epoch)
-		dst, err := ParseDstLocation(test.standardTZ, test.dstTZ)
+		dst, err := ParseDSTLocation(test.standardTZ, test.dstTZ)
 		if err != nil {
 			t.Errorf("Error parsing DST locs (%s,%s): %s",
 				test.standardTZ, test.dstTZ, err)

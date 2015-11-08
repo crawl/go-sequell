@@ -11,6 +11,7 @@ import (
 	"github.com/crawl/go-sequell/crawl/xlogtools"
 )
 
+// Servers is the list of servers are sources for games and milestones
 type Servers struct {
 	Servers []*Server
 }
@@ -28,6 +29,7 @@ func (x *Servers) MkdirTargets() error {
 	return nil
 }
 
+// XlogSources returns the list of all xlog sources
 func (x *Servers) XlogSources() []*XlogSrc {
 	sources := []*XlogSrc{}
 	addAll := func(logs []*XlogSrc) {
@@ -57,6 +59,7 @@ func (x *Servers) TargetLogDirs() []string {
 	return targetDirs
 }
 
+// Server returns the server specified by alias.
 func (x *Servers) Server(alias string) *Server {
 	for _, s := range x.Servers {
 		if s.Name == alias || s.Aliases[alias] {
@@ -79,16 +82,21 @@ func (x *Servers) String() string {
 	return buf.String()
 }
 
+// A Server represents an online game server that supplies logfiles and
+// milestones
 type Server struct {
 	Name          string
 	Aliases       map[string]bool
 	BaseURL       string
 	LocalPathBase string
-	TimeZoneMap   ctime.DstLocation
+	TimeZoneMap   ctime.DSTLocation
 	UtcEpoch      time.Time
 	Logfiles      []*XlogSrc
 }
 
+// ParseLogTime parses a timestamp as read from a server's logfile in the
+// correct timezone for that server. Timezones are treated as UTC unless the
+// server was operating before Crawl logfile timestamps switched to UTC.
 func (s *Server) ParseLogTime(logtime string) (time.Time, error) {
 	return ctime.ParseLogTime(logtime, s.UtcEpoch, s.TimeZoneMap)
 }
@@ -100,6 +108,8 @@ func (s *Server) String() string {
 		s.UtcEpoch, len(s.Logfiles))
 }
 
+// An XlogSrc is a reference to an xlogfile hosted on a server somewhere, and
+// to its cached (target) path.
 type XlogSrc struct {
 	Server        *Server
 	Name          string
@@ -126,15 +136,20 @@ func (x *XlogSrc) liveAsterisk() string {
 	return ""
 }
 
+// TargetDir returns the directory that contains the xlogfile's local cache
 func (x *XlogSrc) TargetDir() string {
 	return filepath.Dir(x.TargetPath)
 }
 
-// MakeTargetDir creates the parent directory of x.TargetPath.
+// MkdirTarget creates the parent directory of x.TargetPath.
 func (x *XlogSrc) MkdirTarget() error {
 	return os.MkdirAll(x.TargetDir(), os.ModeDir|0755)
 }
 
+// Local checks if this xlogfile is local to the system running Sequell. This
+// can only be true if a) Sequell is running on an active Crawl server and
+// reading from a live local log or b) Sequell is running in test mode with
+// local copies of logs.
 func (x *XlogSrc) Local() bool {
 	if x.LocalPath == "" {
 		return false
@@ -143,15 +158,21 @@ func (x *XlogSrc) Local() bool {
 	return err == nil
 }
 
+// TargetExists checks if the local cached logfile copy exists
 func (x *XlogSrc) TargetExists() bool {
 	_, err := os.Stat(x.TargetPath)
 	return err == nil
 }
 
+// NeedsFetch checks if the logfile should be downloaded from the remote
+// server. (It does not check if the cached copy is stale, only if this is a
+// file that must be periodically downloaded.)
 func (x *XlogSrc) NeedsFetch() bool {
 	return x.Live && !x.Local()
 }
 
+// LinkLocal links a local logfile to the target path. Fails if x is not a
+// local log, or the symlink attempt fails.
 func (x *XlogSrc) LinkLocal() error {
 	if !x.Local() {
 		return fmt.Errorf("%s is not a local xlog", x.String())
@@ -171,6 +192,8 @@ func (x *XlogSrc) LinkLocal() error {
 	return os.Symlink(x.LocalPath, x.TargetPath)
 }
 
+// DownloadURL gets the URL to download the remote xlog from, or an empty
+// string if there is no known URL (such as for local files).
 func (x *XlogSrc) DownloadURL() string {
 	if x.Local() {
 		return x.URL

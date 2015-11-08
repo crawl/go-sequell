@@ -10,10 +10,12 @@ import (
 	"github.com/crawl/go-sequell/xlog"
 )
 
+// FieldGenCondition matches xlogs that need a field to be generated.
 type FieldGenCondition interface {
 	Matches(x xlog.Xlog) bool
 }
 
+// FieldGen describes how a target field is generated from a source field.
 type FieldGen struct {
 	SourceField string
 	TargetField string
@@ -21,6 +23,7 @@ type FieldGen struct {
 	Transforms  stringnorm.Normalizer
 }
 
+// Matches checks if the xlog x needs a new generated field
 func (f *FieldGen) Matches(x xlog.Xlog) bool {
 	if len(f.Conditions) == 0 {
 		return true
@@ -33,6 +36,7 @@ func (f *FieldGen) Matches(x xlog.Xlog) bool {
 	return true
 }
 
+// Apply generates the target field in x based on the source field.
 func (f *FieldGen) Apply(x xlog.Xlog) {
 	if !f.Matches(x) {
 		return
@@ -41,12 +45,14 @@ func (f *FieldGen) Apply(x xlog.Xlog) {
 	result, err := f.Transforms.Normalize(src)
 	if err != nil {
 		log.Printf("Error gen %s[%s]->%s: %s in %#v\n",
-			f.SourceField, src, f.TargetField, err)
+			f.SourceField, src, f.TargetField, err, x)
 		return
 	}
 	x[f.TargetField] = result
 }
 
+// ParseFieldGenerators parses a list of field generators from a
+// field-input-transforms definition in crawl-data.yml
 func ParseFieldGenerators(genmap map[interface{}]interface{}) ([]*FieldGen, error) {
 	res := make([]*FieldGen, 0, len(genmap))
 	for targetF, cfg := range genmap {
@@ -83,6 +89,7 @@ func ParseFieldGenerators(genmap map[interface{}]interface{}) ([]*FieldGen, erro
 	return res, nil
 }
 
+// ParseRegexpReplacements parses regexp replacements into a string normalizer.
 func ParseRegexpReplacements(regexps interface{}) (stringnorm.Normalizer, error) {
 	if regexps == nil {
 		return nil, nil
@@ -90,6 +97,7 @@ func ParseRegexpReplacements(regexps interface{}) (stringnorm.Normalizer, error)
 	return stringnorm.ParseRegexpPairs(conv.IStringPairs(regexps))
 }
 
+// ParseStringReplacements parses string replacements into a string normalizer.
 func ParseStringReplacements(replacements interface{}) (stringnorm.Normalizer, error) {
 	if replacements == nil {
 		return nil, nil

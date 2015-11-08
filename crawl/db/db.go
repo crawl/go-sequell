@@ -9,14 +9,15 @@ import (
 	"github.com/crawl/go-sequell/schema"
 )
 
+// A Field represents a field in a game or milestone table.
 type Field struct {
 	Name             string
 	Type             string
 	Features         string
-	SqlName          string
-	SqlType          string
-	SqlRefType       string
-	SqlLookupExpr    string
+	SQLName          string
+	SQLType          string
+	SQLRefType       string
+	SQLLookupExpr    string
 	DefaultValue     string
 	DefaultString    string
 	PrimaryKey       bool
@@ -30,6 +31,7 @@ type Field struct {
 	External         bool
 }
 
+// NeedsIndex checks if a field needs an index on it.
 func (f *Field) NeedsIndex() bool {
 	return f.ForeignKeyLookup || f.Indexed
 }
@@ -49,18 +51,21 @@ func (f *Field) ResolvedKey() string {
 // the simple SQL name for other fields.
 func (f *Field) RefName() string {
 	if f.ForeignKeyLookup {
-		return f.SqlName + "_id"
+		return f.SQLName + "_id"
 	}
-	return f.SqlName
+	return f.SQLName
 }
 
+// RefType returns the foreign key type for this field if the field belongs in
+// a lookup table, or the direct type if not.
 func (f *Field) RefType() string {
 	if f.ForeignKeyLookup {
-		return f.SqlRefType
+		return f.SQLRefType
 	}
-	return f.SqlType
+	return f.SQLType
 }
 
+// RefDefault returns the default unless this is a foreign key.
 func (f *Field) RefDefault() string {
 	if f.ForeignKeyLookup {
 		return ""
@@ -68,6 +73,9 @@ func (f *Field) RefDefault() string {
 	return f.DefaultString
 }
 
+// ForeignKeyConstraint returns the foreign key constraint for the field f, if
+// f belongs in a lookup table. For fields that are stored directly in the
+// fact table, returns nil.
 func (f *Field) ForeignKeyConstraint(table string) schema.Constraint {
 	if !f.ForeignKeyLookup || f.ForeignKeyTable == "" {
 		return nil
@@ -80,18 +88,23 @@ func (f *Field) ForeignKeyConstraint(table string) schema.Constraint {
 	}
 }
 
+// SchemaColumn returns the SQL column spec for this field.
 func (f *Field) SchemaColumn() *schema.Column {
 	return &schema.Column{
 		Name:    f.RefName(),
-		SqlType: f.RefType(),
+		SQLType: f.RefType(),
 		Default: f.RefDefault(),
 	}
 }
 
+// LookupSchemaColumn gets the schema column for this field as it would be
+// defined in a lookup table. Viz. this is always the true name and type of the
+// field, even if the field would normally be stored as a foreign key in a
+// fact table.
 func (f *Field) LookupSchemaColumn() *schema.Column {
 	return &schema.Column{
-		Name:    f.SqlName,
-		SqlType: f.SqlType,
+		Name:    f.SQLName,
+		SQLType: f.SQLType,
 	}
 }
 
@@ -111,22 +124,22 @@ func (f *Field) initialize(parser *FieldParser) (err error) {
 	} else if f.Type == "PK" {
 		f.PrimaryKey = true
 	}
-	f.SqlName = parser.FieldSqlName(f.Name)
-	f.SqlType, err = parser.FieldSqlType(f.Type)
-	f.SqlLookupExpr = parser.FieldSqlLookupExpr(f.SqlName, f.Type)
+	f.SQLName = parser.FieldSQLName(f.Name)
+	f.SQLType, err = parser.FieldSQLType(f.Type)
+	f.SQLLookupExpr = parser.FieldSQLLookupExpr(f.SQLName, f.Type)
 	if err != nil {
 		return
 	}
 
 	if f.ForeignKeyLookup {
-		f.SqlRefType, err = parser.FieldSqlType("REF")
+		f.SQLRefType, err = parser.FieldSQLType("REF")
 		if err != nil {
 			return
 		}
 	}
 
 	if !f.PrimaryKey {
-		f.DefaultValue = parser.FieldSqlDefault(f.Type)
+		f.DefaultValue = parser.FieldSQLDefault(f.Type)
 		if f.DefaultValue != "" {
 			f.DefaultString = "default " + f.DefaultValue
 		}
@@ -156,15 +169,17 @@ func (f *Field) applyFeature(feat rune) {
 	}
 }
 
+// FieldParser parses SQL field specs from the schema YAML.
 type FieldParser struct {
-	yaml                qyaml.Yaml
+	yaml                qyaml.YAML
 	sqlFieldNameMap     map[string]string
 	sqlFieldTypes       map[string]string
 	sqlFieldDefaults    map[string]string
 	sqlFieldLookupExprs map[string]string
 }
 
-func NewFieldParser(spec qyaml.Yaml) *FieldParser {
+// NewFieldParser creates a field parser object given the schema YAML.
+func NewFieldParser(spec qyaml.YAML) *FieldParser {
 	return &FieldParser{
 		yaml:                spec,
 		sqlFieldNameMap:     spec.StringMap("sql-field-names"),
@@ -176,6 +191,7 @@ func NewFieldParser(spec qyaml.Yaml) *FieldParser {
 
 var rFieldSpec = regexp.MustCompile(`^([a-z_]+)([A-Z]*)([^\w]*)$`)
 
+// ParseField parses a field spec
 func (f *FieldParser) ParseField(spec string) (*Field, error) {
 	match := rFieldSpec.FindStringSubmatch(strings.TrimSpace(spec))
 	if match == nil {
@@ -190,36 +206,41 @@ func (f *FieldParser) ParseField(spec string) (*Field, error) {
 	return field, nil
 }
 
-func (p *FieldParser) FieldSqlLookupExpr(sqlName string, typeKey string) string {
-	lookupExpr := p.sqlFieldLookupExprs[typeKey]
+// FieldSQLLookupExpr gets the lookup table expression for the field named sqlName
+func (f *FieldParser) FieldSQLLookupExpr(sqlName string, typeKey string) string {
+	lookupExpr := f.sqlFieldLookupExprs[typeKey]
 	if lookupExpr == "" {
 		return ""
 	}
 	return strings.Replace(lookupExpr, "%s", sqlName, -1)
 }
 
-func (p *FieldParser) FieldSqlName(name string) string {
-	if sqlName, ok := p.sqlFieldNameMap[name]; ok {
+// FieldSQLName gets the SQL column name for the field named name.
+func (f *FieldParser) FieldSQLName(name string) string {
+	if sqlName, ok := f.sqlFieldNameMap[name]; ok {
 		return sqlName
 	}
 	return name
 }
 
-func (p *FieldParser) FieldSqlNames(names []string) []string {
+// FieldSQLNames gets the list of SQL column names for the field names.
+func (f *FieldParser) FieldSQLNames(names []string) []string {
 	res := make([]string, len(names))
 	for i, name := range names {
-		res[i] = p.FieldSqlName(name)
+		res[i] = f.FieldSQLName(name)
 	}
 	return res
 }
 
-func (p *FieldParser) FieldSqlType(annotatedType string) (string, error) {
-	if sqlType, ok := p.sqlFieldTypes[annotatedType]; ok {
+// FieldSQLType gets the SQL type of a field given a schema type sigil string.
+func (f *FieldParser) FieldSQLType(annotatedType string) (string, error) {
+	if sqlType, ok := f.sqlFieldTypes[annotatedType]; ok {
 		return sqlType, nil
 	}
-	return "", fmt.Errorf("FieldSqlType(%#v) undefined", annotatedType)
+	return "", fmt.Errorf("FieldSQLType(%#v) undefined", annotatedType)
 }
 
-func (p *FieldParser) FieldSqlDefault(annotatedType string) string {
-	return p.sqlFieldDefaults[annotatedType]
+// FieldSQLDefault gets the default value for a field given its sigil type.
+func (f *FieldParser) FieldSQLDefault(annotatedType string) string {
+	return f.sqlFieldDefaults[annotatedType]
 }

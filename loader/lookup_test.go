@@ -36,7 +36,7 @@ func TestLookupCI(t *testing.T) {
 		l := NewTableLookup(testSchema.LookupTable(test.table), 3)
 		actual := l.CaseSensitive
 		if actual != test.caseSensitive {
-			t.Errorf("Expected lookup case-sensitive=%t, got %t",
+			t.Errorf("Expected lookup (%s) case-sensitive=%t, got %t",
 				test.table, test.caseSensitive, actual)
 		}
 	}
@@ -46,7 +46,7 @@ func TestTableLookup(t *testing.T) {
 	DB := testConn()
 	lookup := createLookup()
 	file := "cszo-git.log"
-	reader := xlog.Reader(file, file)
+	reader := xlog.NewReader(file, file)
 
 	purgeTables(DB)
 	rows := []xlog.Xlog{}

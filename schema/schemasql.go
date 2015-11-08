@@ -4,38 +4,44 @@ import (
 	"strings"
 )
 
-func (s *Schema) SqlSel(sel SchemaSelect) []string {
+// SQLSel returns the SQL DDL statements selected by sel
+func (s *Schema) SQLSel(sel Select) []string {
 	switch sel {
 	case SelTablesIndexesConstraints:
-		return s.Sql()
+		return s.SQL()
 	case SelTables:
-		return s.SqlNoIndexesConstraints()
+		return s.SQLNoIndexesConstraints()
 	case SelIndexesConstraints:
-		return s.IndexConstraintSql()
+		return s.IndexConstraintSQL()
 	case SelDropIndexesConstraints:
-		return s.DropIndexConstraintSql()
+		return s.DropIndexConstraintSQL()
 	}
 	return nil
 }
 
-func (s *Schema) Sql() []string {
+// SQL returns the list of DDL statements for this schema.
+func (s *Schema) SQL() []string {
 	return append(
-		s.sqlTableRevMap((*Table).DropSql),
-		s.sqlTableMap((*Table).Sql)...)
+		s.sqlTableRevMap((*Table).DropSQL),
+		s.sqlTableMap((*Table).SQL)...)
 }
 
-func (s *Schema) DropIndexConstraintSql() []string {
-	return s.sqlTableMap((*Table).DropIndexConstraintSql)
+// DropIndexConstraintSQL returns the DDL to drop indexes and constraints,
+// usually to prepare for a bulk load.
+func (s *Schema) DropIndexConstraintSQL() []string {
+	return s.sqlTableMap((*Table).DropIndexConstraintSQL)
 }
 
-func (s *Schema) IndexConstraintSql() []string {
-	return s.sqlTableMap((*Table).IndexConstraintSql)
+// IndexConstraintSQL returns the DDL for table indexes and constraints.
+func (s *Schema) IndexConstraintSQL() []string {
+	return s.sqlTableMap((*Table).IndexConstraintSQL)
 }
 
-func (s *Schema) SqlNoIndexesConstraints() []string {
+// SQLNoIndexesConstraints returns the schema SQL without index and constraints.
+func (s *Schema) SQLNoIndexesConstraints() []string {
 	return append(
-		s.sqlTableRevMap((*Table).DropSql),
-		s.sqlTableMap((*Table).SqlNoIndexesConstraints)...)
+		s.sqlTableRevMap((*Table).DropSQL),
+		s.sqlTableMap((*Table).SQLNoIndexesConstraints)...)
 }
 
 func (s *Schema) sqlTableRevMap(tsql func(t *Table) []string) []string {
@@ -54,81 +60,98 @@ func (s *Schema) sqlTableMap(tsql func(t *Table) []string) []string {
 	return res
 }
 
-func (t *Table) Sql() []string {
-	return append(t.SqlNoIndexesConstraints(), t.IndexConstraintSql()...)
+// SQL returns the DDL to create the table t, along with indexes and
+// constraints.
+func (t *Table) SQL() []string {
+	return append(t.SQLNoIndexesConstraints(), t.IndexConstraintSQL()...)
 }
 
-func (t *Table) DropSql() []string {
+// DropSQL returns the SQL to drop t
+func (t *Table) DropSQL() []string {
 	return []string{"drop table if exists " + t.Name}
 }
 
-func (t *Table) SqlNoIndexesConstraints() []string {
-	return append([]string{t.CreateTableSql()}, t.CreateForceIndexSql()...)
+// SQLNoIndexesConstraints returns the table's DDL SQL, ignoring indexes and
+// constraints.
+func (t *Table) SQLNoIndexesConstraints() []string {
+	return append([]string{t.CreateTableSQL()}, t.CreateForceIndexSQL()...)
 }
 
-func (t *Table) CreateForceIndexSql() []string {
-	indexSqls := []string{}
+// CreateForceIndexSQL returns SQL statements for force-created indexes. Forced
+// indexes are necessary for fast bulk-loads (usually indexes on lookup tables),
+// and must be returned even when if the caller requested no regular indexes.
+func (t *Table) CreateForceIndexSQL() []string {
+	indexSQLs := []string{}
 	for _, index := range t.Indexes {
 		if index.Force {
-			indexSqls = append(indexSqls, index.Sql())
+			indexSQLs = append(indexSQLs, index.SQL())
 		}
 	}
-	return indexSqls
+	return indexSQLs
 }
 
-func (t *Table) IndexConstraintSql() []string {
-	return t.CreateIndexConstraintSqls()
+// IndexConstraintSQL returns SQL statements to create indexes and constraints
+func (t *Table) IndexConstraintSQL() []string {
+	return t.CreateIndexConstraintSQLs()
 }
 
-func (t *Table) DropIndexConstraintSql() []string {
+// DropIndexConstraintSQL returns the DDL to drop this table's indexes and
+// constraints.
+func (t *Table) DropIndexConstraintSQL() []string {
 	sqls := []string{}
 	for _, c := range t.Constraints {
-		sqls = append(sqls, "alter table "+t.Name+" drop "+c.Sql())
+		sqls = append(sqls, "alter table "+t.Name+" drop "+c.SQL())
 	}
 	for _, index := range t.Indexes {
 		if !index.Force {
-			sqls = append(sqls, index.DropSql())
+			sqls = append(sqls, index.DropSQL())
 		}
 	}
 	return sqls
 }
 
-func (t *Table) CreateTableSql() string {
+// CreateTableSQL returns the DDL SQL to create this table.
+func (t *Table) CreateTableSQL() string {
 	colsConstraints := t.CreateColumnClauses()
 	return "create table " + t.Name +
 		" (\n" + strings.Join(colsConstraints, ",\n") + "\n)"
 }
 
-func (t *Table) CreateIndexConstraintSqls() []string {
+// CreateIndexConstraintSQLs returns the DDL statements to create the table's
+// indexes and constraints.
+func (t *Table) CreateIndexConstraintSQLs() []string {
 	sqls := []string{}
 	for _, index := range t.Indexes {
 		if !index.Force {
-			sqls = append(sqls, index.Sql())
+			sqls = append(sqls, index.SQL())
 		}
 	}
 	for _, c := range t.Constraints {
-		sqls = append(sqls, "alter table "+t.Name+" add "+c.Sql())
+		sqls = append(sqls, "alter table "+t.Name+" add "+c.SQL())
 	}
 	return sqls
 }
 
+// CreateColumnClauses returns the list of column SQL expressions.
 func (t *Table) CreateColumnClauses() []string {
 	pieces := make([]string, len(t.Columns))
 	for i, col := range t.Columns {
-		pieces[i] = "  " + col.Sql()
+		pieces[i] = "  " + col.SQL()
 	}
 	return pieces
 }
 
-func (c *Column) Sql() string {
-	base := c.Name + " " + c.SqlType
+// SQL returns the SQL expression for the column c
+func (c *Column) SQL() string {
+	base := c.Name + " " + c.SQLType
 	if c.Default != "" {
 		base += " " + c.Default
 	}
 	return base
 }
 
-func (i *Index) Sql() string {
+// SQL returns the DDL to create the index i.
+func (i *Index) SQL() string {
 	createClause := "create index"
 	if i.Unique {
 		createClause = "create unique index"
@@ -137,6 +160,7 @@ func (i *Index) Sql() string {
 		" (" + strings.Join(i.Columns, ", ") + ")"
 }
 
-func (i *Index) DropSql() string {
+// DropSQL returns the DDL statement to drop the index i.
+func (i *Index) DropSQL() string {
 	return "drop index if exists " + i.Name
 }

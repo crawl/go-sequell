@@ -7,6 +7,7 @@ import (
 
 var reStartsWithArticle = regexp.MustCompile(`^(?:an?|the) `)
 
+// Article prefixes thing with "a" or "an" as appropriate.
 func Article(thing string) string {
 	if reStartsWithArticle.FindString(thing) != "" {
 		return thing
@@ -17,13 +18,14 @@ func Article(thing string) string {
 		}
 		if IsVowel(rune) {
 			return "an " + thing
-		} else {
-			return "a " + thing
 		}
+
+		return "a " + thing
 	}
 	return thing
 }
 
+// IsVowel checks if r is an English vowel.
 func IsVowel(r rune) bool {
 	return r == 'a' || r == 'e' || r == 'i' || r == 'o' || r == 'u'
 }

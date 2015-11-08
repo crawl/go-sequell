@@ -9,6 +9,7 @@ import (
 	"github.com/crawl/go-sequell/schema"
 )
 
+// A CrawlSchema is a schema modeling the tables that track games and milestones
 type CrawlSchema struct {
 	FieldParser             *FieldParser
 	Tables                  []*CrawlTable
@@ -18,6 +19,8 @@ type CrawlSchema struct {
 	FieldNameLookupTableMap map[string]*LookupTable
 }
 
+// A CrawlTable represents a Crawl fact or dimension table. Game/Milestone
+// tables are fact tables, lookup tables are dimension tables.
 type CrawlTable struct {
 	Name             string
 	Fields           []*Field
@@ -25,17 +28,21 @@ type CrawlTable struct {
 	CompositeIndexes []*Index
 }
 
+// An Index represents a SQL index on a Crawl table.
 type Index struct {
 	Columns []string
 }
 
+// A LookupTable is a dimension table
 type LookupTable struct {
 	CrawlTable
 	ReferencingFields []*Field
 	DerivedFields     []*Field
 }
 
-func MustLoadSchema(schemaDef qyaml.Yaml) *CrawlSchema {
+// MustLoadSchema loads a Crawl schema from the schemaDef YAML, panicking on
+// error.
+func MustLoadSchema(schemaDef qyaml.YAML) *CrawlSchema {
 	sch, err := LoadSchema(schemaDef)
 	if err != nil {
 		panic(err)
@@ -43,7 +50,8 @@ func MustLoadSchema(schemaDef qyaml.Yaml) *CrawlSchema {
 	return sch
 }
 
-func LoadSchema(schemaDef qyaml.Yaml) (*CrawlSchema, error) {
+// LoadSchema loads a CrawlSchema from the schemaDef YAML.
+func LoadSchema(schemaDef qyaml.YAML) (*CrawlSchema, error) {
 	schema := CrawlSchema{
 		FieldParser:             NewFieldParser(schemaDef),
 		FieldNameLookupTableMap: map[string]*LookupTable{},
@@ -64,6 +72,8 @@ func LoadSchema(schemaDef qyaml.Yaml) (*CrawlSchema, error) {
 	return &schema, nil
 }
 
+// PrefixedTablesWithField returns the list of tables containing field,
+// prefixing them with their table variant prefixes.
 func (s *CrawlSchema) PrefixedTablesWithField(field string) []*CrawlTable {
 	res := []*CrawlTable{}
 	for _, t := range s.Tables {
@@ -78,6 +88,7 @@ func (s *CrawlSchema) PrefixedTablesWithField(field string) []*CrawlTable {
 	return res
 }
 
+// LookupTable gets a lookup table by name.
 func (s *CrawlSchema) LookupTable(name string) *LookupTable {
 	for _, lt := range s.LookupTables {
 		if lt.Name == name {
@@ -87,6 +98,7 @@ func (s *CrawlSchema) LookupTable(name string) *LookupTable {
 	return nil
 }
 
+// ParseVariants parses the game variant map.
 func (s *CrawlSchema) ParseVariants(variantMap map[string]string) {
 	s.VariantNamePrefixMap = variantMap
 	s.TableVariantPrefixes = make([]string, len(variantMap))
@@ -100,7 +112,8 @@ func (s *CrawlSchema) ParseVariants(variantMap map[string]string) {
 	}
 }
 
-func (s *CrawlSchema) ParseTable(name string, schemaDef qyaml.Yaml) (err error) {
+// ParseTable reads a table schema from the schema file for the given table name.
+func (s *CrawlSchema) ParseTable(name string, schemaDef qyaml.YAML) (err error) {
 	fields, err := s.ParseTableFields(name, schemaDef)
 	if err != nil {
 		return err
@@ -126,11 +139,13 @@ func (s *CrawlSchema) ParseTable(name string, schemaDef qyaml.Yaml) (err error) 
 	return nil
 }
 
-func (s *CrawlSchema) ParseTableFields(name string, schemaDef qyaml.Yaml) (tableFields []*Field, err error) {
+// ParseTableFields parses the table field defs from the schema for the named table.
+func (s *CrawlSchema) ParseTableFields(name string, schemaDef qyaml.YAML) (tableFields []*Field, err error) {
 	annotatedFieldNames := schemaDef.StringSlice(name + "-fields-with-type")
 	return s.ParseFields(annotatedFieldNames)
 }
 
+// ParseFields parses a list of annotated field names into Field objects.
 func (s *CrawlSchema) ParseFields(annotatedFieldNames []string) (tableFields []*Field, err error) {
 	tableFields = make([]*Field, len(annotatedFieldNames))
 	for i, field := range annotatedFieldNames {
@@ -142,7 +157,8 @@ func (s *CrawlSchema) ParseFields(annotatedFieldNames []string) (tableFields []*
 	return
 }
 
-func (s *CrawlSchema) ParseCompositeIndexes(name string, fields []*Field, schemaDef qyaml.Yaml) ([]*Index, error) {
+// ParseCompositeIndexes parses composite index definitions from the schema.
+func (s *CrawlSchema) ParseCompositeIndexes(name string, fields []*Field, schemaDef qyaml.YAML) ([]*Index, error) {
 	indexDefs := schemaDef.Slice(name + "-indexes")
 	compositeIndexes := make([]*Index, len(indexDefs))
 
@@ -155,7 +171,7 @@ func (s *CrawlSchema) ParseCompositeIndexes(name string, fields []*Field, schema
 		return nil
 	}
 
-	fieldSqlNames := func(names []string) ([]string, error) {
+	fieldSQLNames := func(names []string) ([]string, error) {
 		res := make([]string, len(names))
 		for i, name := range names {
 			field := findField(name)
@@ -173,7 +189,7 @@ func (s *CrawlSchema) ParseCompositeIndexes(name string, fields []*Field, schema
 			return nil, fmt.Errorf("No fields defined for index on %s with spec %#v\n",
 				name, def)
 		}
-		sqlNames, err := fieldSqlNames(fields)
+		sqlNames, err := fieldSQLNames(fields)
 		if err != nil {
 			return nil, err
 		}
@@ -184,6 +200,7 @@ func (s *CrawlSchema) ParseCompositeIndexes(name string, fields []*Field, schema
 	return compositeIndexes, nil
 }
 
+// ParseLookupTable parses a lookup table definition
 func (s *CrawlSchema) ParseLookupTable(name string, defn interface{}) error {
 	switch tdef := defn.(type) {
 	case []interface{}:
@@ -214,6 +231,8 @@ func (s *CrawlSchema) markReferenceFields(fields []*Field) []*Field {
 	return fields
 }
 
+// RegisterLookupTables registers lookup tables for all fields that belong
+// in a lookup table.
 func (s *CrawlSchema) RegisterLookupTables(fields []*Field) {
 	for _, field := range fields {
 		if field.ForeignKeyLookup {
@@ -226,10 +245,13 @@ func (s *CrawlSchema) RegisterLookupTables(fields []*Field) {
 	}
 }
 
+// FindLookupTableForField returns the lookup table for fieldName, or nil if
+// no lookup table exists.
 func (s *CrawlSchema) FindLookupTableForField(fieldName string) *LookupTable {
 	return s.FieldNameLookupTableMap[fieldName]
 }
 
+// AddLookupTable creates and registers a lookup table, returning the new table.
 func (s *CrawlSchema) AddLookupTable(name string, fields []*Field, generatedFields []*Field) *LookupTable {
 	idField, err := s.FieldParser.ParseField("idIB%*")
 	if err != nil {
@@ -263,6 +285,7 @@ func (s *CrawlSchema) AddLookupTable(name string, fields []*Field, generatedFiel
 	return lookupTable
 }
 
+// IndexName gets the name for the index on table (fields...).
 func IndexName(table string, fields []string, unique bool) string {
 	base := "ind_" + table
 	if unique {
@@ -271,12 +294,16 @@ func IndexName(table string, fields []string, unique bool) string {
 	return base + "_" + strings.Join(fields, "_")
 }
 
+// Schema creates a SQL schema for this Crawl schema.
 func (s *CrawlSchema) Schema() *schema.Schema {
 	return &schema.Schema{
 		Tables: s.SchemaTables(),
 	}
 }
 
+// PrimaryTableNames returns the names of the fact tables (viz. games and
+// milestones), with all Crawl game variants (i.e. logrecord, spr_logrecord,
+// etc.)
 func (s *CrawlSchema) PrimaryTableNames() []string {
 	names := make([]string, len(s.Tables)*len(s.TableVariantPrefixes))
 	i := 0
@@ -289,6 +316,7 @@ func (s *CrawlSchema) PrimaryTableNames() []string {
 	return names
 }
 
+// Table gets the CrawlTable object for the named table.
 func (s *CrawlSchema) Table(name string) *CrawlTable {
 	for _, table := range s.Tables {
 		if table.Name == name {
@@ -298,6 +326,7 @@ func (s *CrawlSchema) Table(name string) *CrawlTable {
 	return nil
 }
 
+// SchemaTables gets the list of table SQL schema objects.
 func (s *CrawlSchema) SchemaTables() []*schema.Table {
 	tables := make([]*schema.Table,
 		len(s.LookupTables)+len(s.Tables)*len(s.TableVariantPrefixes))
@@ -316,6 +345,7 @@ func (s *CrawlSchema) SchemaTables() []*schema.Table {
 	return tables
 }
 
+// FindField looks up the field definition given a field name.
 func (t *CrawlTable) FindField(name string) *Field {
 	for _, f := range t.Fields {
 		if f.Name == name {
@@ -325,6 +355,8 @@ func (t *CrawlTable) FindField(name string) *Field {
 	return nil
 }
 
+// SchemaTablePrefixed gets the schema table object for this table, prefixing
+// the name with prefix.
 func (t *CrawlTable) SchemaTablePrefixed(prefix string) *schema.Table {
 	tableName := prefix + t.Name
 	return &schema.Table{
@@ -335,6 +367,7 @@ func (t *CrawlTable) SchemaTablePrefixed(prefix string) *schema.Table {
 	}
 }
 
+// SchemaColumns gets the list of columns in this table.
 func (t *CrawlTable) SchemaColumns() []*schema.Column {
 	cols := make([]*schema.Column, len(t.Fields))
 	for i, field := range t.Fields {
@@ -343,6 +376,7 @@ func (t *CrawlTable) SchemaColumns() []*schema.Column {
 	return cols
 }
 
+// SchemaIndexes gets the list of indexes for this table.
 func (t *CrawlTable) SchemaIndexes(prefix string) []*schema.Index {
 	indexes := []*schema.Index{}
 	add := func(i *schema.Index) {
@@ -374,10 +408,12 @@ func (t *CrawlTable) SchemaIndexes(prefix string) []*schema.Index {
 	return indexes
 }
 
+// SchemaIndexName gets the name for the index for the given columns.
 func (t *CrawlTable) SchemaIndexName(prefix string, columns []string, unique bool) string {
 	return IndexName(prefix+t.Name, columns, unique)
 }
 
+// SchemaConstraints gets the list of schema constraints for this table.
 func (t *CrawlTable) SchemaConstraints(table string) []schema.Constraint {
 	constraints := []schema.Constraint{}
 	add := func(c schema.Constraint) {
@@ -389,7 +425,7 @@ func (t *CrawlTable) SchemaConstraints(table string) []schema.Constraint {
 	if t.PrimaryKeyField != nil {
 		add(schema.PrimaryKeyConstraint{
 			ConstraintName: table + "_pk",
-			Column:         t.PrimaryKeyField.SqlName,
+			Column:         t.PrimaryKeyField.SQLName,
 		})
 	}
 	for _, field := range t.Fields {
@@ -401,6 +437,7 @@ func (t *CrawlTable) SchemaConstraints(table string) []schema.Constraint {
 	return constraints
 }
 
+// CaseSensitive checks if this table's lookup field is case sensitive.
 func (l *LookupTable) CaseSensitive() bool {
 	return l.LookupField().CaseSensitive
 }
@@ -411,14 +448,17 @@ func (l *LookupTable) ReferencingFieldCount() int {
 	return len(l.ReferencingFields)
 }
 
+// LookupField gets the primary field for this lookup table.
 func (l *LookupTable) LookupField() *Field {
 	return l.Fields[1]
 }
 
+// TableName gets the SQL name of this lookup table.
 func (l *LookupTable) TableName() string {
 	return "l_" + l.Name
 }
 
+// SchemaTable gets the table definition for this table.
 func (l *LookupTable) SchemaTable() *schema.Table {
 	return &schema.Table{
 		Name:    l.TableName(),
@@ -433,6 +473,7 @@ func (l *LookupTable) SchemaTable() *schema.Table {
 	}
 }
 
+// SchemaColumns gets the list of columns in this lookup table.
 func (l *LookupTable) SchemaColumns() []*schema.Column {
 	cols := make([]*schema.Column, len(l.Fields))
 	for i, field := range l.Fields {
@@ -441,22 +482,23 @@ func (l *LookupTable) SchemaColumns() []*schema.Column {
 	return cols
 }
 
+// SchemaIndexes gets the list of indexes for this lookup table.
 func (l *LookupTable) SchemaIndexes() []*schema.Index {
 	indexes := []*schema.Index{
 		&schema.Index{
-			Name:      IndexName(l.TableName(), []string{l.Fields[1].SqlName}, true),
+			Name:      IndexName(l.TableName(), []string{l.Fields[1].SQLName}, true),
 			TableName: l.TableName(),
-			Columns:   []string{l.Fields[1].SqlName},
+			Columns:   []string{l.Fields[1].SQLName},
 			Unique:    true,
 			Force:     true,
 		},
 	}
 	for _, field := range l.Fields {
-		if field.SqlLookupExpr != "" {
+		if field.SQLLookupExpr != "" {
 			indexes = append(indexes, &schema.Index{
-				Name:      IndexName(l.TableName(), []string{field.SqlName}, false),
+				Name:      IndexName(l.TableName(), []string{field.SQLName}, false),
 				TableName: l.TableName(),
-				Columns:   []string{field.SqlLookupExpr},
+				Columns:   []string{field.SQLLookupExpr},
 			})
 		}
 	}

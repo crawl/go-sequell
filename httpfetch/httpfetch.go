@@ -11,8 +11,10 @@ import (
 	"time"
 )
 
+// DefaultUserAgent is the HTTP user agent string.
 const DefaultUserAgent = "Sequell httpfetch/1.0"
 
+// A Fetcher downloads files from remote servers.
 type Fetcher struct {
 	HTTPClient                   *http.Client
 	ConnectTimeout               time.Duration
@@ -39,16 +41,27 @@ func New() *Fetcher {
 	}
 }
 
-var DefaultConnectTimeout = 10 * time.Second
-var DefaultReadTimeout = 20 * time.Second
-var DefaultHTTPTransport = http.Transport{
-	Dial: dialer(DefaultConnectTimeout, DefaultReadTimeout),
-	ResponseHeaderTimeout: DefaultConnectTimeout,
-}
-var DefaultHTTPClient = &http.Client{
-	Transport: &DefaultHTTPTransport,
-}
+var (
+	// DefaultConnectTimeout is how long to wait for a connection to timeout.
+	DefaultConnectTimeout = 10 * time.Second
 
+	// DefaultReadTimeout is how long to wait for a HTTP read to timeout.
+	DefaultReadTimeout = 20 * time.Second
+
+	// DefaultHTTPTransport is the default transport to use for HTTP requests
+	DefaultHTTPTransport = http.Transport{
+		Dial: dialer(DefaultConnectTimeout, DefaultReadTimeout),
+		ResponseHeaderTimeout: DefaultConnectTimeout,
+	}
+
+	// DefaultHTTPClient is the default HTTP client to use for requests.
+	DefaultHTTPClient = &http.Client{
+		Transport: &DefaultHTTPTransport,
+	}
+)
+
+// GetConcurrentRequestCount returns the maximum concurrent requests to make
+// when processing count requests.
 func (h *Fetcher) GetConcurrentRequestCount(count int) int {
 	if count > h.MaxConcurrentRequestsPerHost {
 		return h.MaxConcurrentRequestsPerHost
@@ -56,8 +69,10 @@ func (h *Fetcher) GetConcurrentRequestCount(count int) int {
 	return count
 }
 
+// Headers is a map of HTTP headers.
 type Headers map[string]string
 
+// An HTTPError represents a HTTP status code and the server's response.
 type HTTPError struct {
 	StatusCode int
 	Response   *http.Response
@@ -68,6 +83,7 @@ func (err *HTTPError) Error() string {
 	return fmt.Sprint(req.Method, " ", req.URL, " failed: ", err.StatusCode)
 }
 
+// A FetchRequest is a request to download URL to Filename
 type FetchRequest struct {
 	URL      string
 	Filename string
@@ -77,18 +93,20 @@ type FetchRequest struct {
 	RequestHeaders Headers
 }
 
+// Host gets the HTTP host to make the request to
 func (req *FetchRequest) Host() (string, error) {
-	reqUrl, err := url.Parse(req.URL)
+	reqURL, err := url.Parse(req.URL)
 	if err != nil {
 		return "", err
 	}
-	return reqUrl.Host, nil
+	return reqURL.Host, nil
 }
 
 func (req *FetchRequest) String() string {
 	return fmt.Sprint(req.URL, " -> ", req.Filename)
 }
 
+// A FetchResult is the result of a fetch
 type FetchResult struct {
 	Req          *FetchRequest
 	Err          error
@@ -99,12 +117,14 @@ func fetchError(req *FetchRequest, err error) *FetchResult {
 	return &FetchResult{req, err, 0}
 }
 
+// AddHeaders adds all headers in h to headers.
 func (headers Headers) AddHeaders(h *http.Header) {
 	for header, value := range headers {
 		h.Add(header, value)
 	}
 }
 
+// Copy returns a copy of headers
 func (headers Headers) Copy() Headers {
 	res := make(Headers)
 	for k, v := range headers {
@@ -113,12 +133,15 @@ func (headers Headers) Copy() Headers {
 	return res
 }
 
+// HeadersWith creates a copy of headers with newHeader=newValue
 func HeadersWith(headers Headers, newHeader, newValue string) Headers {
 	headerCopy := headers.Copy()
 	headerCopy[newHeader] = newValue
 	return headerCopy
 }
 
+// FileGetResponse makes a HTTP GET request to url and returns the response
+// object.
 func (h *Fetcher) FileGetResponse(url string, headers Headers) (*http.Response, error) {
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -145,6 +168,8 @@ func (h *Fetcher) FileGetResponse(url string, headers Headers) (*http.Response, 
 	return resp, nil
 }
 
+// FetchFile downloads a file as specified in req, writing a completion
+// FetchResult to complete.
 func (h *Fetcher) FetchFile(req *FetchRequest, complete chan<- *FetchResult) {
 	if !req.FullDownload {
 		finf, err := os.Stat(req.Filename)
@@ -173,6 +198,8 @@ func fileResumeHeaders(req *FetchRequest, file *os.File) (Headers, int64) {
 	return headers, resumePoint
 }
 
+// ResumeFileDownload downloads req and attempts to resume the download into
+// req.Filename. On completion, a FetchResult is written to the complete chan.
 func (h *Fetcher) ResumeFileDownload(req *FetchRequest, complete chan<- *FetchResult) {
 	var err error
 	handleError := func() {
@@ -193,7 +220,7 @@ func (h *Fetcher) ResumeFileDownload(req *FetchRequest, complete chan<- *FetchRe
 		err = fmt.Errorf("expected http 206 (partial content), got %d", resp.StatusCode)
 	}
 
-	var copied int64 = 0
+	var copied int64
 	if err != nil {
 		httpErr, _ := err.(*HTTPError)
 		if httpErr == nil || httpErr.StatusCode != http.StatusRequestedRangeNotSatisfiable {
@@ -208,6 +235,9 @@ func (h *Fetcher) ResumeFileDownload(req *FetchRequest, complete chan<- *FetchRe
 	complete <- &FetchResult{req, err, copied}
 }
 
+// NewFileDownload downloads a file as specified in req, writing a fetch result
+// to the complete chan when done. File downloads are not resumed, so any
+// existing file will be overwritten.
 func (h *Fetcher) NewFileDownload(req *FetchRequest, complete chan<- *FetchResult) {
 	resp, err := h.FileGetResponse(req.URL, req.RequestHeaders)
 	if err != nil {

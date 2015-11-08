@@ -20,14 +20,17 @@ import (
 	"github.com/lib/pq"
 )
 
-const LoadBufferSize = 50000
+const loadBufferSize = 50000
 
+// A Loader loads game and milestone records into Sequell's database. Loaders
+// must be configured with a set of servers, a database connection, and the
+// sequell database schema.
 type Loader struct {
 	*sources.Servers
 	DB               pg.DB
 	Schema           *db.CrawlSchema
 	Readers          []*Reader
-	GameTypePrefixes map[string]string
+	gameTypePrefixes map[string]string
 	RowCount         int64
 	LogNorm          *xlogtools.Normalizer
 
@@ -40,18 +43,23 @@ type Loader struct {
 	offsetQuery         *sql.Stmt
 }
 
+// A Reader reads records suing an XlogReader (i.e. from one xlog file), from
+// the source XlogSrc, and writes those records to the Table configured.
 type Reader struct {
-	*xlog.XlogReader
+	*xlog.Reader
 	*sources.XlogSrc
 	Table string
 }
 
+// New creates a new loader given a database connection, server and schema
+// configs, an xlog normalizer and the set of game type mappings of Crawl
+// game types to their table prefixes.
 func New(db pg.DB, srv *sources.Servers, sch *db.CrawlSchema, norm *xlogtools.Normalizer, gameTypePrefixes map[string]string) *Loader {
 	l := &Loader{
 		Servers:          srv,
 		DB:               db,
 		Schema:           sch,
-		GameTypePrefixes: gameTypePrefixes,
+		gameTypePrefixes: gameTypePrefixes,
 		LogNorm:          norm,
 	}
 	l.init()
@@ -62,14 +70,14 @@ func (l *Loader) init() {
 	if l.Readers != nil {
 		return
 	}
-	l.buffer = NewBuffer(LoadBufferSize)
+	l.buffer = NewBuffer(loadBufferSize)
 	xlogs := l.Servers.XlogSources()
 	l.Readers = make([]*Reader, len(xlogs))
 	for i, x := range xlogs {
 		l.Readers[i] = &Reader{
-			XlogReader: xlog.Reader(x.TargetPath, x.TargetRelPath),
-			XlogSrc:    x,
-			Table:      l.TableName(x),
+			Reader:  xlog.NewReader(x.TargetPath, x.TargetRelPath),
+			XlogSrc: x,
+			Table:   l.TableName(x),
 		}
 	}
 	l.createTableLookups()
@@ -94,7 +102,7 @@ func (l *Loader) createTableLookups() {
 		if lookup, ok := lookups[lookupTable.Name]; ok {
 			return lookup
 		}
-		lookup := NewTableLookup(lookupTable, LoadBufferSize)
+		lookup := NewTableLookup(lookupTable, loadBufferSize)
 		lookups[lookupTable.Name] = lookup
 		return lookup
 	}
@@ -138,9 +146,9 @@ func (l *Loader) initTableInsertFields() {
 
 func (l *Loader) initCopyStatements() {
 	l.tableCopyStatements =
-		make(map[string]string, len(l.tableInsertFields)*len(l.GameTypePrefixes))
+		make(map[string]string, len(l.tableInsertFields)*len(l.gameTypePrefixes))
 	for table, fields := range l.tableInsertFields {
-		for _, prefix := range l.GameTypePrefixes {
+		for _, prefix := range l.gameTypePrefixes {
 			table := prefix + table
 			l.tableCopyStatements[table] = l.copyStatement(table, fields)
 		}
@@ -155,11 +163,13 @@ func (l *Loader) copyStatement(table string, fields []*db.Field) string {
 	return pq.CopyIn(table, fieldRefNames...)
 }
 
-// TableName returns the insertion table for the given source.
+// TableName returns the insertion table for the given xlog source.
 func (l *Loader) TableName(x *sources.XlogSrc) string {
-	return l.GameTypePrefixes[x.Game] + x.Type.BaseTable()
+	return l.gameTypePrefixes[x.Game] + x.Type.BaseTable()
 }
 
+// FindReader returns the Reader object given a file path, using an exact
+// match for file == Reader.TargetPath.
 func (l *Loader) FindReader(file string) *Reader {
 	for _, r := range l.Readers {
 		if r.TargetPath == file {
@@ -258,6 +268,7 @@ func (l *Loader) LoadReaderLogs(reader *Reader) error {
 	}
 }
 
+// NormalizeLog normalizes x and adds reader metadata to it.
 func (l *Loader) NormalizeLog(x xlog.Xlog, reader *Reader) error {
 	x["file"] = reader.Filename
 	x["table"] = reader.Table
@@ -431,7 +442,7 @@ func (l *Loader) updateFileOffsets(tx *sql.Tx, offsets map[string]string) error 
 	if noffsets == 0 {
 		return nil
 	}
-	sql := l.updateFileOffsetSql(noffsets)
+	sql := l.updateFileOffsetSQL(noffsets)
 	values := make([]interface{}, noffsets*2)
 	i := 0
 	for file, offsetText := range offsets {
@@ -447,7 +458,7 @@ func (l *Loader) updateFileOffsets(tx *sql.Tx, offsets map[string]string) error 
 	return err
 }
 
-func (l *Loader) updateFileOffsetSql(noffset int) string {
+func (l *Loader) updateFileOffsetSQL(noffset int) string {
 	var buf bytes.Buffer
 	buf.WriteString(`update l_file f set file_offset = c.file_offset
                               from (values `)

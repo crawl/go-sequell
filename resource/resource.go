@@ -6,9 +6,11 @@ import (
 	"github.com/crawl/go-sequell/root"
 )
 
+// Root is the resource root containing Sequell's config
 var Root = root.New("", "SEQUELL_ROOT", "HENZELL_ROOT")
 
-func Yaml(path string) (qyaml.Yaml, error) {
+// YAML reads the YAML file at path.
+func YAML(path string) (qyaml.YAML, error) {
 	yaml, err := qyaml.Parse(Root.Path(path))
 	if err != nil {
 		return yaml, ectx.Err("yaml: "+path, err)
@@ -16,8 +18,9 @@ func Yaml(path string) (qyaml.Yaml, error) {
 	return yaml, nil
 }
 
-func YamlMustParse(path string) qyaml.Yaml {
-	yaml, err := Yaml(path)
+// MustParseYAML reads the YAML at path, panicking if there is an error.
+func MustParseYAML(path string) qyaml.YAML {
+	yaml, err := YAML(path)
 	if err != nil {
 		panic(err)
 	}

@@ -7,6 +7,7 @@ import (
 	"gopkg.in/fsnotify.v1"
 )
 
+// A Notifier monitors files on a local filesystem for changes.
 type Notifier struct {
 	name           string
 	watcher        *fsnotify.Watcher
@@ -15,9 +16,17 @@ type Notifier struct {
 	shutdown       chan bool
 }
 
-const DefaultDebounce = 250 * time.Millisecond
-const DefaultRemonitorDelay = 500 * time.Millisecond
+const (
+	// DefaultDebounce is how long to wait after a file change notification
+	// before firing an event.
+	DefaultDebounce = 250 * time.Millisecond
 
+	// DefaultRemonitorDelay is how long to wait after a file is removed to see
+	// if it will reappear and must be remonitored.
+	DefaultRemonitorDelay = 500 * time.Millisecond
+)
+
+// New creates a file change notifier named name.
 func New(name string) *Notifier {
 	return &Notifier{
 		name:           name,
@@ -27,10 +36,15 @@ func New(name string) *Notifier {
 	}
 }
 
-func (n *Notifier) Close() {
+// Close shuts down the notifier asynchronously.
+func (n *Notifier) Close() error {
 	n.shutdown <- true
+	return nil
 }
 
+// Notify synchronously watches the list of files for changes, writing changed
+// filenames to res. Notify blocks unless monitoring fails, so it must be run in
+// a goroutine.
 func (n *Notifier) Notify(files []string, res chan<- string) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {

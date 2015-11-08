@@ -13,7 +13,8 @@ type articleNorm struct {
 	specialCases []string
 }
 
-func ArticleNormalizer(specialCases []string) *articleNorm {
+// ArticleNormalizer returns a string normalizer that adds articles.
+func ArticleNormalizer(specialCases []string) stringnorm.Normalizer {
 	return &articleNorm{specialCases: specialCases}
 }
 
@@ -32,6 +33,8 @@ func (a *articleNorm) Normalize(killer string) (string, error) {
 	return grammar.Article(killer), nil
 }
 
+// NormalizeKiller normalizes a killer name given the game version (cv),
+// the raw killer name and the killerFlags if known.
 func NormalizeKiller(cv, killer, rawKiller, killerFlags string) string {
 	var err error
 	for _, norm := range normalizers {
@@ -46,6 +49,7 @@ func NormalizeKiller(cv, killer, rawKiller, killerFlags string) string {
 var rSpectralThing = regexp.MustCompile(`spectral (\w+)`)
 var rDerivedUndead = regexp.MustCompile(`(?i)(zombie|skeleton|simulacrum)$`)
 
+// NormalizeKmod guesses the kmod based on the killer name.
 func NormalizeKmod(killer string) string {
 	spectralMatch := rSpectralThing.FindStringSubmatch(killer)
 	if spectralMatch != nil && spectralMatch[1] != "warrior" {
@@ -74,6 +78,7 @@ var kauxNormalizers = stringnorm.List{
 	stringnorm.SR(`\b(?:un)?cursed `, ""),
 }
 
+// NormalizeKaux normalizes the Crawl kaux field.
 func NormalizeKaux(kaux string) string {
 	return text.NormalizeSpace(stringnorm.NormalizeNoErr(kauxNormalizers, kaux))
 }

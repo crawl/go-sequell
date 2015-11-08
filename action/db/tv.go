@@ -14,6 +14,7 @@ import (
 	"github.com/crawl/go-sequell/pg"
 )
 
+// ExportTV exports the ntv column from game and milestone tables.
 func ExportTV(db pg.ConnSpec) error {
 	c, err := db.Open()
 	if err != nil {
@@ -57,6 +58,8 @@ func writeTVData(c pg.DB, table string) error {
 	return rows.Err()
 }
 
+// ImportTV reads a TV export file and updates games and milestones with the
+// imported ntv counts.
 func ImportTV(db pg.ConnSpec) error {
 	c, err := db.Open()
 	if err != nil {
@@ -106,7 +109,7 @@ func ImportTV(db pg.ConnSpec) error {
 		buf.WriteString(
 			`) as c (game_key, ntv, ttime), l_game_key as k
              where t.game_key_id = k.id
-               and c.game_key = k.game_key 
+               and c.game_key = k.game_key
 			   and c.ttime = t.` + extraIdentField(table))
 		return buf.String()
 	}

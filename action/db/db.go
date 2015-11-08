@@ -20,8 +20,10 @@ import (
 	"github.com/crawl/go-sequell/sources"
 )
 
+// DBExtensions is the list of Postgres extensions that Sequell wants.
 var DBExtensions = []string{"citext", "orafce"}
 
+// CrawlSchema loads the crawl game schema from crawl-data.yml
 func CrawlSchema() *cdb.CrawlSchema {
 	schema, err := cdb.LoadSchema(data.Crawl)
 	if err != nil {
@@ -30,6 +32,7 @@ func CrawlSchema() *cdb.CrawlSchema {
 	return schema
 }
 
+// Sources loads the list of xlog sources from sources.yml
 func Sources() *sources.Servers {
 	src, err := sources.Sources(data.Sources(), action.LogCache)
 	if err != nil {
@@ -38,6 +41,7 @@ func Sources() *sources.Servers {
 	return src
 }
 
+// DumpSchema dumps the schema in the db.
 func DumpSchema(dbspec pg.ConnSpec) error {
 	db, err := dbspec.Open()
 	if err != nil {
@@ -51,6 +55,8 @@ func DumpSchema(dbspec pg.ConnSpec) error {
 	return nil
 }
 
+// CreateDB creates the crawl database, all extensions, Sequell's DB user, and
+// grants DB ownership to Sequell's user.
 func CreateDB(admin, db pg.ConnSpec) error {
 	pgdb, err := admin.Open()
 	if err != nil {
@@ -78,6 +84,7 @@ func CreateDB(admin, db pg.ConnSpec) error {
 	return ectx.Err("GrantDBOwner", pgdb.GrantDBOwner(db.Database, db.User))
 }
 
+// CreateUser creates a user in the db, the user being specified in dbspec.
 func CreateUser(pgdb pg.DB, dbspec pg.ConnSpec) error {
 	userExist, err := pgdb.UserExists(dbspec.User)
 	if err != nil {
@@ -92,6 +99,7 @@ func CreateUser(pgdb pg.DB, dbspec pg.ConnSpec) error {
 	return nil
 }
 
+// CreateExtensions creates the extensions Sequell needs in the db.
 func CreateExtensions(db pg.ConnSpec) error {
 	c, err := db.Open()
 	if err != nil {
@@ -113,6 +121,7 @@ func CreateExtensions(db pg.ConnSpec) error {
 	return nil
 }
 
+// PrintSchema dumps the database schema as configured in crawl-data.yml
 func PrintSchema(skipIndexes, dropIndexes, createIndexes bool) {
 	s := CrawlSchema().Schema()
 	sel := schema.SelTablesIndexesConstraints
@@ -128,6 +137,8 @@ func PrintSchema(skipIndexes, dropIndexes, createIndexes bool) {
 	s.Sort().Write(sel, os.Stdout)
 }
 
+// CheckDBSchema vets the schema in dbspec for accuracy. The applyDelta
+// parameter is currently ignored.
 func CheckDBSchema(dbspec pg.ConnSpec, applyDelta bool) error {
 	db, err := dbspec.Open()
 	if err != nil {
@@ -152,6 +163,7 @@ func CheckDBSchema(dbspec pg.ConnSpec, applyDelta bool) error {
 	return nil
 }
 
+// CreateDBSchema creates all tables in the db.
 func CreateDBSchema(db pg.ConnSpec) error {
 	c, err := db.Open()
 	if err != nil {
@@ -160,7 +172,7 @@ func CreateDBSchema(db pg.ConnSpec) error {
 	defer c.Close()
 	s := CrawlSchema().Schema()
 	log.Printf("Creating tables in database \"%s\"\n", db.Database)
-	for _, sql := range s.SqlSel(schema.SelTables) {
+	for _, sql := range s.SQLSel(schema.SelTables) {
 		if _, err = c.Exec(sql); err != nil {
 			return err
 		}
@@ -168,6 +180,8 @@ func CreateDBSchema(db pg.ConnSpec) error {
 	return nil
 }
 
+// DropDB drops the Sequell db if force is true. If terminate is specified,
+// existing connections will be terminated.
 func DropDB(admin pg.ConnSpec, db pg.ConnSpec, force, terminate bool) error {
 	if !force {
 		return fmt.Errorf("Use --force to drop the database \"%s\"",
@@ -189,6 +203,8 @@ func DropDB(admin pg.ConnSpec, db pg.ConnSpec, force, terminate bool) error {
 	return err
 }
 
+// TerminateConnections terminates all connections to targetDB given admin
+// privileges.
 func TerminateConnections(adminDB pg.DB, targetDB string) error {
 	pids, err := adminDB.ActiveConnections(targetDB)
 	if err != nil {
@@ -203,6 +219,7 @@ func TerminateConnections(adminDB pg.DB, targetDB string) error {
 	return nil
 }
 
+// LoadLogs loads all xlogs in sourceDir into the db.
 func LoadLogs(db pg.ConnSpec, sourceDir string) error {
 	c, err := db.Open()
 	if err != nil {
@@ -281,13 +298,15 @@ func forceSourceDir(srv *sources.Servers, dir string) error {
 	return nil
 }
 
+// CreateIndexes creates indexes in the db, usually run after a bulk load is
+// complete.
 func CreateIndexes(db pg.ConnSpec) error {
 	c, err := db.Open()
 	if err != nil {
 		return err
 	}
 	sch := CrawlSchema().Schema().Sort()
-	for _, index := range sch.SqlSel(schema.SelIndexesConstraints) {
+	for _, index := range sch.SQLSel(schema.SelIndexesConstraints) {
 		log.Println("Exec:", index)
 		if _, err = c.Exec(index); err != nil {
 			log.Printf("Error creating index: %s\n", err)
@@ -296,6 +315,8 @@ func CreateIndexes(db pg.ConnSpec) error {
 	return nil
 }
 
+// ListFiles lists all logfiles that have been loaded (even partially) into the
+// db.
 func ListFiles(db pg.ConnSpec) error {
 	c, err := db.Open()
 	if err != nil {
@@ -318,6 +339,8 @@ func ListFiles(db pg.ConnSpec) error {
 	return rows.Err()
 }
 
+// DeleteFileRows deletes all games and milestones loaded from the list of
+// files given.
 func DeleteFileRows(db pg.ConnSpec, files []string) error {
 	if len(files) == 0 {
 		log.Println("No files specified.")

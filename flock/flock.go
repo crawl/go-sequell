@@ -10,11 +10,13 @@ import (
 	"github.com/crawl/go-sequell/ectx"
 )
 
+// A Lock represents a lock file. Locks are not safe for concurrent use.
 type Lock struct {
 	Path string
 	File *os.File
 }
 
+// New creates a file lock
 func New(file string) *Lock {
 	return &Lock{Path: file}
 }
@@ -27,6 +29,7 @@ func (l *Lock) lockMode(blocking bool) int {
 	return mode
 }
 
+// Lock locks the file at l.Path, blocking if necessary.
 func (l *Lock) Lock(blocking bool) error {
 	if l.File == nil {
 		var err error
@@ -43,6 +46,7 @@ func (l *Lock) Lock(blocking bool) error {
 	return nil
 }
 
+// Unlock unlocks a locked file.
 func (l *Lock) Unlock() error {
 	if l.File == nil {
 		return nil

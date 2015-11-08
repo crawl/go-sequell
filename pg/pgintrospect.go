@@ -10,8 +10,11 @@ import (
 	"github.com/crawl/go-sequell/schema"
 )
 
+// A PID is the PID of a postgres client connection; this is not the same as
+// a Unix process ID.
 type PID int
 
+// ActiveConnections gets the list of client PIDs connected to the DB.
 func (p DB) ActiveConnections(db string) ([]PID, error) {
 	rows, err :=
 		p.Query(`select pid from pg_stat_activity
@@ -36,11 +39,13 @@ func (p DB) ActiveConnections(db string) ([]PID, error) {
 	return pids, nil
 }
 
+// TerminateConnection kills the connection specified by pid.
 func (p DB) TerminateConnection(pid PID) error {
 	_, err := p.Exec(`select pg_terminate_backend($1)`, int(pid))
 	return ectx.Err("pg_terminate_backend", err)
 }
 
+// IntrospectSchema discovers the database schema.
 func (p DB) IntrospectSchema() (*schema.Schema, error) {
 	tables, err := p.IntrospectTableNames()
 	if err != nil {
@@ -58,6 +63,7 @@ func (p DB) IntrospectSchema() (*schema.Schema, error) {
 	return &schema, nil
 }
 
+// IntrospectTableNames discovers the names of tables in the db.
 func (p DB) IntrospectTableNames() ([]string, error) {
 	rows, err := p.Query("select table_name from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE'")
 	if err != nil {
@@ -80,6 +86,7 @@ func (p DB) IntrospectTableNames() ([]string, error) {
 	return tableNames, nil
 }
 
+// IntrospectTableSchemas discovers the structure of the named tables in the db.
 func (p DB) IntrospectTableSchemas(tables []string) (schemas []*schema.Table, err error) {
 	schemas = make([]*schema.Table, len(tables))
 	for i, t := range tables {
@@ -91,6 +98,7 @@ func (p DB) IntrospectTableSchemas(tables []string) (schemas []*schema.Table, er
 	return schemas, nil
 }
 
+// IntrospectTable discovers the structure of table.
 func (p DB) IntrospectTable(table string) (*schema.Table, error) {
 	cols, err := p.IntrospectTableColumns(table)
 	if err != nil {
@@ -115,6 +123,7 @@ func (p DB) IntrospectTable(table string) (*schema.Table, error) {
 	}, nil
 }
 
+// IntrospectTableColumns introspects the columns in table from the db.
 func (p DB) IntrospectTableColumns(table string) ([]*schema.Column, error) {
 	rows, err := p.Query(`select column_name, column_default,
                                  data_type, udt_name, numeric_precision
@@ -137,7 +146,7 @@ func (p DB) IntrospectTableColumns(table string) ([]*schema.Column, error) {
 		if dataType.String == "USER-DEFINED" {
 			dataType = userDefinedType
 		}
-		cols = append(cols, p.ColumnDef(colName.String, colDefault.String, dataType.String, numericPrecision.Int64))
+		cols = append(cols, p.columnDef(colName.String, colDefault.String, dataType.String, numericPrecision.Int64))
 	}
 	if err = rows.Err(); err != nil {
 		return nil, err
@@ -145,19 +154,20 @@ func (p DB) IntrospectTableColumns(table string) ([]*schema.Column, error) {
 	return cols, nil
 }
 
-func (p DB) ColumnDef(name, defval, dataType string, precision int64) *schema.Column {
-	dataType, defval = p.NormalizeType(dataType, defval, precision)
+func (p DB) columnDef(name, defval, dataType string, precision int64) *schema.Column {
+	dataType, defval = p.normalizeType(dataType, defval, precision)
 	if defval != "" {
 		defval = "default " + defval
 	}
 	return &schema.Column{
 		Name:    name,
-		SqlType: dataType,
+		SQLType: dataType,
 		Default: defval,
 	}
 }
 
-func (p DB) NormalizeType(sqlType, defval string, precision int64) (string, string) {
+// normalizeType normalizes an introspected type.
+func (p DB) normalizeType(sqlType, defval string, precision int64) (string, string) {
 	if sqlType == "timestamp without time zone" {
 		sqlType = "timestamp"
 	}
@@ -175,6 +185,7 @@ func (p DB) NormalizeType(sqlType, defval string, precision int64) (string, stri
 	return sqlType, defval
 }
 
+// IntrospectTableConstraints discovers the constraints on table with cols.
 func (p DB) IntrospectTableConstraints(table string, cols []*schema.Column) ([]schema.Constraint, error) {
 	pkey, err := p.IntrospectTablePrimaryKey(table)
 	if err != nil {
@@ -200,6 +211,7 @@ func (p DB) IntrospectTableConstraints(table string, cols []*schema.Column) ([]s
 	return constraints, nil
 }
 
+// IntrospectTablePrimaryKey discovers the primary key for a table.
 func (p DB) IntrospectTablePrimaryKey(table string) (schema.Constraint, error) {
 	row := p.QueryRow(`select kcu.column_name, tc.constraint_name
                               from information_schema.table_constraints as tc
@@ -221,6 +233,7 @@ func (p DB) IntrospectTablePrimaryKey(table string) (schema.Constraint, error) {
 	}, nil
 }
 
+// IntrospectTableForeignKeys discovers the foreign keys for table.
 func (p DB) IntrospectTableForeignKeys(table string) ([]schema.Constraint, error) {
 	rows, err := p.Query(`select kcu.column_name,
                                  ccu.table_name as foreign_table,
@@ -258,6 +271,8 @@ func (p DB) IntrospectTableForeignKeys(table string) ([]schema.Constraint, error
 	return constraints, nil
 }
 
+// IntrospectTableUniqueConstraints discovers the unique constraints for table
+// with cols.
 func (p DB) IntrospectTableUniqueConstraints(table string, cols []*schema.Column) error {
 	rows, err := p.Query(`select kcu.column_name
                             from information_schema.table_constraints as tc
@@ -284,6 +299,7 @@ func (p DB) IntrospectTableUniqueConstraints(table string, cols []*schema.Column
 	return rows.Err()
 }
 
+// IntrospectTableIndexes discovers the indexes for table with cols.
 func (p DB) IntrospectTableIndexes(table string, cols []*schema.Column) ([]*schema.Index, error) {
 	indexNameRows, err :=
 		p.Query(`select c.relname as index_name,
@@ -311,12 +327,12 @@ func (p DB) IntrospectTableIndexes(table string, cols []*schema.Column) ([]*sche
 			return nil, ctx("IntrospectTableIndexes", err)
 		}
 
-		colIndices, err := SplitIntArray(colArray)
+		colIndices, err := splitIntArray(colArray)
 		if err != nil {
 			return nil, err
 		}
 		indexes =
-			append(indexes, p.TableIndex(table, index, unique, cols, colIndices))
+			append(indexes, p.tableIndex(table, index, unique, cols, colIndices))
 	}
 	if err = indexNameRows.Err(); err != nil {
 		return nil, err
@@ -324,7 +340,7 @@ func (p DB) IntrospectTableIndexes(table string, cols []*schema.Column) ([]*sche
 	return indexes, nil
 }
 
-func (p DB) TableIndex(
+func (p DB) tableIndex(
 	table, index string, unique bool, cols []*schema.Column,
 	indexColNumbers []int) *schema.Index {
 	indexDef := schema.Index{
@@ -343,8 +359,8 @@ func (p DB) TableIndex(
 	return &indexDef
 }
 
-func SplitIntArray(intarray string) ([]int, error) {
-	intarray = StripArrayBraces(intarray)
+func splitIntArray(intarray string) ([]int, error) {
+	intarray = stripArrayBraces(intarray)
 	intstrings := strings.Split(intarray, " ")
 	res := make([]int, len(intstrings))
 	var err error
@@ -358,7 +374,7 @@ func SplitIntArray(intarray string) ([]int, error) {
 	return res, err
 }
 
-func StripArrayBraces(bracedarray string) string {
+func stripArrayBraces(bracedarray string) string {
 	if bracedarray[0] == '{' {
 		bracedarray = bracedarray[1:]
 	}
@@ -368,11 +384,13 @@ func StripArrayBraces(bracedarray string) string {
 	return bracedarray
 }
 
+// AddUniqueSpecifier adds unique to the type of a column referenced by a
+// unique index.
 func AddUniqueSpecifier(cols []*schema.Column, colname string) error {
 	for _, col := range cols {
 		if col.Name == colname {
-			if strings.Index(col.SqlType, " unique") == -1 {
-				col.SqlType += " unique"
+			if strings.Index(col.SQLType, " unique") == -1 {
+				col.SQLType += " unique"
 			}
 			return nil
 		}

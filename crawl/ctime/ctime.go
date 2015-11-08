@@ -8,24 +8,30 @@ import (
 	"time"
 )
 
-const LayoutTimeWithZone = "20060102150405Z0700"
-const LayoutUTCTime = "20060102150405"
-const LayoutUTCEpoch = "200601021504Z0700"
-const LayoutDBTime = "2006-01-02 15:04:05"
-const LayoutLogTime = LayoutUTCTime
+// Crawl time layouts
+const (
+	LayoutTimeWithZone = "20060102150405Z0700"
+	LayoutUTCTime      = "20060102150405"
+	LayoutUTCEpoch     = "200601021504Z0700"
+	LayoutDBTime       = "2006-01-02 15:04:05"
+	LayoutLogTime      = LayoutUTCTime
+)
 
 // Explicit 0-9: don't match Unicode digits.
 var rYearMonth = regexp.MustCompile(`^[0-9]{6}`)
 var rDaylightSavingSuffix = regexp.MustCompile(`[SD]$`)
 
-type DstLocation struct {
+// DSTLocation represents the non-UTC standard and DST time locations for a place
+type DSTLocation struct {
 	loc    *time.Location
 	dstLoc *time.Location
 }
 
-func ParseDstLocation(loc string, dst string) (DstLocation, error) {
+// ParseDSTLocation parses the standard and DST timezones for a place given the
+// timezone strings
+func ParseDSTLocation(loc string, dst string) (DSTLocation, error) {
 	if loc == "" {
-		return DstLocation{}, nil
+		return DSTLocation{}, nil
 	}
 	if dst == "" {
 		dst = loc
@@ -33,28 +39,29 @@ func ParseDstLocation(loc string, dst string) (DstLocation, error) {
 
 	baseLocation, err := ParseTZ(loc)
 	if err != nil {
-		return DstLocation{}, err
+		return DSTLocation{}, err
 	}
 	dstLocation, err := ParseTZ(dst)
 	if err != nil {
-		return DstLocation{}, err
+		return DSTLocation{}, err
 	}
-	return DstLocation{loc: baseLocation, dstLoc: dstLocation}, nil
+	return DSTLocation{loc: baseLocation, dstLoc: dstLocation}, nil
 }
 
-func (d DstLocation) IsZero() bool {
+// IsZero returns true for an uninitialized d
+func (d DSTLocation) IsZero() bool {
 	return d.loc == nil || d.dstLoc == nil
 }
 
-func (d DstLocation) Location(dst bool) *time.Location {
+// Location gets the time location, DST or normal.
+func (d DSTLocation) Location(dst bool) *time.Location {
 	if dst {
 		return d.dstLoc
-	} else {
-		return d.loc
 	}
+	return d.loc
 }
 
-func (d DstLocation) String() string {
+func (d DSTLocation) String() string {
 	return "{" + d.loc.String() + " " + d.dstLoc.String() + "}"
 }
 
@@ -140,7 +147,7 @@ func dstQualifier(qualifier byte) bool {
 func ParseLogTime(
 	logtime string,
 	utcepoch time.Time,
-	dstlocations DstLocation) (time.Time, error) {
+	dstlocations DSTLocation) (time.Time, error) {
 
 	logtimestr, dst := SplitDstQualifier(NormalizeUnixTime(logtime))
 	utcTime, err := time.Parse(LayoutLogTime, logtimestr)

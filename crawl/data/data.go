@@ -5,21 +5,28 @@ import (
 	"github.com/crawl/go-sequell/resource"
 )
 
-var Crawl qyaml.Yaml = CrawlData()
+// Crawl is the crawl-specific configuration data.
+var Crawl = CrawlData()
+
+// Schema is the Sequell database schema definition.
 var Schema = Crawl
 
-func CrawlData() qyaml.Yaml {
-	return resource.YamlMustParse("config/crawl-data.yml")
+// CrawlData parses the crawl-data.yml file into a YAML object, panicking on error.
+func CrawlData() qyaml.YAML {
+	return resource.MustParseYAML("config/crawl-data.yml")
 }
 
-func Sources() qyaml.Yaml {
-	return resource.YamlMustParse("config/sources.yml")
+// Sources parses the sources.yml file into a YAML object, panicking on error.
+func Sources() qyaml.YAML {
+	return resource.MustParseYAML("config/sources.yml")
 }
 
+// Uniques gets the list of uniques defined in crawl-data.yml
 func Uniques() []string {
 	return Crawl.StringSlice("uniques")
 }
 
+// Orcs gets the list of orcs defined in crawl-data.yml
 func Orcs() []string {
 	return Crawl.StringSlice("orcs")
 }

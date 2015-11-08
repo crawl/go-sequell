@@ -4,8 +4,11 @@ import (
 	"errors"
 )
 
-var ErrNormalizeComplete error = errors.New("ErrNormalizeComplete")
+// ErrNormalizeComplete is a sentinel value returned by a normalizer to
+// request that no other normalizers be run.
+var ErrNormalizeComplete = errors.New("ErrNormalizeComplete")
 
+// A Normalizer normalizes a string value.
 type Normalizer interface {
 	// Normalize copies the given text and normalizes and returns the copy.
 	// If the normalizer does not recognize the text, it must return the
@@ -17,8 +20,12 @@ type Normalizer interface {
 	Normalize(text string) (string, error)
 }
 
+// A List of Normalizers, which applies each Normalizer in order.
 type List []Normalizer
 
+// Normalize applies each normalizer in n to text, returning the final value.
+// If any normalizer returns ErrNormalizeComplete, the remaining normalizers
+// are short-circuited.
 func (n List) Normalize(text string) (string, error) {
 	var err error
 	for _, norm := range n {
@@ -33,6 +40,7 @@ func (n List) Normalize(text string) (string, error) {
 	return text, nil
 }
 
+// Normalize applies the list of string normalizers to text.
 func Normalize(normalizers []Normalizer, text string) (string, error) {
 	return List(normalizers).Normalize(text)
 }
@@ -52,6 +60,8 @@ func Combine(normalizers ...Normalizer) Normalizer {
 	return combined
 }
 
+// NormalizeNoErr applies normalizer to text; errors are silently ignored,
+// and the original text is returned on error.
 func NormalizeNoErr(normalizer Normalizer, text string) string {
 	res, err := normalizer.Normalize(text)
 	if err != nil {

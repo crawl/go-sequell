@@ -24,12 +24,16 @@ import (
 	"gopkg.in/fsnotify.v1"
 )
 
-const CommandFetch = "fetch"
-const CommandCommit = "commit"
-const CommandExit = "exit"
+const (
+	commandFetch  = "fetch"
+	commandCommit = "commit"
+	commandExit   = "exit"
+)
 
-var ErrExit = errors.New("exit")
+var errExit = errors.New("exit")
 
+// Sync is the master isync state object, keeping track of the logs to sync, the
+// database and the log fetcher.
 type Sync struct {
 	ConnSpec  pg.ConnSpec
 	DB        pg.DB
@@ -37,7 +41,7 @@ type Sync struct {
 	Loader    *loader.Loader
 	Servers   *sources.Servers
 	Schema    *db.CrawlSchema
-	CrawlData qyaml.Yaml
+	CrawlData qyaml.YAML
 	Fetcher   *logfetch.Fetcher
 
 	logFileWatcher     *fnotify.Notifier
@@ -49,6 +53,8 @@ type Sync struct {
 	changedConfigFiles chan string
 }
 
+// New creates a new sync object given a database connection spec and a
+// cache directory to save logs.
 func New(c pg.ConnSpec, cachedir string) (*Sync, error) {
 	DB, err := c.Open()
 	if err != nil {
@@ -119,7 +125,7 @@ func (l *Sync) Run() error {
 		line, err := reader.ReadString('\n')
 		if line != "" {
 			if err := l.runCommand(strings.TrimSpace(line)); err != nil {
-				if err == ErrExit {
+				if err == errExit {
 					return normalShutdown()
 				}
 				return err
@@ -134,6 +140,7 @@ func (l *Sync) Run() error {
 	}
 }
 
+// Shutdown stops the isync process, gracefully quitting all tasks.
 func (l *Sync) Shutdown() {
 	l.stopAllTasks()
 }
@@ -146,7 +153,7 @@ func (l *Sync) runCommand(cmd string) error {
 		default:
 		}
 	case "exit":
-		return ErrExit
+		return errExit
 	default:
 		log.Println("Unknown command: try \"fetch\" or \"exit\"")
 	}

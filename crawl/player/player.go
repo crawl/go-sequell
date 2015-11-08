@@ -7,6 +7,7 @@ import (
 	"github.com/crawl/go-sequell/stringnorm"
 )
 
+// CharNormalizer normalizes Crawl char abbreviations (such as TeCK)
 type CharNormalizer struct {
 	SpeciesAbbrNameMap stringnorm.MultiMapper
 	SpeciesNameAbbrMap stringnorm.MultiMapper
@@ -14,13 +15,17 @@ type CharNormalizer struct {
 	ClassNameAbbrMap   stringnorm.MultiMapper
 }
 
-func StockCharNormalizer(yaml qyaml.Yaml) *CharNormalizer {
+// StockCharNormalizer creates a normalizer using the species and classes data
+// in yaml
+func StockCharNormalizer(yaml qyaml.YAML) *CharNormalizer {
 	return NewCharNormalizer(yaml.Map("species"), yaml.Map("classes"))
 }
 
+// NewCharNormalizer creates a normalizer using the species and class
+// abbreviation maps supplied.
 func NewCharNormalizer(species, classes map[interface{}]interface{}) *CharNormalizer {
-	specAbbrMap := CreateMultiMapper(species)
-	classAbbrMap := CreateMultiMapper(classes)
+	specAbbrMap := createMultiMapper(species)
+	classAbbrMap := createMultiMapper(classes)
 	return &CharNormalizer{
 		SpeciesAbbrNameMap: specAbbrMap,
 		SpeciesNameAbbrMap: specAbbrMap.Invert(),
@@ -29,6 +34,7 @@ func NewCharNormalizer(species, classes map[interface{}]interface{}) *CharNormal
 	}
 }
 
+// NormalizeChar normalizes a species:class char abbreviation
 func (c *CharNormalizer) NormalizeChar(race, class, existingChar string) string {
 	if raceAbbr, ok := c.SpeciesNameAbbrMap[race]; ok {
 		if classAbbr, ok := c.ClassNameAbbrMap[class]; ok {
@@ -38,7 +44,7 @@ func (c *CharNormalizer) NormalizeChar(race, class, existingChar string) string 
 	return existingChar
 }
 
-func CreateMultiMapper(value map[interface{}]interface{}) stringnorm.MultiMapper {
+func createMultiMapper(value map[interface{}]interface{}) stringnorm.MultiMapper {
 	res := stringnorm.CreateMultiMapper(value)
 	for _, v := range res {
 		for i := range v {
