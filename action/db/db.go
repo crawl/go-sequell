@@ -324,7 +324,7 @@ func ListFiles(db pg.ConnSpec) error {
 	}
 	defer c.Close()
 
-	rows, err := c.Query("select file from l_file")
+	rows, err := c.Query("select file from l_file order by file")
 	if err != nil {
 		return err
 	}

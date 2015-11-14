@@ -8,83 +8,56 @@ import (
 
 	"gopkg.in/natefinch/lumberjack.v2"
 
-	"github.com/codegangsta/cli"
 	"github.com/crawl/go-sequell/action"
 	"github.com/crawl/go-sequell/action/db"
 	"github.com/crawl/go-sequell/pg"
+	"github.com/crawl/go-sequell/text"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+)
+
+const (
+	cmd     = "seqdb"
+	version = "1.1.0"
 )
 
 var cmdError error
 
 func main() {
-	app := cli.NewApp()
-	app.Name = "seqdb"
-	app.Usage = "Sequell db ops"
-	app.Version = "1.1.0"
-	app.Action = func(c *cli.Context) {
-		cli.ShowAppHelp(c)
-	}
-	app.Before = func(c *cli.Context) error {
-		if logPath := c.GlobalString("log"); logPath != "" {
-			if err := os.MkdirAll(filepath.Dir(logPath), 0755); err != nil {
-				return err
-			}
-			log.SetOutput(&lumberjack.Logger{
-				Filename:   logPath,
-				MaxSize:    10,
-				MaxBackups: 10,
-				MaxAge:     15,
-			})
-		}
-		return nil
-	}
-	defineFlags(app)
-	defineCommands(app)
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
-	app.Run(os.Args)
-	if cmdError != nil {
-		os.Exit(1)
+	app := &cobra.Command{
+		Use:   cmd,
+		Short: cmd + " manages Sequell's game database",
+		PreRun: func(c *cobra.Command, args []string) {
+			if logp := c.Flag("log"); logp != nil {
+				if logPath := logp.Value.String(); logPath != "" {
+					if err := os.MkdirAll(filepath.Dir(logPath), 0755); err != nil {
+						fmt.Fprintln(os.Stderr, "mkdir", logPath, "failed:", err)
+						return
+					}
+					log.SetOutput(&lumberjack.Logger{
+						Filename:   logPath,
+						MaxSize:    10,
+						MaxBackups: 10,
+						MaxAge:     15,
+					})
+				}
+			}
+		},
 	}
+	defineAppFlags(app)
+	defineCommands(app)
+	app.Execute()
 }
 
-func defineFlags(app *cli.App) {
-	app.Flags = []cli.Flag{
-		cli.StringFlag{
-			Name:   "log",
-			Usage:  "Sequell log file path",
-			EnvVar: "SEQUELL_LOG",
-		},
-		cli.StringFlag{
-			Name:   "db",
-			Value:  "sequell",
-			Usage:  "Sequell database name",
-			EnvVar: "SEQUELL_DBNAME",
-		},
-		cli.StringFlag{
-			Name:   "user",
-			Value:  "sequell",
-			Usage:  "Sequell database user",
-			EnvVar: "SEQUELL_DBUSER",
-		},
-		cli.StringFlag{
-			Name:   "password",
-			Value:  "sequell",
-			Usage:  "Sequell database user password",
-			EnvVar: "SEQUELL_DBPASS",
-		},
-		cli.StringFlag{
-			Name:   "host",
-			Value:  "localhost",
-			Usage:  "Sequell postgres database host",
-			EnvVar: "SEQUELL_DBHOST",
-		},
-		cli.IntFlag{
-			Name:   "port",
-			Value:  0,
-			Usage:  "Sequell postgres database port",
-			EnvVar: "SEQUELL_DBPORT",
-		},
-	}
+func defineAppFlags(app *cobra.Command) {
+	f := app.PersistentFlags()
+	f.String("log", os.Getenv("SEQUELL_LOG"), "Sequell log file path")
+	f.String("db", text.FirstNotEmpty(os.Getenv("SEQUELL_DBNAME"), "sequell"), "Sequell database name")
+	f.String("user", text.FirstNotEmpty(os.Getenv("SEQUELL_DBUSER"), "sequell"), "Sequell database user")
+	f.String("password", text.FirstNotEmpty(os.Getenv("SEQUELL_DBPASS"), "sequell"), "Sequell database password")
+	f.String("host", text.FirstNotEmpty(os.Getenv("SEQUELL_DBHOST"), "localhost"), "Sequell postgres database host")
+	f.Int("port", text.ParseInt("SEQUELL_DBPORT", 0), "Sequell postgres database port")
 }
 
 func reportError(err error) {
@@ -99,275 +72,275 @@ func fatal(msg string) {
 	os.Exit(1)
 }
 
-func adminFlags() []cli.Flag {
-	return []cli.Flag{
-		cli.StringFlag{
-			Name:  "admin",
-			Usage: "Postgres admin user (optional)",
-		},
-		cli.StringFlag{
-			Name:  "adminpassword",
-			Usage: "Postgres admin user's password (optional)",
-		},
-		cli.StringFlag{
-			Name:  "admindb",
-			Value: "postgres",
-			Usage: "Postgres admin db",
-		},
-	}
+func adminFlags(f *pflag.FlagSet) {
+	f.String("admin", "", "Postgres admin user (optional)")
+	f.String("adminpassword", "", "Postgres admin user's password (optional)")
+	f.String("admindb", "postgres", "Postgres admin db")
 }
 
-func dropFlags() []cli.Flag {
-	return []cli.Flag{
-		cli.BoolFlag{
-			Name:  "force",
-			Usage: "actually drop the database",
-		},
-		cli.BoolFlag{
-			Name:  "terminate",
-			Usage: "terminate other sessions connected to the database",
-		},
-	}
+func dropFlags(f *pflag.FlagSet) {
+	f.Bool("force", false, "actually drop the database")
+	f.Bool("terminate", false, "terminate other sessions connected to the database")
 }
 
-func adminDBSpec(c *cli.Context) pg.ConnSpec {
+func adminDBSpec(c *cobra.Command) pg.ConnSpec {
 	return pg.ConnSpec{
-		Database: c.String("admindb"),
-		User:     c.String("admin"),
-		Password: c.String("adminpassword"),
-		Host:     c.GlobalString("host"),
-		Port:     c.GlobalInt("port"),
+		Database: stringFlag(c, "admindb"),
+		User:     stringFlag(c, "admin"),
+		Password: stringFlag(c, "adminpassword"),
+		Host:     stringFlag(c, "host"),
+		Port:     intFlag(c, "port"),
 	}
 }
 
-func defineCommands(app *cli.App) {
-	dbSpec := func(c *cli.Context) pg.ConnSpec {
-		return pg.ConnSpec{
-			Database: c.GlobalString("db"),
-			User:     c.GlobalString("user"),
-			Password: c.GlobalString("password"),
-			Host:     c.GlobalString("host"),
-			Port:     c.GlobalInt("port"),
+func setFlags(flagSetter func(*pflag.FlagSet), cmd *cobra.Command) *cobra.Command {
+	flagSetter(cmd.Flags())
+	return cmd
+}
+
+func andFlags(flagSetters ...func(*pflag.FlagSet)) func(*pflag.FlagSet) {
+	return func(f *pflag.FlagSet) {
+		for _, setter := range flagSetters {
+			setter(f)
 		}
 	}
-	app.Commands = []cli.Command{
-		{
-			Name:  "fetch",
-			Usage: "download logs from all sources",
-			Flags: []cli.Flag{
-				cli.BoolFlag{
-					Name:  "only-live",
-					Usage: "fetch only logs that are believed to be live",
-				},
-			},
-			Action: func(c *cli.Context) {
-				reportError(action.DownloadLogs(c.Bool("only-live"), c.Args()))
-			},
-		},
-		{
-			Name:  "load",
-			Usage: "load all outstanding data in the logs to the db",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "force-source-dir",
-					Usage: "Forces the loader to use the files in the directory specified, associating them with the appropriate servers (handy to load test data)",
-				},
-			},
-			Action: func(c *cli.Context) {
-				reportError(db.LoadLogs(dbSpec(c), c.String("force-source-dir")))
-			},
-		},
-		{
-			Name:  "isync",
-			Usage: "load all data, then run an interactive process that accepts commands to \"fetch\" on stdin, automatically loading logs that are updated",
-			Action: func(c *cli.Context) {
-				reportError(action.Isync(dbSpec(c)))
-			},
-		},
-		{
-			Name:  "schema",
-			Usage: "print the Sequell schema",
-			Flags: []cli.Flag{
-				cli.BoolFlag{
-					Name:  "no-index",
-					Usage: "table drop+create DDL only; no indexes and constraints",
-				},
-				cli.BoolFlag{
-					Name:  "drop-index",
-					Usage: "DDL to drop indexes and constraints only; no tables",
-				},
-				cli.BoolFlag{
-					Name:  "create-index",
-					Usage: "DDL to create indexes and constraints only; no tables",
-				},
-			},
-			Action: func(c *cli.Context) {
-				noIndex := c.Bool("no-index")
-				dropIndex := c.Bool("drop-index")
-				createIndex := c.Bool("create-index")
-				if noIndex && (dropIndex || createIndex) {
-					fatal("--no-index cannot be combined with --drop-index or --create-index")
-				}
-				if dropIndex && createIndex {
-					fatal("--drop-index cannot be combined with --create-index")
-				}
-				db.PrintSchema(noIndex, dropIndex, createIndex)
-			},
-		},
-		{
-			Name:  "dumpschema",
-			Usage: "dump the schema currently in the db",
-			Action: func(c *cli.Context) {
-				db.DumpSchema(dbSpec(c))
-			},
-		},
-		{
-			Name:      "checkdb",
-			ShortName: "c",
-			Usage:     "check the DB schema for correctness",
-			Flags: []cli.Flag{
-				cli.BoolFlag{
-					Name:  "upgrade",
-					Usage: "apply any changes to the DB",
-				},
-			},
-			Action: func(c *cli.Context) {
-				reportError(db.CheckDBSchema(dbSpec(c), c.Bool("upgrade")))
-			},
-		},
-		{
-			Name:  "newdb",
-			Usage: "create the Sequell database and initialize it",
-			Flags: adminFlags(),
-			Action: func(c *cli.Context) {
-				if err := db.CreateDB(adminDBSpec(c), dbSpec(c)); err != nil {
-					reportError(err)
-					return
-				}
-				reportError(db.CreateDBSchema(dbSpec(c)))
-			},
-		},
-		{
-			Name:  "dropdb",
-			Usage: "drop the Sequell database (must use --force)",
-			Flags: append(adminFlags(), dropFlags()...),
-			Action: func(c *cli.Context) {
-				reportError(
-					db.DropDB(adminDBSpec(c), dbSpec(c), c.Bool("force"),
-						c.Bool("terminate")))
-			},
-		},
-		{
-			Name:  "resetdb",
-			Usage: "drop and recreate the Sequell database (must use --force), => dropdb + newdb",
-			Flags: append(adminFlags(), dropFlags()...),
-			Action: func(c *cli.Context) {
-				force := c.Bool("force")
-				reportError(
-					db.DropDB(adminDBSpec(c), dbSpec(c), force,
-						c.Bool("terminate")))
-				if force {
-					reportError(
-						db.CreateDB(adminDBSpec(c), dbSpec(c)))
-					reportError(db.CreateDBSchema(dbSpec(c)))
-				}
-			},
-		},
-		{
-			Name:  "createdb",
-			Usage: "create the Sequell database (empty)",
-			Flags: adminFlags(),
-			Action: func(c *cli.Context) {
-				reportError(db.CreateDB(adminDBSpec(c), dbSpec(c)))
-			},
-		},
-		{
-			Name:  "create-tables",
-			Usage: "create tables in the Sequell database",
-			Action: func(c *cli.Context) {
-				reportError(db.CreateDBSchema(dbSpec(c)))
-			},
-		},
-		{
-			Name:  "create-indexes",
-			Usage: "create indexes (use after loading)",
-			Action: func(c *cli.Context) {
-				reportError(db.CreateIndexes(dbSpec(c)))
-			},
-		},
-		{
-			Name:  "ls-files",
-			Usage: "lists all files known to Sequell",
-			Action: func(c *cli.Context) {
-				reportError(db.ListFiles(dbSpec(c)))
-			},
-		},
-		{
-			Name:  "rm-file",
-			Usage: "deletes rows inserted from the specified file(s)",
-			Action: func(c *cli.Context) {
-				reportError(db.DeleteFileRows(dbSpec(c), c.Args()))
-			},
-		},
-		{
-			Name:  "sources",
-			Usage: "show all remote source URLs",
-			Action: func(c *cli.Context) {
-				reportError(action.ShowSourceURLs())
-			},
-		},
-		{
-			Name:  "export-tv",
-			Usage: "export ntv data (writes to stdout)",
-			Action: func(c *cli.Context) {
-				reportError(db.ExportTV(dbSpec(c)))
-			},
-		},
-		{
-			Name:  "import-tv",
-			Usage: "import ntv data (reads from stdin)",
-			Action: func(c *cli.Context) {
-				reportError(db.ImportTV(dbSpec(c)))
-			},
-		},
-		{
-			Name:  "vrenum",
-			Usage: "recomputes version numbers for l_version, l_cversion and l_vlong. Use this to update these tables if/when the version number algorithm changes.",
-			Action: func(c *cli.Context) {
-				reportError(db.RenumberVersions(dbSpec(c)))
-			},
-		},
-		{
-			Name:  "fix-char",
-			Usage: "fix incorrect `char` fields using crace and cls",
-			Action: func(c *cli.Context) {
-				reportError(db.FixCharFields(dbSpec(c)))
-			},
-		},
-		{
-			Name:  "fix-field",
-			Usage: "fix incorrect field",
-			Action: func(c *cli.Context) {
-				if len(c.Args()) <= 0 {
-					reportError(fmt.Errorf("field to fix not specified"))
-					return
-				}
-				reportError(db.FixField(dbSpec(c), c.Args()[0]))
-			},
-		},
-		{
-			Name:  "fix-god-ecumenical",
-			Usage: "fix nouns for god.ecumenical milestones",
-			Action: func(c *cli.Context) {
-				reportError(db.FixGodEcumenical(dbSpec(c)))
-			},
-		},
-		{
-			Name:  "xlog-link",
-			Usage: "link old remote.* to new URL-based paths",
-			Action: func(c *cli.Context) {
-				reportError(action.LinkLogs())
-			},
-		},
+}
+
+func boolFlag(cmd *cobra.Command, name string) bool {
+	val, err := cmd.Flags().GetBool(name)
+	if err != nil {
+		fatal("bad boolean value for" + name + ": " + err.Error())
 	}
+	return val
+}
+
+func stringFlag(cmd *cobra.Command, name string) string {
+	val, err := cmd.Flags().GetString(name)
+	if err != nil {
+		fatal("bad string value for " + name + ": " + err.Error())
+	}
+	return val
+}
+
+func intFlag(cmd *cobra.Command, name string) int {
+	val, err := cmd.Flags().GetInt(name)
+	if err != nil {
+		fatal("bad int value for " + name + ": " + err.Error())
+	}
+	return val
+}
+
+func defineCommands(app *cobra.Command) {
+	app.AddCommand(&cobra.Command{
+		Use:   "version",
+		Short: "Show " + cmd + " version",
+		Run: func(*cobra.Command, []string) {
+			fmt.Println(cmd, version)
+		},
+	})
+
+	dbSpec := func(c *cobra.Command) pg.ConnSpec {
+		return pg.ConnSpec{
+			Database: stringFlag(c, "db"),
+			User:     stringFlag(c, "user"),
+			Password: stringFlag(c, "password"),
+			Host:     stringFlag(c, "host"),
+			Port:     intFlag(c, "port"),
+		}
+	}
+
+	app.AddCommand(setFlags(func(f *pflag.FlagSet) {
+		f.Bool("only-live", false, "fetch only logs that are live")
+	}, &cobra.Command{
+		Use:   "fetch",
+		Short: "download logs from all sources",
+		Run: func(c *cobra.Command, args []string) {
+			reportError(action.DownloadLogs(boolFlag(c, "only-live"), args))
+		},
+	}))
+
+	app.AddCommand(setFlags(func(f *pflag.FlagSet) {
+		f.String("force-source-dir", "", "Forces the loader to use the files in the directory specified, associating them with appropriate servers (for test data)")
+	}, &cobra.Command{
+		Use:   "load",
+		Short: "load all outstanding data in the logs to the db",
+		Run: func(c *cobra.Command, args []string) {
+			reportError(db.LoadLogs(dbSpec(c), stringFlag(c, "force-source-dir")))
+		},
+	}))
+
+	app.AddCommand(&cobra.Command{
+		Use:   "isync",
+		Short: "load all data, then run an interactive process that accepts commands to \"fetch\" on stdin, automatically loading logs that are updated",
+		Run: func(c *cobra.Command, args []string) {
+			reportError(action.Isync(dbSpec(c)))
+		},
+	})
+	app.AddCommand(setFlags(func(f *pflag.FlagSet) {
+		f.Bool("no-index", false, "table drop+create DDL only; no indexes and constraints")
+		f.Bool("drop-index", false, "DDL to drop indexes and constraints only; no tables")
+		f.Bool("create-index", false, "DDL to create indexes and constraints only; no tables")
+	}, &cobra.Command{
+		Use:   "schema",
+		Short: "print the Sequell schema",
+		Run: func(c *cobra.Command, args []string) {
+			noIndex := boolFlag(c, "no-index")
+			dropIndex := boolFlag(c, "drop-index")
+			createIndex := boolFlag(c, "create-index")
+			if noIndex && (dropIndex || createIndex) {
+				fatal("--no-index cannot be combined with --drop-index or --create-index")
+			}
+			if dropIndex && createIndex {
+				fatal("--drop-index cannot be combined with --create-index")
+			}
+			db.PrintSchema(noIndex, dropIndex, createIndex)
+		},
+	}))
+
+	app.AddCommand(&cobra.Command{
+		Use:   "dumpschema",
+		Short: "dump the schema currently in the db",
+		Run: func(c *cobra.Command, args []string) {
+			reportError(db.DumpSchema(dbSpec(c)))
+		},
+	})
+	app.AddCommand(setFlags(func(f *pflag.FlagSet) {
+		f.Bool("upgrade", false, "apply any changes to the DB (not implemented)")
+	}, &cobra.Command{
+		Use:   "checkdb",
+		Short: "check the DB schema for correctness",
+		Run: func(c *cobra.Command, args []string) {
+			reportError(db.CheckDBSchema(dbSpec(c), boolFlag(c, "upgrade")))
+		},
+	}))
+	app.AddCommand(setFlags(adminFlags, &cobra.Command{
+		Use:   "newdb",
+		Short: "create the Sequell database and initialize it",
+		Run: func(c *cobra.Command, args []string) {
+			if err := db.CreateDB(adminDBSpec(c), dbSpec(c)); err != nil {
+				reportError(err)
+				return
+			}
+			reportError(db.CreateDBSchema(dbSpec(c)))
+		},
+	}))
+	app.AddCommand(setFlags(andFlags(adminFlags, dropFlags), &cobra.Command{
+		Use:   "dropdb",
+		Short: "drop the Sequell database (must use --force)",
+		Run: func(c *cobra.Command, args []string) {
+			reportError(
+				db.DropDB(adminDBSpec(c), dbSpec(c), boolFlag(c, "force"),
+					boolFlag(c, "terminate")))
+		},
+	}))
+	app.AddCommand(setFlags(andFlags(adminFlags, dropFlags), &cobra.Command{
+		Use:   "resetdb",
+		Short: "drop and recreate the Sequell database (must use --force), => dropdb + newdb",
+		Run: func(c *cobra.Command, args []string) {
+			force := boolFlag(c, "force")
+			reportError(
+				db.DropDB(adminDBSpec(c), dbSpec(c), force,
+					boolFlag(c, "terminate")))
+			if force {
+				reportError(
+					db.CreateDB(adminDBSpec(c), dbSpec(c)))
+				reportError(db.CreateDBSchema(dbSpec(c)))
+			}
+		},
+	}))
+	app.AddCommand(setFlags(adminFlags, &cobra.Command{
+		Use:   "createdb",
+		Short: "create the Sequell database (empty)",
+		Run: func(c *cobra.Command, args []string) {
+			reportError(db.CreateDB(adminDBSpec(c), dbSpec(c)))
+		},
+	}))
+	app.AddCommand(&cobra.Command{
+		Use:   "create-tables",
+		Short: "create tables in the Sequell database",
+		Run: func(c *cobra.Command, args []string) {
+			reportError(db.CreateDBSchema(dbSpec(c)))
+		},
+	})
+	app.AddCommand(&cobra.Command{
+		Use:   "create-indexes",
+		Short: "create indexes (use after loading)",
+		Run: func(c *cobra.Command, args []string) {
+			reportError(db.CreateIndexes(dbSpec(c)))
+		},
+	})
+	app.AddCommand(&cobra.Command{
+		Use:   "ls-files",
+		Short: "lists all files known to Sequell",
+		Run: func(c *cobra.Command, args []string) {
+			reportError(db.ListFiles(dbSpec(c)))
+		},
+	})
+	app.AddCommand(&cobra.Command{
+		Use:   "rm-file",
+		Short: "deletes rows inserted from the specified file(s)",
+		Run: func(c *cobra.Command, args []string) {
+			reportError(db.DeleteFileRows(dbSpec(c), args))
+		},
+	})
+	app.AddCommand(&cobra.Command{
+		Use:   "sources",
+		Short: "show all remote source URLs",
+		Run: func(c *cobra.Command, args []string) {
+			reportError(action.ShowSourceURLs())
+		},
+	})
+	app.AddCommand(&cobra.Command{
+		Use:   "export-tv",
+		Short: "export ntv data (writes to stdout)",
+		Run: func(c *cobra.Command, args []string) {
+			reportError(db.ExportTV(dbSpec(c)))
+		},
+	})
+	app.AddCommand(&cobra.Command{
+		Use:   "import-tv",
+		Short: "import ntv data (reads from stdin)",
+		Run: func(c *cobra.Command, args []string) {
+			reportError(db.ImportTV(dbSpec(c)))
+		},
+	})
+	app.AddCommand(&cobra.Command{
+		Use:   "vrenum",
+		Short: "recomputes version numbers for l_version, l_cversion and l_vlong. Use this to update these tables if/when the version number algorithm changes.",
+		Run: func(c *cobra.Command, args []string) {
+			reportError(db.RenumberVersions(dbSpec(c)))
+		},
+	})
+	app.AddCommand(&cobra.Command{
+		Use:   "fix-char",
+		Short: "fix incorrect `char` fields using crace and cls",
+		Run: func(c *cobra.Command, args []string) {
+			reportError(db.FixCharFields(dbSpec(c)))
+		},
+	})
+	app.AddCommand(&cobra.Command{
+		Use:   "fix-field",
+		Short: "fix incorrect field",
+		Run: func(c *cobra.Command, args []string) {
+			if len(args) <= 0 {
+				reportError(fmt.Errorf("field to fix not specified"))
+				return
+			}
+			reportError(db.FixField(dbSpec(c), args[0]))
+		},
+	})
+	app.AddCommand(&cobra.Command{
+		Use:   "fix-god-ecumenical",
+		Short: "fix nouns for god.ecumenical milestones",
+		Run: func(c *cobra.Command, args []string) {
+			reportError(db.FixGodEcumenical(dbSpec(c)))
+		},
+	})
+	app.AddCommand(&cobra.Command{
+		Use:   "xlog-link",
+		Short: "link old remote.* to new URL-based paths",
+		Run: func(c *cobra.Command, args []string) {
+			reportError(action.LinkLogs())
+		},
+	})
 }
