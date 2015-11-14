@@ -10,7 +10,7 @@ import (
 	"github.com/crawl/go-sequell/xlog"
 )
 
-var testSchema = cdb.MustLoadSchema(data.CrawlData())
+var testSchema = cdb.MustLoadSchema(data.CrawlData().YAML)
 
 func testConn() pg.DB {
 	db, err := pg.OpenDBUser("sequell_test", "sequell", "sequell")

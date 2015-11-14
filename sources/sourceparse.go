@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/crawl/go-sequell/crawl/ctime"
+	"github.com/crawl/go-sequell/crawl/data"
 	"github.com/crawl/go-sequell/crawl/xlogtools"
 	"github.com/crawl/go-sequell/qyaml"
 	"github.com/crawl/go-sequell/text"
@@ -13,9 +14,10 @@ import (
 
 // Sources reads a parsed sources.yml object and returns a Servers object
 // with metadata on the remote servers that supply xlogs to Sequell.
-func Sources(sources qyaml.YAML, cachedir string) (*Servers, error) {
+func Sources(sources qyaml.YAML, crawl data.Crawl, cachedir string) (*Servers, error) {
 	return sourceYamlParser{
 		sources:  sources.Slice("sources"),
+		crawl:    crawl,
 		cachedir: cachedir,
 	}.Parse()
 }
@@ -39,6 +41,7 @@ func DuplicateXlogTargets(xlogs []*XlogSrc) []string {
 
 type sourceYamlParser struct {
 	sources  []interface{}
+	crawl    data.Crawl
 	cachedir string
 }
 
@@ -50,6 +53,7 @@ func (s sourceYamlParser) Parse() (*Servers, error) {
 	for i, serverYaml := range s.sources {
 		sources.Servers[i], err = serverParser{
 			server:   qyaml.Wrap(serverYaml),
+			crawl:    s.crawl,
 			cachedir: s.cachedir,
 		}.Parse()
 		if err != nil {
@@ -61,6 +65,7 @@ func (s sourceYamlParser) Parse() (*Servers, error) {
 
 type serverParser struct {
 	server   qyaml.YAML
+	crawl    data.Crawl
 	cachedir string
 }
 
@@ -95,8 +100,9 @@ func (s serverParser) ParseXlogRefs(
 	server *Server,
 	logfiles []interface{}) ([]*XlogSrc, error) {
 	xlogs, err := xlogSpecParser{
-		server:   server,
-		cachedir: s.cachedir,
+		server:      server,
+		gameMatcher: xlogtools.NewGameMatcher(s.crawl),
+		cachedir:    s.cachedir,
 	}.Parse(logfiles)
 	if err != nil {
 		return nil, err
@@ -110,8 +116,9 @@ func (s serverParser) ParseXlogRefs(
 }
 
 type xlogSpecParser struct {
-	server   *Server
-	cachedir string
+	server      *Server
+	cachedir    string
+	gameMatcher *xlogtools.GameMatcher
 }
 
 func (p xlogSpecParser) Parse(specs []interface{}) ([]*XlogSrc, error) {
@@ -163,7 +170,7 @@ func (p xlogSpecParser) ParseXlogAliased(aliased map[interface{}]interface{}) ([
 }
 
 func (p xlogSpecParser) NewXlogSrc(name, qualifier string, mustSync bool) *XlogSrc {
-	game := xlogtools.XlogGame(name)
+	game := p.gameMatcher.XlogGame(name)
 	gameVersion := xlogtools.XlogGameVersion(name)
 	logtype := xlogtools.FileType(name)
 	qualifiedName := xlogtools.XlogQualifiedName(p.server.Name, game, gameVersion, qualifier, logtype)

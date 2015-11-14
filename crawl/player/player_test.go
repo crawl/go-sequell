@@ -6,9 +6,10 @@ import (
 	"github.com/crawl/go-sequell/crawl/data"
 )
 
+var crawlData = data.CrawlData()
 var norm = NewCharNormalizer(
-	data.Crawl.Map("species"),
-	data.Crawl.Map("classes"))
+	crawlData.Map("species"),
+	crawlData.Map("classes"))
 
 func TestNormalizeChar(t *testing.T) {
 	var tests = []struct {

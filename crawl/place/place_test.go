@@ -7,7 +7,7 @@ import (
 	"github.com/crawl/go-sequell/stringnorm"
 )
 
-var norm = Normalizer(data.Crawl.StringMap("place-fixups"))
+var norm = Normalizer(data.CrawlData().StringMap("place-fixups"))
 
 func TestCanonicalPlace(t *testing.T) {
 	cases := [][]string{

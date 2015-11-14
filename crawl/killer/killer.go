@@ -4,6 +4,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/crawl/go-sequell/crawl/data"
+	"github.com/crawl/go-sequell/crawl/unique"
 	"github.com/crawl/go-sequell/grammar"
 	"github.com/crawl/go-sequell/stringnorm"
 	"github.com/crawl/go-sequell/text"
@@ -33,11 +35,45 @@ func (a *articleNorm) Normalize(killer string) (string, error) {
 	return grammar.Article(killer), nil
 }
 
+// A Normalizer normalizes killer names.
+type Normalizer struct {
+	c           data.Crawl
+	normalizers []killerNormalizer
+}
+
+// NewNormalizer creates a KillerNormalizer given a crawl-data config.
+func NewNormalizer(c data.Crawl) *Normalizer {
+	return &Normalizer{
+		c: c,
+		normalizers: []killerNormalizer{
+			reNorm(`^an? \w+-headed (hydra.*)$`, "a $1"),
+			reNorm(`^the \w+-headed ((?:Lernaean )?hydra.*)$`, "the $1"),
+			reNorm(`^.*'s? ghost$`, "a player ghost"),
+			reNorm(`^.*'s? illusion$`, "a player illusion"),
+			reNorm(`^an? \w+ (draconian.*)`, "a $1"),
+			killerNormFunc(func(cv, killer, raw, flags string) (string, error) {
+				if strings.Index(killer, "very ugly thing") != -1 {
+					return "a very ugly thing", nil
+				}
+				if strings.Index(killer, "ugly thing") != -1 {
+					return "an ugly thing", nil
+				}
+				return killer, nil
+			}),
+			reNorm(`^an? .* \(((?:glowing )?shapeshifter)\)$`, "a $1"),
+			reNorm(`^the .* shaped (.*)$`, "the $1"),
+			reNorm(`.*\bmiscasting\b.*$`, "miscast"),
+			reNorm(`.*\bunwield\b.*`, "unwield"),
+			&uniqueNormalizer{c: c, u: unique.New(c)},
+		},
+	}
+}
+
 // NormalizeKiller normalizes a killer name given the game version (cv),
 // the raw killer name and the killerFlags if known.
-func NormalizeKiller(cv, killer, rawKiller, killerFlags string) string {
+func (n *Normalizer) NormalizeKiller(cv, killer, rawKiller, killerFlags string) string {
 	var err error
-	for _, norm := range normalizers {
+	for _, norm := range n.normalizers {
 		killer, err = norm.NormalizeKiller(cv, killer, rawKiller, killerFlags)
 		if err != nil {
 			return killer
@@ -91,28 +127,6 @@ type killerNormFunc func(string, string, string, string) (string, error)
 
 func (k killerNormFunc) NormalizeKiller(cv, killer, killerRaw, killerFlags string) (string, error) {
 	return k(cv, killer, killerRaw, killerFlags)
-}
-
-var normalizers = []killerNormalizer{
-	reNorm(`^an? \w+-headed (hydra.*)$`, "a $1"),
-	reNorm(`^the \w+-headed ((?:Lernaean )?hydra.*)$`, "the $1"),
-	reNorm(`^.*'s? ghost$`, "a player ghost"),
-	reNorm(`^.*'s? illusion$`, "a player illusion"),
-	reNorm(`^an? \w+ (draconian.*)`, "a $1"),
-	killerNormFunc(func(cv, killer, raw, flags string) (string, error) {
-		if strings.Index(killer, "very ugly thing") != -1 {
-			return "a very ugly thing", nil
-		}
-		if strings.Index(killer, "ugly thing") != -1 {
-			return "an ugly thing", nil
-		}
-		return killer, nil
-	}),
-	reNorm(`^an? .* \(((?:glowing )?shapeshifter)\)$`, "a $1"),
-	reNorm(`^the .* shaped (.*)$`, "the $1"),
-	reNorm(`.*\bmiscasting\b.*$`, "miscast"),
-	reNorm(`.*\bunwield\b.*`, "unwield"),
-	&uniqueNormalizer{},
 }
 
 type simpleKillerNormalizer struct {

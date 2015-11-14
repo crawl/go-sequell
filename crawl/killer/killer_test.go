@@ -2,6 +2,8 @@ package killer
 
 import (
 	"testing"
+
+	"github.com/crawl/go-sequell/crawl/data"
 )
 
 var killerTests = []struct {
@@ -24,8 +26,9 @@ var killerTests = []struct {
 }
 
 func TestNormalizeKiller(t *testing.T) {
+	k := NewNormalizer(data.CrawlData())
 	for _, test := range killerTests {
-		res := NormalizeKiller("0.10", test.start, test.start, "")
+		res := k.NormalizeKiller("0.10", test.start, test.start, "")
 		if res != test.finish {
 			t.Errorf("Expected '%s' to normalize to '%s', but got '%s'", test.start, test.finish, res)
 		}

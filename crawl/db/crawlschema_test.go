@@ -9,7 +9,7 @@ import (
 )
 
 func TestLoadSchema(t *testing.T) {
-	cschema, err := LoadSchema(data.Schema)
+	cschema, err := LoadSchema(data.CrawlSchema().YAML)
 	if err != nil {
 		t.Errorf("Error loading schema: %v\n", err)
 		return

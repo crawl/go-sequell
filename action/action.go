@@ -29,7 +29,7 @@ var DBLock = flock.New(Root.Path(".seq.db.lock"))
 var FetchLock = flock.New(Root.Path(".seq.fetch.lock"))
 
 func logProc(act func(*sources.Servers) error) error {
-	src, err := sources.Sources(data.Sources(), LogCache)
+	src, err := sources.Sources(data.Sources(), data.CrawlData(), LogCache)
 	if err != nil {
 		return err
 	}
@@ -96,7 +96,7 @@ func xlogFilter(filters []string) func([]*sources.XlogSrc) []*sources.XlogSrc {
 // ShowSourceURLs shows all remote Xlog URLs, including Xlogs that are no
 // longer live.
 func ShowSourceURLs() error {
-	src, err := sources.Sources(data.Sources(), LogCache)
+	src, err := sources.Sources(data.Sources(), data.CrawlData(), LogCache)
 	if err != nil {
 		return err
 	}
@@ -109,8 +109,9 @@ func ShowSourceURLs() error {
 // DownloadLogs downloads all logfiles, possibly filtered to a subset. If
 // incremental, ignores files that are no longer live.
 func DownloadLogs(incremental bool, filters []string) error {
-	src, err := sources.Sources(data.Sources(), LogCache)
+	src, err := sources.Sources(data.Sources(), data.CrawlData(), LogCache)
 	if err != nil {
+
 		return err
 	}
 	err = os.MkdirAll(LogCache, os.ModePerm)

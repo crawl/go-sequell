@@ -18,7 +18,6 @@ import (
 	"github.com/crawl/go-sequell/loader"
 	"github.com/crawl/go-sequell/logfetch"
 	"github.com/crawl/go-sequell/pg"
-	"github.com/crawl/go-sequell/qyaml"
 	"github.com/crawl/go-sequell/resource"
 	"github.com/crawl/go-sequell/sources"
 	"gopkg.in/fsnotify.v1"
@@ -41,7 +40,7 @@ type Sync struct {
 	Loader    *loader.Loader
 	Servers   *sources.Servers
 	Schema    *db.CrawlSchema
-	CrawlData qyaml.YAML
+	CrawlData data.Crawl
 	Fetcher   *logfetch.Fetcher
 
 	logFileWatcher     *fnotify.Notifier
@@ -64,7 +63,7 @@ func New(c pg.ConnSpec, cachedir string) (*Sync, error) {
 		ConnSpec:           c,
 		DB:                 DB,
 		CacheDir:           cachedir,
-		CrawlData:          data.Crawl,
+		CrawlData:          data.CrawlData(),
 		Fetcher:            logfetch.New(),
 		changedLogFiles:    make(chan string),
 		changedConfigFiles: make(chan string),
@@ -84,7 +83,7 @@ func (l *Sync) init() error {
 }
 
 func (l *Sync) setServers() error {
-	servers, err := sources.Sources(data.Sources(), l.CacheDir)
+	servers, err := sources.Sources(data.Sources(), l.CrawlData, l.CacheDir)
 	if err != nil {
 		return err
 	}
@@ -93,7 +92,7 @@ func (l *Sync) setServers() error {
 }
 
 func (l *Sync) setSchema() error {
-	schema, err := db.LoadSchema(l.CrawlData)
+	schema, err := db.LoadSchema(l.CrawlData.YAML)
 	if err != nil {
 		return err
 	}
@@ -106,7 +105,7 @@ func (l *Sync) gameTypePrefixes() map[string]string {
 }
 
 func (l *Sync) newLoader() *loader.Loader {
-	norm := xlogtools.MustBuildNormalizer(l.CrawlData)
+	norm := xlogtools.MustBuildNormalizer(l.CrawlData.YAML)
 	return loader.New(l.DB, l.Servers, l.Schema, norm, l.gameTypePrefixes())
 }
 
@@ -220,7 +219,6 @@ func (l *Sync) reloadConfigs() {
 		log.Printf("Config %s changed, reloading\n", cfg)
 		l.stopSlaveTasks()
 		l.CrawlData = data.CrawlData()
-		data.Crawl = l.CrawlData
 		l.setServers()
 		l.setSchema()
 		l.startSlaveTasks()

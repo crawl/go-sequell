@@ -11,6 +11,7 @@ import (
 	"github.com/crawl/go-sequell/action"
 	"github.com/crawl/go-sequell/action/db"
 	"github.com/crawl/go-sequell/pg"
+	"github.com/crawl/go-sequell/resource"
 	"github.com/crawl/go-sequell/text"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -47,6 +48,19 @@ func main() {
 	}
 	defineAppFlags(app)
 	defineCommands(app)
+
+	defer func() {
+		if r := recover(); r != nil {
+			switch e := r.(type) {
+			case resource.Error:
+				fmt.Fprintln(os.Stderr, e.Error())
+				fmt.Fprintln(os.Stderr, "Perhaps SEQUELL_HOME is not set, or you're in the wrong directory?")
+				os.Exit(1)
+			default:
+				panic(r)
+			}
+		}
+	}()
 	app.Execute()
 }
 

@@ -2,27 +2,31 @@ package unique
 
 import (
 	"testing"
+
+	"github.com/crawl/go-sequell/crawl/data"
 )
 
+var inst = New(data.CrawlData())
+
 func TestIsUnique(t *testing.T) {
-	if !IsUnique("Blork the orc", "") {
+	if !inst.IsUnique("Blork the orc", "") {
 		t.Errorf("Expected Blork to be unique, but isn't")
 	}
 
-	if IsUnique("Abigabaxcjd", "") {
+	if inst.IsUnique("Abigabaxcjd", "") {
 		t.Errorf("Expected junk name to be non-unique, but is")
 	}
 
-	if !IsUnique("elcid", "zombie,unique,powwow") {
+	if !inst.IsUnique("elcid", "zombie,unique,powwow") {
 		t.Errorf("Expected flagged name to be unique, but isn't")
 	}
 }
 
 func TestIsOrc(t *testing.T) {
-	if !IsOrc("Hawl") {
+	if !inst.IsOrc("Hawl") {
 		t.Errorf("Expected Hawl to be flagged an orc")
 	}
-	if IsOrc("Tarantino") {
+	if inst.IsOrc("Tarantino") {
 		t.Errorf("Expected Tarantino to be flagged a non-orc")
 	}
 }
@@ -43,7 +47,7 @@ func TestMaybePanLord(t *testing.T) {
 		{"0.10", "Cow the pandemonium lord", true},
 	}
 	for _, test := range tests {
-		isPanLord := MaybePanLord(test.version, test.name, "")
+		isPanLord := inst.MaybePanLord(test.version, test.name, "")
 		if isPanLord != test.panLord {
 			t.Errorf("MaybePanLord(%#v, %#v, \"\") == %#v, want %#v", test.version, test.name, isPanLord, test.panLord)
 		}
@@ -51,8 +55,7 @@ func TestMaybePanLord(t *testing.T) {
 }
 
 func TestGenericPanLordName(t *testing.T) {
-	if GenericPanLordName() != "a pandemonium lord" {
-		t.Errorf("GenericPanLordName() produced bad result: %s",
-			GenericPanLordName())
+	if name := inst.GenericPanLordName(); name != "a pandemonium lord" {
+		t.Errorf("GenericPanLordName() produced bad result: %s", name)
 	}
 }

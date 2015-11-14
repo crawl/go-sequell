@@ -26,7 +26,7 @@ func FixCharFields(dbc pg.ConnSpec) error {
 
 	sch := CrawlSchema()
 
-	norm := player.StockCharNormalizer(data.Crawl)
+	norm := player.StockCharNormalizer(data.CrawlData().YAML)
 	for _, table := range sch.PrimaryTableNames() {
 		rows, err := findMismatchedCharRows(c, norm, table)
 		if err != nil {

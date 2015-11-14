@@ -12,13 +12,14 @@ import (
 )
 
 func createLoader() (*Loader, error) {
-	srv, err := sources.Sources(data.Sources(), "server-xlogs")
+	crawlData := data.CrawlData()
+	srv, err := sources.Sources(data.Sources(), crawlData, "server-xlogs")
 	if err != nil {
 		return nil, err
 	}
 	return New(testConn(), srv, testSchema,
-		xlogtools.MustBuildNormalizer(data.Crawl),
-		data.Crawl.StringMap("game-type-prefixes")), nil
+		xlogtools.MustBuildNormalizer(crawlData.YAML),
+		crawlData.StringMap("game-type-prefixes")), nil
 }
 
 func TestTableName(t *testing.T) {

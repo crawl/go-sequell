@@ -83,12 +83,14 @@ func ValidXlog(log xlog.Xlog) bool {
 // Normalizer is a set of normalizations that are applied to xlog fields to
 // canonicalize an xlog record
 type Normalizer struct {
-	CrawlData     qyaml.YAML
-	GodNorm       stringnorm.Normalizer
-	PlaceNorm     stringnorm.Normalizer
-	CharNorm      *player.CharNormalizer
-	KillerArticle stringnorm.Normalizer
-	FieldGens     []*FieldGen
+	CrawlData        qyaml.YAML
+	GodNorm          stringnorm.Normalizer
+	PlaceNorm        stringnorm.Normalizer
+	CharNorm         *player.CharNormalizer
+	KillerArticle    stringnorm.Normalizer
+	FieldGens        []*FieldGen
+	milestoneVerbMap map[string]string
+	knorm            *killer.Normalizer
 }
 
 // MustBuildNormalizer creates an xlog normalizer given a crawlData config. It
@@ -109,12 +111,14 @@ func BuildNormalizer(crawlData qyaml.YAML) (*Normalizer, error) {
 		return nil, err
 	}
 	return &Normalizer{
-		CrawlData:     crawlData,
-		GodNorm:       god.Normalizer(crawlData.StringMap("god-aliases")),
-		PlaceNorm:     place.Normalizer(crawlData.StringMap("place-fixups")),
-		CharNorm:      player.StockCharNormalizer(crawlData),
-		KillerArticle: killer.ArticleNormalizer(crawlData.StringSlice("special-killer-phrases")),
-		FieldGens:     fieldGen,
+		CrawlData:        crawlData,
+		GodNorm:          god.Normalizer(crawlData.StringMap("god-aliases")),
+		PlaceNorm:        place.Normalizer(crawlData.StringMap("place-fixups")),
+		CharNorm:         player.StockCharNormalizer(crawlData),
+		KillerArticle:    killer.ArticleNormalizer(crawlData.StringSlice("special-killer-phrases")),
+		FieldGens:        fieldGen,
+		milestoneVerbMap: crawlData.StringMap("milestone-verb-mappings"),
+		knorm:            killer.NewNormalizer(data.Crawl{YAML: crawlData}),
 	}, nil
 }
 
@@ -158,7 +162,7 @@ func (n *Normalizer) NormalizeLog(log xlog.Xlog) (xlog.Xlog, error) {
 			return nil, err
 		}
 		log["banisher"] = banisher
-		log["cbanisher"] = killer.NormalizeKiller(cv, banisher, banisher, "")
+		log["cbanisher"] = n.knorm.NormalizeKiller(cv, banisher, banisher, "")
 	}
 
 	milestone := Type(log) == Milestone
@@ -167,18 +171,18 @@ func (n *Normalizer) NormalizeLog(log xlog.Xlog) (xlog.Xlog, error) {
 		log["noun"] = text.FirstNotEmpty(log["milestone"], "?")
 		log["rtime"] = log["time"]
 		log["oplace"] = text.FirstNotEmpty(log["oplace"], log["place"])
-		NormalizeMilestoneFields(log)
+		n.NormalizeMilestoneFields(log)
 	} else {
 		log["vmsg"] = text.FirstNotEmpty(log["vmsg"], log["tmsg"])
 		log["map"] = NormalizeMapName(log["map"])
 		log["killermap"] = NormalizeMapName(log["killermap"])
 		log["ikiller"] = text.FirstNotEmpty(log["ikiller"], log["killer"])
 		log["ckiller"] =
-			killer.NormalizeKiller(cv,
+			n.knorm.NormalizeKiller(cv,
 				text.FirstNotEmpty(log["killer"], log["ktyp"]),
 				log["killer"], log["killer_flags"])
 		log["cikiller"] =
-			killer.NormalizeKiller(cv, log["ikiller"], log["ikiller"], "")
+			n.knorm.NormalizeKiller(cv, log["ikiller"], log["ikiller"], "")
 		log["kmod"] = killer.NormalizeKmod(log["killer"])
 		log["ckaux"] = killer.NormalizeKaux(log["kaux"])
 		log["rend"] = log["end"]
@@ -194,7 +198,6 @@ func NormalizeMapName(mapname string) string {
 	return strings.Replace(mapname, ",", ";", -1)
 }
 
-var milestoneVerbMap = data.Crawl.StringMap("milestone-verb-mappings")
 var rActionWord = regexp.MustCompile(`(\w+) (.*?)\.?$`)
 var rGhostWord = regexp.MustCompile(`(\w+) the ghost of (\S+)`)
 var rAbyssCause = regexp.MustCompile(`\((.*?)\)$`)
@@ -202,9 +205,9 @@ var rSacrificedThing = regexp.MustCompile(`sacrificed (?:an? )?(\w+)`)
 
 // NormalizeMilestoneFields normalizes a milestone record, cleaning up fields
 // and converting them to the canonical forms Sequell expects.
-func NormalizeMilestoneFields(log xlog.Xlog) {
+func (n *Normalizer) NormalizeMilestoneFields(log xlog.Xlog) {
 	verb := log["verb"]
-	if mappedVerb, ok := milestoneVerbMap[verb]; ok {
+	if mappedVerb, ok := n.milestoneVerbMap[verb]; ok {
 		log["verb"] = mappedVerb
 		verb = mappedVerb
 	}

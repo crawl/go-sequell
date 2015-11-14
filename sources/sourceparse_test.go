@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/crawl/go-sequell/crawl/data"
 	"github.com/crawl/go-sequell/qyaml"
 )
 
@@ -31,7 +32,7 @@ func TestSources(t *testing.T) {
 		t.Errorf("Error parsing yaml: %s", err)
 		return
 	}
-	src, err := Sources(schema, "test")
+	src, err := Sources(schema, data.CrawlData(), "test")
 	if err != nil {
 		t.Errorf("Error parsing sources: %s", err)
 		return

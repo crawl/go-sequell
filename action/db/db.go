@@ -25,7 +25,7 @@ var DBExtensions = []string{"citext", "orafce"}
 
 // CrawlSchema loads the crawl game schema from crawl-data.yml
 func CrawlSchema() *cdb.CrawlSchema {
-	schema, err := cdb.LoadSchema(data.Crawl)
+	schema, err := cdb.LoadSchema(data.CrawlData().YAML)
 	if err != nil {
 		panic(err)
 	}
@@ -34,7 +34,7 @@ func CrawlSchema() *cdb.CrawlSchema {
 
 // Sources loads the list of xlog sources from sources.yml
 func Sources() *sources.Servers {
-	src, err := sources.Sources(data.Sources(), action.LogCache)
+	src, err := sources.Sources(data.Sources(), data.CrawlData(), action.LogCache)
 	if err != nil {
 		panic(err)
 	}
@@ -239,9 +239,9 @@ func LoadLogs(db pg.ConnSpec, sourceDir string) error {
 	}
 	defer action.DBLock.Unlock()
 
-	logNorm := xlogtools.MustBuildNormalizer(data.Crawl)
+	logNorm := xlogtools.MustBuildNormalizer(data.CrawlData().YAML)
 	ldr := loader.New(c, sources, CrawlSchema(), logNorm,
-		data.Crawl.StringMap("game-type-prefixes"))
+		data.CrawlData().StringMap("game-type-prefixes"))
 
 	if sourceDir != "" {
 		log.Println("Loading logs from", sourceDir, "into", db.Database)
@@ -268,7 +268,8 @@ func forceSourceDir(srv *sources.Servers, dir string) error {
 		if !xlogtools.IsXlogQualifiedName(filename) {
 			continue
 		}
-		src, game, xtype := xlogtools.XlogServerType(filename)
+		gameType := xlogtools.NewGameMatcher(data.CrawlData())
+		src, game, xtype := gameType.XlogServerType(filename)
 		if xtype == xlogtools.Unknown {
 			log.Printf("Ignoring %s: unknown type\n", filename)
 			continue

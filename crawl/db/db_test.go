@@ -102,7 +102,7 @@ var fieldParseCases = []struct {
 }
 
 func TestParseField(t *testing.T) {
-	p := NewFieldParser(data.Schema)
+	p := NewFieldParser(data.CrawlSchema().YAML)
 	for _, testCase := range fieldParseCases {
 		field, err := p.ParseField(testCase.spec)
 		if err != nil {

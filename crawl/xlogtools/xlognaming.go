@@ -9,12 +9,32 @@ import (
 	"github.com/crawl/go-sequell/crawl/version"
 )
 
-var gameTypeMatcher = createTextTypeMatcher(data.Crawl.Map("game-type-tags"))
+// NewGameMatcher creates a GameMatcher using the game-type-tags property of c.
+func NewGameMatcher(c data.Crawl) *GameMatcher {
+	return &GameMatcher{
+		t: createTextTypeMatcher(c.Map("game-type-tags")),
+	}
+}
+
+// A GameMatcher identifies the type of a game by examining its log filename.
+type GameMatcher struct {
+	t TextTypeLookup
+}
 
 // XlogGame guesses what kind of games a given logfile or milestone
 // filename contains.
-func XlogGame(filename string) string {
-	return gameTypeMatcher.FindType(filename)
+func (g *GameMatcher) XlogGame(filename string) string {
+	return g.t.FindType(filename)
+}
+
+// XlogServerType parses an Xlog qualified name and returns the Xlog
+// server, game type, and Xlog file type.
+func (g *GameMatcher) XlogServerType(filename string) (server, game string, xlogtype XlogType) {
+	m := rXlogQualifiedName.FindStringSubmatch(filename)
+	if m == nil {
+		return "", "", Unknown
+	}
+	return m[1], g.XlogGame(filename), XlogFileType(filename)
 }
 
 var rGitVersion = regexp.MustCompile(`(?i)\b(?:git|svn|master|trunk)\b`)
@@ -41,16 +61,6 @@ var rXlogQualifiedName = regexp.MustCompile(`^remote.(\w+)-[\w.-]+$`)
 // formatted as a canonical qualified name.
 func IsXlogQualifiedName(filename string) bool {
 	return rXlogQualifiedName.FindString(filename) != ""
-}
-
-// XlogServerType parses an Xlog qualified name and returns the Xlog
-// server, game type, and Xlog file type.
-func XlogServerType(filename string) (server, game string, xlogtype XlogType) {
-	m := rXlogQualifiedName.FindStringSubmatch(filename)
-	if m == nil {
-		return "", "", Unknown
-	}
-	return m[1], XlogGame(filename), XlogFileType(filename)
 }
 
 // XlogFileType guesses the type of xlog file based on the name.

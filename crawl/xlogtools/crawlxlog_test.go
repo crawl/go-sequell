@@ -201,7 +201,7 @@ var normXlogTest = [][]xlog.Xlog{
 	},
 }
 
-var norm = MustBuildNormalizer(data.Crawl)
+var norm = MustBuildNormalizer(data.CrawlData().YAML)
 
 func TestNormalizeLog(t *testing.T) {
 	for _, test := range normXlogTest {

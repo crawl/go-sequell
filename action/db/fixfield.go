@@ -45,7 +45,7 @@ func FixField(dbc pg.ConnSpec, field string) error {
 }
 
 func findFieldGen(field string) (*xlogtools.FieldGen, error) {
-	norm, err := xlogtools.BuildNormalizer(data.Crawl)
+	norm, err := xlogtools.BuildNormalizer(data.CrawlData().YAML)
 	if err != nil {
 		return nil, err
 	}
