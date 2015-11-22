@@ -29,7 +29,7 @@ func main() {
 	app := &cobra.Command{
 		Use:   cmd,
 		Short: cmd + " manages Sequell's game database",
-		PreRun: func(c *cobra.Command, args []string) {
+		PersistentPreRun: func(c *cobra.Command, args []string) {
 			if logp := c.Flag("log"); logp != nil {
 				if logPath := logp.Value.String(); logPath != "" {
 					if err := os.MkdirAll(filepath.Dir(logPath), 0755); err != nil {
