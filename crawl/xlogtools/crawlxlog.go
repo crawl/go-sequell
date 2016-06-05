@@ -203,7 +203,7 @@ var rGhostWord = regexp.MustCompile(`(\w+) the ghost of (\S+)`)
 var rAbyssCause = regexp.MustCompile(`\((.*?)\)$`)
 var rSacrificedThing = regexp.MustCompile(`sacrificed (?:an? )?(\w+)`)
 var rAncestorType = regexp.MustCompile(`.* as a (.+)[.]$`)
-var rAncestorSpecial = regexp.MustCompile(`.*(casting|wielding an?) (.+)[.]$`)
+var rAncestorSpecial = regexp.MustCompile(`.*(?:casting|wielding an?) (.+)[.]$`)
 
 // NormalizeMilestoneFields normalizes a milestone record, cleaning up fields
 // and converting them to the canonical forms Sequell expects.
@@ -239,16 +239,16 @@ func (n *Normalizer) NormalizeMilestoneFields(log xlog.Xlog) {
 		if abyssCauseMatch != nil {
 			noun = text.FirstNotEmpty(abyssCauseMatch[1], "?")
 		}
-    case "ancestor.class"
-        ancestorTypeMatch := rAncestorType.FindStringSubmatch(noun)
-        if ancestorTypeMatch != nil {
-            noun = ancestorTypeMatch[1]
-        }
-    case "ancestor.special"
-        ancestorSpecialMatch := rAncestorSpecial.FindStringSubmatch(noun)
-        if ancestorSpecialMatch != nil {
-            noun = ancestorSpecialMatch[2]
-        }
+	case "ancestor.class":
+		ancestorTypeMatch := rAncestorType.FindStringSubmatch(noun)
+		if ancestorTypeMatch != nil {
+			noun = ancestorTypeMatch[1]
+		}
+	case "ancestor.special":
+		ancestorSpecialMatch := rAncestorSpecial.FindStringSubmatch(noun)
+		if ancestorSpecialMatch != nil {
+			noun = ancestorSpecialMatch[1]
+		}
 	case "br.enter", "br.end", "br.mid":
 		noun = place.StripPlaceDepth(log["place"])
 	case "br.exit":

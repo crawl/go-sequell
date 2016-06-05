@@ -199,6 +199,42 @@ var normXlogTest = [][]xlog.Xlog{
 			"explbr": "",
 		},
 	},
+	{
+		xlog.Xlog{
+			"type":      "ancestor.class",
+			"milestone": "remembered their ancestor Yon as a battlemage.",
+		},
+		xlog.Xlog{
+			"type":      "ancestor.class",
+			"verb":      "ancestor.class",
+			"milestone": "remembered their ancestor Yon as a battlemage.",
+			"noun":      "battlemage",
+		},
+	},
+	{
+		xlog.Xlog{
+			"type":      "ancestor.special",
+			"milestone": "remembered their ancestor Cihuaton casting Metabolic Englaciation.",
+		},
+		xlog.Xlog{
+			"type":      "ancestor.special",
+			"verb":      "ancestor.special",
+			"milestone": "remembered their ancestor Cihuaton casting Metabolic Englaciation.",
+			"noun":      "Metabolic Englaciation",
+		},
+	},
+	{
+		xlog.Xlog{
+			"type":      "ancestor.special",
+			"milestone": "remembered their ancestor Servius wielding a demon trident.",
+		},
+		xlog.Xlog{
+			"type":      "ancestor.special",
+			"verb":      "ancestor.special",
+			"milestone": "remembered their ancestor Servius wielding a demon trident.",
+			"noun":      "demon trident",
+		},
+	},
 }
 
 var norm = MustBuildNormalizer(data.CrawlData().YAML)

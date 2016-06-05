@@ -111,7 +111,6 @@ func ShowSourceURLs() error {
 func DownloadLogs(incremental bool, filters []string) error {
 	src, err := sources.Sources(data.Sources(), data.CrawlData(), LogCache)
 	if err != nil {
-
 		return err
 	}
 	err = os.MkdirAll(LogCache, os.ModePerm)
