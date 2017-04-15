@@ -15,7 +15,7 @@ type Error struct {
 }
 
 func (e Error) Error() string {
-	return e.err.Error()
+	return e.err.Error() + ".\nPerhaps you need to set SEQUELL_ROOT in your environment to the directory containing config/crawl-data.yml?"
 }
 
 // YAML reads the YAML file at path.

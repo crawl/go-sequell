@@ -9,9 +9,15 @@ import (
 	"github.com/crawl/go-sequell/xlog"
 )
 
-var normXlogTest = [][]xlog.Xlog{
+type xinput xlog.Xlog
+type xoutput xlog.Xlog
+
+var normXlogTest = []struct {
+	xinput
+	xoutput
+}{
 	{
-		xlog.Xlog{
+		xinput{
 			"src":       "cao",
 			"v":         "0.10-a0",
 			"alpha":     "y",
@@ -21,7 +27,7 @@ var normXlogTest = [][]xlog.Xlog{
 			"milestone": "pacified Sigmund",
 			"start":     "20140001123755S",
 		},
-		xlog.Xlog{
+		xoutput{
 			"v":         "0.10.0-a0",
 			"cv":        "0.10-a",
 			"sk":        "Translocations",
@@ -35,148 +41,148 @@ var normXlogTest = [][]xlog.Xlog{
 		},
 	},
 	{
-		xlog.Xlog{
+		xinput{
 			"vsavrv": "Git::0.10.0-a0",
 		},
-		xlog.Xlog{
+		xoutput{
 			"vsavrv":    "0.10.0-a0",
 			"vsavrvnum": strconv.FormatUint(version.NumericID("0.10.0-a0"), 10),
 		},
 	},
 	{
-		xlog.Xlog{
+		xinput{
 			"vsav": "34.150",
 		},
-		xlog.Xlog{
+		xoutput{
 			"vsav":    "34.150",
 			"vsavnum": strconv.FormatUint(version.NumericID("34.150"), 10),
 		},
 	},
 	{
-		xlog.Xlog{
+		xinput{
 			"race": "Red Draconian",
 		},
-		xlog.Xlog{
+		xoutput{
 			"crace": "Draconian",
 			"race":  "Red Draconian",
 		},
 	},
 	{
-		xlog.Xlog{
+		xinput{
 			"type":     "yak",
 			"banisher": "red draconian",
 		},
-		xlog.Xlog{
+		xoutput{
 			"type":      "yak",
 			"banisher":  "a red draconian",
 			"cbanisher": "a draconian",
 		},
 	},
 	{
-		xlog.Xlog{
+		xinput{
 			"type":     "yak",
 			"banisher": "cow's ghost",
 		},
-		xlog.Xlog{
+		xoutput{
 			"type":      "yak",
 			"banisher":  "cow's ghost",
 			"cbanisher": "a player ghost",
 		},
 	},
 	{
-		xlog.Xlog{
+		xinput{
 			"type":     "yak",
 			"banisher": "Peony",
 		},
-		xlog.Xlog{
+		xoutput{
 			"type":      "yak",
 			"banisher":  "Peony",
 			"cbanisher": "a pandemonium lord",
 		},
 	},
 	{
-		xlog.Xlog{
+		xinput{
 			"type":     "yak",
 			"banisher": "you",
 		},
-		xlog.Xlog{
+		xoutput{
 			"type":      "yak",
 			"banisher":  "you",
 			"cbanisher": "you",
 		},
 	},
 	{
-		xlog.Xlog{
+		xinput{
 			"type":     "yak",
 			"banisher": "miscasting Shatter",
 		},
-		xlog.Xlog{
+		xoutput{
 			"type":      "yak",
 			"banisher":  "miscasting Shatter",
 			"cbanisher": "miscast",
 		},
 	},
 	{
-		xlog.Xlog{
+		xinput{
 			"type":     "yak",
 			"banisher": "distortion unwield",
 		},
-		xlog.Xlog{
+		xoutput{
 			"type":      "yak",
 			"banisher":  "distortion unwield",
 			"cbanisher": "unwield",
 		},
 	},
 	{
-		xlog.Xlog{
+		xinput{
 			"sk": "Transmigration",
 		},
-		xlog.Xlog{
+		xoutput{
 			"sk": "Transmutations",
 		},
 	},
 	{
-		xlog.Xlog{
+		xinput{
 			"sk": "Translocations",
 		},
-		xlog.Xlog{
+		xoutput{
 			"sk": "Translocations",
 		},
 	},
 	{
-		xlog.Xlog{
+		xinput{
 			"race": "Grotesk",
 		},
-		xlog.Xlog{
+		xoutput{
 			"race":  "Grotesk",
 			"crace": "Gargoyle",
 		},
 	},
 	{
-		xlog.Xlog{
+		xinput{
 			"type": "god.ecumenical",
 			"god":  "Makhleb",
 		},
-		xlog.Xlog{
+		xoutput{
 			"verb": "god.ecumenical",
 			"noun": "Makhleb",
 		},
 	},
 	{
-		xlog.Xlog{
+		xinput{
 			"race": "Kenku",
 		},
-		xlog.Xlog{
+		xoutput{
 			"race":  "Kenku",
 			"crace": "Tengu",
 		},
 	},
 	{
-		xlog.Xlog{
+		xinput{
 			"type":      "unique",
 			"milestone": "slimified Maurice",
 		},
-		xlog.Xlog{
+		xoutput{
 			"type":      "unique",
 			"verb":      "uniq.slime",
 			"milestone": "slimified Maurice",
@@ -184,27 +190,27 @@ var normXlogTest = [][]xlog.Xlog{
 		},
 	},
 	{
-		xlog.Xlog{
+		xinput{
 			"explbr": "HEAD",
 		},
-		xlog.Xlog{
+		xoutput{
 			"explbr": "",
 		},
 	},
 	{
-		xlog.Xlog{
+		xinput{
 			"explbr": "crawl-0.16",
 		},
-		xlog.Xlog{
+		xoutput{
 			"explbr": "",
 		},
 	},
 	{
-		xlog.Xlog{
+		xinput{
 			"type":      "ancestor.class",
 			"milestone": "remembered their ancestor Yon as a battlemage.",
 		},
-		xlog.Xlog{
+		xoutput{
 			"type":      "ancestor.class",
 			"verb":      "ancestor.class",
 			"milestone": "remembered their ancestor Yon as a battlemage.",
@@ -212,11 +218,11 @@ var normXlogTest = [][]xlog.Xlog{
 		},
 	},
 	{
-		xlog.Xlog{
+		xinput{
 			"type":      "ancestor.special",
 			"milestone": "remembered their ancestor Cihuaton casting Metabolic Englaciation.",
 		},
-		xlog.Xlog{
+		xoutput{
 			"type":      "ancestor.special",
 			"verb":      "ancestor.special",
 			"milestone": "remembered their ancestor Cihuaton casting Metabolic Englaciation.",
@@ -224,15 +230,48 @@ var normXlogTest = [][]xlog.Xlog{
 		},
 	},
 	{
-		xlog.Xlog{
+		xinput{
 			"type":      "ancestor.special",
 			"milestone": "remembered their ancestor Servius wielding a demon trident.",
 		},
-		xlog.Xlog{
+		xoutput{
 			"type":      "ancestor.special",
 			"verb":      "ancestor.special",
 			"milestone": "remembered their ancestor Servius wielding a demon trident.",
 			"noun":      "demon trident",
+		},
+	},
+	{
+		xinput{
+			"race": "Gnome",
+			"char": "GnFE",
+		},
+		xoutput{
+			"race":  "Gnome",
+			"crace": "Gnome",
+			"char":  "GmFE",
+		},
+	},
+	{
+		xinput{
+			"race": "Bultungin",
+			"char": "BuMo",
+		},
+		xoutput{
+			"race":  "Gnoll",
+			"crace": "Gnoll",
+			"char":  "GnMo",
+		},
+	},
+	{
+		xinput{
+			"race": "Gnoll",
+			"char": "GnMo",
+		},
+		xoutput{
+			"race":  "Gnoll",
+			"crace": "Gnoll",
+			"char":  "GnMo",
 		},
 	},
 }
@@ -241,17 +280,17 @@ var norm = MustBuildNormalizer(data.CrawlData().YAML)
 
 func TestNormalizeLog(t *testing.T) {
 	for _, test := range normXlogTest {
-		log, expected := test[0], test[1]
-		normalized, err := norm.NormalizeLog(log.Clone())
+		inputXlog, expectedXlog := test.xinput, test.xoutput
+		normalizedXlog, err := norm.NormalizeLog(xlog.Xlog(inputXlog).Clone())
 		if err != nil {
-			t.Errorf("NormalizeLog(%v) failed: %v\n", log, err)
+			t.Errorf("NormalizeLog(%v) failed: %v\n", inputXlog, err)
 			continue
 		}
 
-		for key, expectedValue := range expected {
-			actual := normalized[key]
-			if actual != expectedValue {
-				t.Errorf("NormalizeLog(%#v): original: %#v, expected: %#v, actual: %#v\n", key, log[key], expectedValue, actual)
+		for key, expectedValue := range expectedXlog {
+			actualValue := normalizedXlog[key]
+			if actualValue != expectedValue {
+				t.Errorf("NormalizeLog(%#v: %#v): original: %#v, expected: %#v, actual: %#v\n", key, inputXlog, inputXlog[key], expectedValue, actualValue)
 			}
 		}
 	}

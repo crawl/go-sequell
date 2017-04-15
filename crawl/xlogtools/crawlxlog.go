@@ -106,7 +106,7 @@ func MustBuildNormalizer(crawlData qyaml.YAML) *Normalizer {
 // BuildNormalizer creates an xlog Normalizer given the crawlData YAML
 // structure.
 func BuildNormalizer(crawlData qyaml.YAML) (*Normalizer, error) {
-	fieldGen, err := ParseFieldGenerators(crawlData.Map("field-input-transforms"))
+	fieldGen, err := ParseFieldGenerators(crawlData.Slice("field-input-transforms"))
 	if err != nil {
 		return nil, err
 	}
