@@ -56,7 +56,7 @@ func updateMismatchedCharRows(c pg.DB, norm *player.CharNormalizer, sch *db.Craw
 		buf := bytes.Buffer{}
 		buf.WriteString(
 			`update ` + table + ` as t set charabbrev_id = c.cid from
-                (values `)
+				(values `)
 		binder := pg.NewBinder()
 		for i := 0; i < nrows; i++ {
 			if i > 0 {
@@ -93,7 +93,7 @@ func updateMismatchedCharRows(c pg.DB, norm *player.CharNormalizer, sch *db.Craw
 		if err != nil {
 			return err
 		}
-		if err = charLookup.ResolveAll(tx); err != nil {
+		if err = charLookup.ResolveQueued(tx); err != nil {
 			tx.Rollback()
 			return err
 		}
@@ -148,13 +148,13 @@ func mismatchedCharQuery(table string, nspecies, nclasses int) string {
 	buf := bytes.Buffer{}
 	buf.WriteString(
 		`select t.id, r.crace, c.cls, ch.charabbrev
-           from ` + table + ` as t,
-                l_crace as r,
-                l_cls as c,
-                l_char as ch
-           where t.crace_id = r.id and t.cls_id = c.id
-             and t.charabbrev_id = ch.id
-             and (`)
+		   from ` + table + ` as t,
+				l_crace as r,
+				l_cls as c,
+				l_char as ch
+		   where t.crace_id = r.id and t.cls_id = c.id
+			 and t.charabbrev_id = ch.id
+			 and (`)
 	binder := pg.NewBinder()
 	for i := 0; i < nspecies; i++ {
 		if binder.NotFirst() {

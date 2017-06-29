@@ -2,6 +2,8 @@
 package text
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -162,4 +164,13 @@ func scanBracedGroup(text string) (grp braceGroup, end int, err error) {
 		return braceGroup{}, 0, fmt.Errorf("Mismatched brace group: %s", text)
 	}
 	return braceGroup{groups: groups}, end, nil
+}
+
+// Hash returns an opaque hash of text, suitable for use in de-duplication. The
+// hash implementation is unspecified: do not rely on a specific hashing
+// algorithm. Do not assume the returned hash is from a cryptographic hashing
+// function.
+func Hash(text string) string {
+	sha2Sum := sha256.Sum256([]byte(text))
+	return hex.EncodeToString(sha2Sum[:])
 }

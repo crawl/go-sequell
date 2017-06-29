@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	cdb "github.com/crawl/go-sequell/crawl/db"
-	"github.com/crawl/go-sequell/ectx"
 	"github.com/crawl/go-sequell/xlog"
 	"github.com/golang/groupcache/lru"
+	"github.com/pkg/errors"
 )
 
 // A TableLookup collects a list of lookup field values that must be inserted
@@ -20,6 +20,15 @@ type TableLookup struct {
 	Lookups       map[string]LookupValue
 	Capacity      int
 	CaseSensitive bool
+
+	// globallyUnique means that the lookup field must be globally unique across
+	// all logfiles and milestones. A duplicate value for a GloballyUnique field
+	// means that the entire xlog row is a duplicate and should be discarded.
+	globallyUnique bool
+
+	// duplicateGlobalLookupIDs is the list of lookup values that are duplicated
+	// when GloballyUnique == true
+	duplicateGlobalLookupIDs map[string]bool
 
 	idCache           *lru.Cache
 	lookupField       *cdb.Field
@@ -39,9 +48,9 @@ type LookupValue struct {
 // NewTableLookup returns a new table lookup object capable of caching
 // up to capacity rows worth of lookups.
 //
-// The usage sequence is: Add all your rows, up to the lookup
+// The usage sequence is: Reset(), Add() all your rows, up to the lookup
 // capacity, then ResolveAll once to look up uncached lookup ids, then
-// SetIds all your rows.
+// SetIDs all your rows.
 func NewTableLookup(table *cdb.LookupTable, capacity int) *TableLookup {
 	tl := &TableLookup{
 		Table:         table,
@@ -51,6 +60,35 @@ func NewTableLookup(table *cdb.LookupTable, capacity int) *TableLookup {
 	}
 	tl.init()
 	return tl
+}
+
+// Reset clears t and prepares it for a fresh batch of rows.
+func (t *TableLookup) Reset() {
+	if len(t.duplicateGlobalLookupIDs) == 0 {
+		return
+	}
+
+	t.clearGlobalLookupIDs()
+}
+
+func (t *TableLookup) clearGlobalLookupIDs() {
+	t.duplicateGlobalLookupIDs = map[string]bool{}
+}
+
+// GloballyUnique returns true if t is a lookup of values that must be globally
+// unique, where duplicate values imply duplicat xlog entries that must be
+// discarded.
+func (t *TableLookup) GloballyUnique() bool {
+	return t.globallyUnique
+}
+
+// SetGloballyUnique flags t as requiring globally unique values and returns t.
+func (t *TableLookup) SetGloballyUnique(unique bool) *TableLookup {
+	t.globallyUnique = unique
+	if unique {
+		t.clearGlobalLookupIDs()
+	}
+	return t
 }
 
 // Name returns the name of the lookup table.
@@ -80,6 +118,8 @@ func (t *TableLookup) init() {
 
 	t.baseQuery = t.constructBaseQuery()
 	t.idCache = lru.New(t.Capacity)
+
+	t.SetGloballyUnique(t.lookupField.UUID)
 }
 
 func (t *TableLookup) constructBaseQuery() string {
@@ -88,27 +128,36 @@ func (t *TableLookup) constructBaseQuery() string {
 		` where ` + t.lookupField.SQLName + ` in `
 }
 
-// SetIds sets [field]_id to the lookup id for all lookup fields in the xlog.
+// SetIDs sets [field]_id to the lookup id for all lookup fields in the xlog.
 // You must call ResolveAll before using SetIds.
-func (t *TableLookup) SetIds(x xlog.Xlog) error {
+func (t *TableLookup) SetIDs(x xlog.Xlog) error {
 	for i, f := range t.refFieldNames {
 		field := t.fieldNames[i]
 		value := x[field]
 		id, err := t.ID(value)
 		if err != nil {
-			return ectx.Err(fmt.Sprintf("SetId(%#v)/%#v [%#v]", value, field, x), err)
+			return errors.Wrapf(err, "SetIDs(%#v)/%#v [%#v]", value, field, x)
 		}
 		x[f] = strconv.Itoa(id)
 	}
 	return nil
 }
 
-// ID retrieves the foreign key value for the given lookup value. Id must be
+// ID retrieves the foreign key value for the given lookup value. ID must be
 // used after a call to ResolveAll to load lookup values into the lookup table,
 // or find the existing ids for lookup values that are already in the lookup
 // table.
 func (t *TableLookup) ID(value string) (int, error) {
-	if id, ok := t.idCache.Get(t.lookupKey(value)); ok {
+	valueLookup := t.lookupKey(value)
+
+	if t.globallyUnique && t.duplicateGlobalLookupIDs[valueLookup] {
+		return 0, ErrDuplicateRow
+	}
+
+	if id, ok := t.idCache.Get(valueLookup); ok {
+		if t.globallyUnique {
+			t.duplicateGlobalLookupIDs[valueLookup] = true
+		}
 		return id.(int), nil
 	}
 	return 0, fmt.Errorf("value %#v not found in %s", value, t)
@@ -133,13 +182,26 @@ func (t *TableLookup) Add(x xlog.Xlog) {
 	}
 }
 
+// AddAll resets t and adds all the given logs to be resolved
+func (t *TableLookup) AddAll(logs []xlog.Xlog) {
+	t.Reset()
+	for _, log := range logs {
+		t.Add(log)
+	}
+}
+
+// LookupKey normalizes a lookupValue into its canonical form
+func LookupKey(lookupValue string, caseSensitive bool) (key string) {
+	lookupValue = NormalizeValue(lookupValue)
+	if caseSensitive {
+		return lookupValue
+	}
+	return strings.ToLower(lookupValue)
+}
+
 // lookupKey transforms a lookup value into its canonical form in the id map.
 func (t *TableLookup) lookupKey(lookup string) string {
-	lookup = NormalizeValue(lookup)
-	if !t.CaseSensitive {
-		return strings.ToLower(lookup)
-	}
-	return lookup
+	return LookupKey(lookup, t.CaseSensitive)
 }
 
 // AddLookup adds the lookup value and the list of values derived from it to
@@ -155,12 +217,22 @@ func (t *TableLookup) AddLookup(lookup string, derivedValues []string) {
 	t.Lookups[key] = LookupValue{Value: lookup, DerivedValues: derivedValues}
 }
 
-// ResolveAll resolves all queued lookups into numeric ids.
-func (t *TableLookup) ResolveAll(tx *sql.Tx) error {
-	if err := t.queryAll(tx); err != nil {
+// ResolveAll resolves all lookups in the given xlogs logs into numeric ids. For
+// instance, given killer names like "an ogre", "a kobold", etc. looks up the
+// corresponding IDs in the lookup table (l_killer) and saves the IDs for each
+// value in the ID lookup cache.
+func (t *TableLookup) ResolveAll(tx *sql.Tx, logs []xlog.Xlog) error {
+	t.AddAll(logs)
+	return t.ResolveQueued(tx)
+}
+
+// ResolveQueued resolves all lookups field values previously queued using
+// t.AddAll or t.Add.
+func (t *TableLookup) ResolveQueued(tx *sql.Tx) error {
+	if err := t.findExistingValueIDs(tx); err != nil {
 		return err
 	}
-	if err := t.insertAll(tx); err != nil {
+	if err := t.insertNewValues(tx); err != nil {
 		return err
 	}
 	if len(t.Lookups) != 0 {
@@ -170,7 +242,14 @@ func (t *TableLookup) ResolveAll(tx *sql.Tx) error {
 	return nil
 }
 
-func (t *TableLookup) insertAll(tx *sql.Tx) error {
+type fieldValueLookup int
+
+const (
+	fieldValueLookupNew fieldValueLookup = iota
+	fieldValueLookupExisting
+)
+
+func (t *TableLookup) insertNewValues(tx *sql.Tx) error {
 	if len(t.Lookups) == 0 {
 		return nil
 	}
@@ -179,45 +258,44 @@ func (t *TableLookup) insertAll(tx *sql.Tx) error {
 	values := t.insertValues()
 	rows, err := tx.Query(insertQuery, values...)
 	if err != nil {
-		return ectx.Err(
-			fmt.Sprintf("Query: %s, binds: %#v", insertQuery, values), err)
+		return errors.Wrapf(err, "Query: %s, binds: %#v", insertQuery, values)
 	}
-	return t.resolveRows(rows, nil)
+	return t.resolveRows(rows, fieldValueLookupNew)
 }
 
-func (t *TableLookup) queryAll(tx *sql.Tx) error {
+func (t *TableLookup) findExistingValueIDs(tx *sql.Tx) error {
 	if len(t.Lookups) == 0 {
 		return nil
 	}
 	query := t.lookupQuery(len(t.Lookups))
-	// fmt.Printf("%s lookup: %d items\n", t.Name(), len(t.Lookups))
 	rows, err := tx.Query(query, t.lookupValues()...)
 	if err != nil {
-		return ectx.Err(query, err)
+		return errors.Wrap(err, query)
 	}
-	// fmt.Printf("%s lookup: resolving rows\n", t.Name())
-	return t.resolveRows(rows, nil)
+	return t.resolveRows(rows, fieldValueLookupExisting)
 }
 
-func (t *TableLookup) resolveRows(rows *sql.Rows, err error) error {
-	if err != nil {
-		return err
-	}
+func (t *TableLookup) resolveRows(rows *sql.Rows, lookupResult fieldValueLookup) error {
 	defer rows.Close()
 	var id int
 	var lookupValue string
 	for rows.Next() {
-		if err = rows.Scan(&id, &lookupValue); err != nil {
+		if err := rows.Scan(&id, &lookupValue); err != nil {
 			return err
 		}
-		t.resolveSingleLookup(id, lookupValue)
+		t.resolveSingleLookup(id, lookupValue, lookupResult)
 	}
-	return ectx.Err("lookup.resolveRows", rows.Err())
+	return errors.Wrap(rows.Err(), "lookup.resolveRows")
 }
 
-func (t *TableLookup) resolveSingleLookup(id int, lookup string) {
+func (t *TableLookup) resolveSingleLookup(id int, lookup string, lookupResult fieldValueLookup) {
 	key := t.lookupKey(lookup)
-	t.idCache.Add(key, id)
+
+	if t.globallyUnique && lookupResult == fieldValueLookupExisting {
+		t.duplicateGlobalLookupIDs[key] = true
+	} else {
+		t.idCache.Add(key, id)
+	}
 	delete(t.Lookups, key)
 }
 

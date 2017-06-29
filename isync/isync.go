@@ -38,7 +38,7 @@ type Sync struct {
 	DB        pg.DB
 	CacheDir  string
 	Loader    *loader.Loader
-	Servers   *sources.Servers
+	Servers   sources.Servers
 	Schema    *db.CrawlSchema
 	CrawlData data.Crawl
 	Fetcher   *logfetch.Fetcher

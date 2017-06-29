@@ -54,7 +54,6 @@ func main() {
 			switch e := r.(type) {
 			case resource.Error:
 				fmt.Fprintln(os.Stderr, e.Error())
-				fmt.Fprintln(os.Stderr, "Perhaps SEQUELL_HOME is not set, or you're in the wrong directory?")
 				os.Exit(1)
 			default:
 				panic(r)
@@ -231,6 +230,7 @@ func defineCommands(app *cobra.Command) {
 		Use:   "newdb",
 		Short: "create the Sequell database and initialize it",
 		Run: func(c *cobra.Command, args []string) {
+			fmt.Fprintln(os.Stderr, "Creating db")
 			if err := db.CreateDB(adminDBSpec(c), dbSpec(c)); err != nil {
 				reportError(err)
 				return

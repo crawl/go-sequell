@@ -14,6 +14,7 @@ type Field struct {
 	Name             string
 	Type             string
 	Features         string
+	UUID             bool
 	SQLName          string
 	SQLType          string
 	SQLRefType       string
@@ -189,7 +190,7 @@ func NewFieldParser(spec qyaml.YAML) *FieldParser {
 	}
 }
 
-var rFieldSpec = regexp.MustCompile(`^([a-z_]+)([A-Z]*)([^\w]*)$`)
+var rFieldSpec = regexp.MustCompile(`^([a-z_]+)([A-Z]*)([^\w]*)((?:\[uuid\])?)$`)
 
 // ParseField parses a field spec
 func (f *FieldParser) ParseField(spec string) (*Field, error) {
@@ -198,7 +199,7 @@ func (f *FieldParser) ParseField(spec string) (*Field, error) {
 		return nil, fmt.Errorf("malformed field spec \"%s\"", spec)
 	}
 
-	field := &Field{Name: match[1], Type: match[2], Features: match[3]}
+	field := &Field{Name: match[1], Type: match[2], Features: match[3], UUID: match[4] != ""}
 	err := field.initialize(f)
 	if err != nil {
 		return nil, err

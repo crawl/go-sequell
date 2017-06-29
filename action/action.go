@@ -28,7 +28,7 @@ var DBLock = flock.New(Root.Path(".seq.db.lock"))
 // FetchLock is the lock file used to guard files downloaded to the cache.
 var FetchLock = flock.New(Root.Path(".seq.fetch.lock"))
 
-func logProc(act func(*sources.Servers) error) error {
+func logProc(act func(sources.Servers) error) error {
 	src, err := sources.Sources(data.Sources(), data.CrawlData(), LogCache)
 	if err != nil {
 		return err
@@ -46,7 +46,7 @@ func logProc(act func(*sources.Servers) error) error {
 
 // LinkLogs links cached logs to their correct modern locations.
 func LinkLogs() error {
-	return logProc(func(src *sources.Servers) error {
+	return logProc(func(src sources.Servers) error {
 		for _, xl := range src.XlogSources() {
 			oldPath := filepath.Join(LogCache, xl.CName)
 			if fi, err := os.Stat(oldPath); err == nil && fi.Mode().IsRegular() {

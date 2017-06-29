@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/crawl/go-sequell/ectx"
 	"github.com/crawl/go-sequell/schema"
+	"github.com/pkg/errors"
 )
 
 // A PID is the PID of a postgres client connection; this is not the same as
@@ -18,10 +18,10 @@ type PID int
 func (p DB) ActiveConnections(db string) ([]PID, error) {
 	rows, err :=
 		p.Query(`select pid from pg_stat_activity
-                  where pid <> pg_backend_pid()
-                    and datname = $1`, db)
+				  where pid != pg_backend_pid()
+					and datname = $1`, db)
 	if err != nil {
-		return nil, ectx.Err("pg_stat_activity", err)
+		return nil, errors.Wrap(err, "pg_stat_activity")
 	}
 	defer rows.Close()
 
@@ -29,7 +29,7 @@ func (p DB) ActiveConnections(db string) ([]PID, error) {
 	for rows.Next() {
 		var pid int
 		if err := rows.Scan(&pid); err != nil {
-			return nil, ectx.Err("pg_stat_activity.scan", err)
+			return nil, errors.Wrap(err, "pg_stat_activity.scan")
 		}
 		pids = append(pids, PID(pid))
 	}
@@ -42,7 +42,7 @@ func (p DB) ActiveConnections(db string) ([]PID, error) {
 // TerminateConnection kills the connection specified by pid.
 func (p DB) TerminateConnection(pid PID) error {
 	_, err := p.Exec(`select pg_terminate_backend($1)`, int(pid))
-	return ectx.Err("pg_terminate_backend", err)
+	return errors.Wrap(err, "pg_terminate_backend")
 }
 
 // IntrospectSchema discovers the database schema.
@@ -126,10 +126,10 @@ func (p DB) IntrospectTable(table string) (*schema.Table, error) {
 // IntrospectTableColumns introspects the columns in table from the db.
 func (p DB) IntrospectTableColumns(table string) ([]*schema.Column, error) {
 	rows, err := p.Query(`select column_name, column_default,
-                                 data_type, udt_name, numeric_precision
-                            from information_schema.columns
-                           where table_schema = 'public' and table_name = $1
-                        order by ordinal_position`, table)
+								 data_type, udt_name, numeric_precision
+							from information_schema.columns
+						   where table_schema = 'public' and table_name = $1
+						order by ordinal_position`, table)
 	if err != nil {
 		return nil, err
 	}
@@ -214,11 +214,11 @@ func (p DB) IntrospectTableConstraints(table string, cols []*schema.Column) ([]s
 // IntrospectTablePrimaryKey discovers the primary key for a table.
 func (p DB) IntrospectTablePrimaryKey(table string) (schema.Constraint, error) {
 	row := p.QueryRow(`select kcu.column_name, tc.constraint_name
-                              from information_schema.table_constraints as tc
-                              join information_schema.key_column_usage as kcu
-                                on tc.constraint_name = kcu.constraint_name
-                             where tc.constraint_type = 'PRIMARY KEY'
-                               and tc.table_name = $1`, table)
+							  from information_schema.table_constraints as tc
+							  join information_schema.key_column_usage as kcu
+								on tc.constraint_name = kcu.constraint_name
+							 where tc.constraint_type = 'PRIMARY KEY'
+							   and tc.table_name = $1`, table)
 	var pkey string
 	var constraintName sql.NullString
 	if err := row.Scan(&pkey, &constraintName); err != nil {
@@ -236,16 +236,16 @@ func (p DB) IntrospectTablePrimaryKey(table string) (schema.Constraint, error) {
 // IntrospectTableForeignKeys discovers the foreign keys for table.
 func (p DB) IntrospectTableForeignKeys(table string) ([]schema.Constraint, error) {
 	rows, err := p.Query(`select kcu.column_name,
-                                 ccu.table_name as foreign_table,
-                                 ccu.column_name as foreign_column,
-                                 tc.constraint_name
-                            from information_schema.table_constraints as tc
-                            join information_schema.key_column_usage as kcu
-                              on tc.constraint_name = kcu.constraint_name
-                            join information_schema.constraint_column_usage as ccu
-                              on tc.constraint_name = ccu.constraint_name
-                           where tc.constraint_type = 'FOREIGN KEY'
-                             and tc.table_name = $1`, table)
+								 ccu.table_name as foreign_table,
+								 ccu.column_name as foreign_column,
+								 tc.constraint_name
+							from information_schema.table_constraints as tc
+							join information_schema.key_column_usage as kcu
+							  on tc.constraint_name = kcu.constraint_name
+							join information_schema.constraint_column_usage as ccu
+							  on tc.constraint_name = ccu.constraint_name
+						   where tc.constraint_type = 'FOREIGN KEY'
+							 and tc.table_name = $1`, table)
 	if err != nil {
 		return nil, err
 	}
@@ -275,11 +275,11 @@ func (p DB) IntrospectTableForeignKeys(table string) ([]schema.Constraint, error
 // with cols.
 func (p DB) IntrospectTableUniqueConstraints(table string, cols []*schema.Column) error {
 	rows, err := p.Query(`select kcu.column_name
-                            from information_schema.table_constraints as tc
-                            join information_schema.key_column_usage as kcu
-                              on tc.constraint_name = kcu.constraint_name
-                           where tc.constraint_type = 'UNIQUE'
-                             and tc.table_name = $1`, table)
+							from information_schema.table_constraints as tc
+							join information_schema.key_column_usage as kcu
+							  on tc.constraint_name = kcu.constraint_name
+						   where tc.constraint_type = 'UNIQUE'
+							 and tc.table_name = $1`, table)
 	if err != nil {
 		return err
 	}
@@ -303,16 +303,16 @@ func (p DB) IntrospectTableUniqueConstraints(table string, cols []*schema.Column
 func (p DB) IntrospectTableIndexes(table string, cols []*schema.Column) ([]*schema.Index, error) {
 	indexNameRows, err :=
 		p.Query(`select c.relname as index_name,
-                        i.indkey as column_indexes,
-                        i.indisunique
-                   from pg_catalog.pg_class c
-                   join pg_catalog.pg_index i on c.oid = i.indexrelid
-                   join pg_catalog.pg_class c2 on i.indrelid = c2.oid
-                   join pg_catalog.pg_namespace ns
-                     on c.relnamespace = ns.oid
-                  where c.relkind = 'i' and ns.nspname = 'public'
-                    and not i.indisprimary
-                    and c2.relname = $1`, table)
+						i.indkey as column_indexes,
+						i.indisunique
+				   from pg_catalog.pg_class c
+				   join pg_catalog.pg_index i on c.oid = i.indexrelid
+				   join pg_catalog.pg_class c2 on i.indrelid = c2.oid
+				   join pg_catalog.pg_namespace ns
+					 on c.relnamespace = ns.oid
+				  where c.relkind = 'i' and ns.nspname = 'public'
+					and not i.indisprimary
+					and c2.relname = $1`, table)
 	if err != nil {
 		return nil, err
 	}

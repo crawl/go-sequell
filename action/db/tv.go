@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/crawl/go-sequell/ectx"
 	"github.com/crawl/go-sequell/pg"
+	"github.com/pkg/errors"
 )
 
 // ExportTV exports the ntv column from game and milestone tables.
@@ -41,7 +41,7 @@ func writeTVData(c pg.DB, table string) error {
 	q := "select g.game_key, t.ntv, t." + extraField + " from " + table +
 		" as t " +
 		`inner join l_game_key g on t.game_key_id = g.id
-              where t.ntv > 0`
+			  where t.ntv > 0`
 	rows, err := c.Query(q)
 	if err != nil {
 		return err
@@ -108,8 +108,8 @@ func ImportTV(db pg.ConnSpec) error {
 		}
 		buf.WriteString(
 			`) as c (game_key, ntv, ttime), l_game_key as k
-             where t.game_key_id = k.id
-               and c.game_key = k.game_key
+			 where t.game_key_id = k.id
+			   and c.game_key = k.game_key
 			   and c.ttime = t.` + extraIdentField(table))
 		return buf.String()
 	}
@@ -141,8 +141,7 @@ func ImportTV(db pg.ConnSpec) error {
 				len(keyTVs), total)
 			_, err := tx.Exec(query, args...)
 			if err != nil {
-				return ectx.Err(
-					fmt.Sprintf("Query (%d binds): %s", len(args), query), err)
+				return errors.Wrapf(err, "Query (%d binds): %s", len(args), query)
 			}
 		}
 		tableTV = tableKeyTV{}

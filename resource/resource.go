@@ -1,9 +1,9 @@
 package resource
 
 import (
-	"github.com/crawl/go-sequell/ectx"
 	"github.com/crawl/go-sequell/qyaml"
 	"github.com/crawl/go-sequell/root"
+	"github.com/pkg/errors"
 )
 
 // Root is the resource root containing Sequell's config
@@ -22,7 +22,7 @@ func (e Error) Error() string {
 func YAML(path string) (qyaml.YAML, error) {
 	yaml, err := qyaml.Parse(Root.Path(path))
 	if err != nil {
-		return yaml, ectx.Err("yaml: "+path, err)
+		return yaml, errors.Wrap(err, "yaml: "+path)
 	}
 	return yaml, nil
 }

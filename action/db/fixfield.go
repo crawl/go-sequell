@@ -116,7 +116,7 @@ func (f *FieldFixer) updateBrokenFields(t *db.CrawlTable, rows *dsql.Rows) error
 		if err != nil {
 			return err
 		}
-		if err = lookup.ResolveAll(txn); err != nil {
+		if err = lookup.ResolveQueued(txn); err != nil {
 			txn.Rollback()
 			return err
 		}

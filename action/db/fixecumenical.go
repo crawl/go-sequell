@@ -74,7 +74,7 @@ func fixTableGodEcumenical(c pg.DB, sch *db.CrawlSchema, lookup *loader.TableLoo
 		if err != nil {
 			return err
 		}
-		if err = lookup.ResolveAll(tx); err != nil {
+		if err = lookup.ResolveQueued(tx); err != nil {
 			tx.Rollback()
 			return err
 		}
@@ -123,7 +123,7 @@ func fixTableGodEcumenical(c pg.DB, sch *db.CrawlSchema, lookup *loader.TableLoo
 
 func findGodEcumenicalRows(c pg.DB, table string) (*sql.Rows, error) {
 	return c.Query(`select t.id, g.god from ` + table + ` as t
-                    inner join l_god g on t.god_id = g.id
-                    inner join l_verb v on t.verb_id = v.id
-                    where v.verb = 'god.ecumenical'`)
+					inner join l_god g on t.god_id = g.id
+					inner join l_verb v on t.verb_id = v.id
+					where v.verb = 'god.ecumenical'`)
 }

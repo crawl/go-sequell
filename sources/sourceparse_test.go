@@ -38,8 +38,8 @@ func TestSources(t *testing.T) {
 		return
 	}
 	expectedCount := 11
-	if len(src.Servers) != expectedCount {
-		t.Errorf("Expected %d sources, got %d", expectedCount, len(src.Servers))
+	if parsedSourceCount := len(src); parsedSourceCount != expectedCount {
+		t.Errorf("Expected %d sources, got %d", expectedCount, parsedSourceCount)
 		return
 	}
 
@@ -69,7 +69,7 @@ func TestSources(t *testing.T) {
 		fmt.Printf("CAO UTC epoch: %s\n", cao.UtcEpoch)
 	}
 
-	for _, srv := range src.Servers {
+	for _, srv := range src {
 		fmt.Println()
 		fmt.Println(srv.Name)
 		for i, log := range srv.Logfiles {

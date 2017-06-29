@@ -12,14 +12,12 @@ import (
 )
 
 // Servers is the list of servers are sources for games and milestones
-type Servers struct {
-	Servers []*Server
-}
+type Servers []*Server
 
 // MkdirTargets creates all directories needed for all copies of
 // remote logs.
-func (x *Servers) MkdirTargets() error {
-	for _, server := range x.Servers {
+func (x Servers) MkdirTargets() error {
+	for _, server := range x {
 		for _, log := range server.Logfiles {
 			if err := log.MkdirTarget(); err != nil {
 				return err
@@ -30,25 +28,25 @@ func (x *Servers) MkdirTargets() error {
 }
 
 // XlogSources returns the list of all xlog sources
-func (x *Servers) XlogSources() []*XlogSrc {
-	sources := []*XlogSrc{}
+func (x Servers) XlogSources() []*XlogSrc {
+	var sources []*XlogSrc
 	addAll := func(logs []*XlogSrc) {
 		for _, log := range logs {
 			sources = append(sources, log)
 		}
 	}
-	for _, s := range x.Servers {
-		addAll(s.Logfiles)
+	for _, server := range x {
+		addAll(server.Logfiles)
 	}
 	return sources
 }
 
 // TargetLogDirs returns the set of target (local copy) log directories
 // for all log files.
-func (x *Servers) TargetLogDirs() []string {
+func (x Servers) TargetLogDirs() []string {
 	targetDirs := []string{}
 	seenDirs := map[string]bool{}
-	for _, server := range x.Servers {
+	for _, server := range x {
 		for _, log := range server.Logfiles {
 			if dir := log.TargetDir(); !seenDirs[dir] {
 				seenDirs[dir] = true
@@ -60,23 +58,23 @@ func (x *Servers) TargetLogDirs() []string {
 }
 
 // Server returns the server specified by alias.
-func (x *Servers) Server(alias string) *Server {
-	for _, s := range x.Servers {
-		if s.Name == alias || s.Aliases[alias] {
-			return s
+func (x Servers) Server(alias string) *Server {
+	for _, server := range x {
+		if server.Name == alias || server.Aliases[alias] {
+			return server
 		}
 	}
 	return nil
 }
 
-func (x *Servers) String() string {
+func (x Servers) String() string {
 	buf := bytes.Buffer{}
 	buf.WriteString("Sources[")
-	for i, srv := range x.Servers {
+	for i, server := range x {
 		if i > 0 {
 			buf.WriteString("; ")
 		}
-		buf.WriteString(srv.String())
+		buf.WriteString(server.String())
 	}
 	buf.WriteString("]")
 	return buf.String()

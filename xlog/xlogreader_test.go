@@ -6,7 +6,7 @@ import (
 
 func TestReader(t *testing.T) {
 	file := "cszo-git.log"
-	reader := NewReader(file, file)
+	reader := NewReader("cszo", file, file)
 	lines, err := reader.ReadAll()
 	if err != nil {
 		t.Errorf("Unexpected error reading %s: %s", file, err)

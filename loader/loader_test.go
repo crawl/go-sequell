@@ -72,7 +72,7 @@ func createSingleFileLoader(file string) (*Loader, error) {
 	}
 	ldr.Readers = []*Reader{
 		&Reader{
-			Reader:  xlog.NewReader(src.TargetPath, src.TargetRelPath),
+			Reader:  xlog.NewReader(src.Server.Name, src.TargetPath, src.TargetRelPath),
 			XlogSrc: src,
 			Table:   ldr.TableName(src),
 		},

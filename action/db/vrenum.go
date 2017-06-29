@@ -6,8 +6,8 @@ import (
 	"strconv"
 
 	"github.com/crawl/go-sequell/crawl/version"
-	"github.com/crawl/go-sequell/ectx"
 	"github.com/crawl/go-sequell/pg"
+	"github.com/pkg/errors"
 )
 
 // RenumberVersions updates all version numbers in Sequell's db, recalculating
@@ -83,7 +83,7 @@ func renumberVersionTable(c pg.DB, table, verCol, vnumCol string) error {
 		binds := versionUpdateBinds()
 		res, err := c.Exec(updateStatement, binds...)
 		if err != nil {
-			return ectx.Err(fmt.Sprintf("Query: %s (%#v)", updateStatement, binds), err)
+			return errors.Wrapf(err, "Query: %s (%#v)", updateStatement, binds)
 		}
 		if rowsAffected, err := res.RowsAffected(); err == nil {
 			fmt.Println("Updated", rowsAffected, "version rows")

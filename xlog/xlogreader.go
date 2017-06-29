@@ -17,6 +17,9 @@ var ErrNoFile = errors.New("xlog file not found")
 
 // A Reader reads xlog entries from a logfile.
 type Reader struct {
+	// SourceKey is a unique identifier for the server this logfile is from
+	SourceKey string
+
 	Path     string
 	Filename string
 	File     *os.File
@@ -26,8 +29,12 @@ type Reader struct {
 
 // NewReader creates a new Reader for the given absolute path, and dbFilename.
 // The dbFilename will be saved as the filename in the database.
-func NewReader(filepath, dbFilename string) *Reader {
-	return &Reader{Path: filepath, Filename: dbFilename}
+func NewReader(sourceKey, filepath, dbFilename string) *Reader {
+	return &Reader{
+		SourceKey: sourceKey,
+		Path:      filepath,
+		Filename:  dbFilename,
+	}
 }
 
 func translateErr(e error) error {
@@ -107,10 +114,10 @@ func (x *Reader) SeekNext(offset int64) error {
 // last complete line read, or the last place explicitly Seek()ed to;
 // does nothing if nothing read yet.
 func (x *Reader) BackToLastCompleteLine() error {
-	if x.File != nil {
-		return x.SeekOffset(x.Offset)
+	if x.File == nil {
+		return nil
 	}
-	return nil
+	return x.SeekOffset(x.Offset)
 }
 
 // ReadAll reads all available Xlog lines from the source; use only for testing.
@@ -141,6 +148,8 @@ func (x *Reader) Next() (Xlog, error) {
 		if err != nil && err != io.EOF {
 			return nil, err
 		}
+
+		atEOF := err == io.EOF
 		lineLen := int64(len(line))
 		readOffset += lineLen
 
@@ -149,17 +158,15 @@ func (x *Reader) Next() (Xlog, error) {
 			line = strings.TrimRight(line, " \n\r\t")
 		}
 		if !IsPotentialXlogLine(line) {
-			if err == nil {
+			if !atEOF {
 				continue
 			}
+
 			// EOF with no parseable data: go back to last line.
-			err = x.BackToLastCompleteLine()
-			if err != nil {
-				return nil, err
-			}
-			return nil, nil
+			return nil, x.BackToLastCompleteLine()
 		}
-		parsedXlog, err := Parse(line)
+
+		parsedXlog, err := Parse(line, x.SourceKey)
 		if err != nil {
 			log.Printf("Xlog %s:%d skipping malformed line %#v\n",
 				x.Path, x.Offset+readOffset-lineLen, line)

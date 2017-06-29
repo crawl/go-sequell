@@ -13,11 +13,11 @@ import (
 	"github.com/crawl/go-sequell/crawl/data"
 	cdb "github.com/crawl/go-sequell/crawl/db"
 	"github.com/crawl/go-sequell/crawl/xlogtools"
-	"github.com/crawl/go-sequell/ectx"
 	"github.com/crawl/go-sequell/loader"
 	"github.com/crawl/go-sequell/pg"
 	"github.com/crawl/go-sequell/schema"
 	"github.com/crawl/go-sequell/sources"
+	"github.com/pkg/errors"
 )
 
 // DBExtensions is the list of Postgres extensions that Sequell wants.
@@ -33,7 +33,7 @@ func CrawlSchema() *cdb.CrawlSchema {
 }
 
 // Sources loads the list of xlog sources from sources.yml
-func Sources() *sources.Servers {
+func Sources() sources.Servers {
 	src, err := sources.Sources(data.Sources(), data.CrawlData(), action.LogCache)
 	if err != nil {
 		panic(err)
@@ -60,28 +60,29 @@ func DumpSchema(dbspec pg.ConnSpec) error {
 func CreateDB(admin, db pg.ConnSpec) error {
 	pgdb, err := admin.Open()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "CreateDB/Open")
 	}
 	defer pgdb.Close()
+
 	dbexist, err := pgdb.DatabaseExists(db.Database)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "CreateDB/DatabaseExists")
 	}
 	if !dbexist {
 		log.Printf("Creating database \"%s\"\n", db.Database)
 		if err = pgdb.CreateDatabase(db.Database); err != nil {
-			return ectx.Err("CreateDatabase", err)
+			return errors.Wrap(err, "CreateDB/CreateDatabase")
 		}
 	}
 
 	if err = CreateExtensions(admin.SpecForDB(db.Database)); err != nil {
-		return ectx.Err("CreateExtensions", err)
+		return errors.Wrap(err, "CreateDB/CreateExtensions")
 	}
 
 	if err = CreateUser(pgdb, db); err != nil {
-		return ectx.Err("CreateUser", err)
+		return errors.Wrap(err, "CreateDB/CreateUser")
 	}
-	return ectx.Err("GrantDBOwner", pgdb.GrantDBOwner(db.Database, db.User))
+	return errors.Wrap(pgdb.GrantDBOwner(db.Database, db.User), "CreateDB/GrantDBOwner")
 }
 
 // CreateUser creates a user in the db, the user being specified in dbspec.
@@ -213,7 +214,7 @@ func TerminateConnections(adminDB pg.DB, targetDB string) error {
 	for _, pid := range pids {
 		log.Println("Terminating backend", pid)
 		if err = adminDB.TerminateConnection(pid); err != nil {
-			return ectx.Err(fmt.Sprintf("[%d]", pid), err)
+			return errors.Wrapf(err, "[%d]", pid)
 		}
 	}
 	return nil
@@ -251,14 +252,14 @@ func LoadLogs(db pg.ConnSpec, sourceDir string) error {
 	return ldr.LoadCommit()
 }
 
-func forceSourceDir(srv *sources.Servers, dir string) error {
+func forceSourceDir(srv sources.Servers, dir string) error {
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return err
 	}
 
 	// Zap all logs and milestones
-	for _, server := range srv.Servers {
+	for _, server := range srv {
 		server.Logfiles = nil
 	}
 

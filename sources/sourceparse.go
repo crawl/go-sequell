@@ -14,7 +14,7 @@ import (
 
 // Sources reads a parsed sources.yml object and returns a Servers object
 // with metadata on the remote servers that supply xlogs to Sequell.
-func Sources(sources qyaml.YAML, crawl data.Crawl, cachedir string) (*Servers, error) {
+func Sources(sources qyaml.YAML, crawl data.Crawl, cachedir string) (Servers, error) {
 	return sourceYamlParser{
 		sources:  sources.Slice("sources"),
 		crawl:    crawl,
@@ -45,13 +45,12 @@ type sourceYamlParser struct {
 	cachedir string
 }
 
-func (s sourceYamlParser) Parse() (*Servers, error) {
-	sources := Servers{
-		Servers: make([]*Server, len(s.sources)),
-	}
+func (s sourceYamlParser) Parse() (Servers, error) {
+	sources := make(Servers, len(s.sources))
+
 	var err error
 	for i, serverYaml := range s.sources {
-		sources.Servers[i], err = serverParser{
+		sources[i], err = serverParser{
 			server:   qyaml.Wrap(serverYaml),
 			crawl:    s.crawl,
 			cachedir: s.cachedir,
@@ -60,7 +59,7 @@ func (s sourceYamlParser) Parse() (*Servers, error) {
 			return nil, err
 		}
 	}
-	return &sources, nil
+	return sources, nil
 }
 
 type serverParser struct {

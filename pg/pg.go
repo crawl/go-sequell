@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"strconv"
 
-	"github.com/crawl/go-sequell/ectx"
 	_ "github.com/lib/pq" // pg driver for database/sql
+	"github.com/pkg/errors"
 )
 
 // DB is a wrapper around database/sql.DB.
@@ -71,7 +71,7 @@ func (c ConnSpec) Open() (DB, error) {
 	cs := c.ConnectionString()
 	dbh, err := sql.Open("postgres", cs)
 	if err != nil {
-		return DB{}, ectx.Err("connect db="+c.Database, err)
+		return DB{}, errors.Wrap(err, "connect db="+c.Database)
 	}
 	return DB{dbh}, nil
 }

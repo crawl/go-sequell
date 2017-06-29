@@ -2,12 +2,11 @@
 package flock
 
 import (
-	"fmt"
 	"os"
 	"strconv"
 	"syscall"
 
-	"github.com/crawl/go-sequell/ectx"
+	"github.com/pkg/errors"
 )
 
 // A Lock represents a lock file. Locks are not safe for concurrent use.
@@ -35,12 +34,12 @@ func (l *Lock) Lock(blocking bool) error {
 		var err error
 		l.File, err = os.OpenFile(l.Path, syscall.O_WRONLY|syscall.O_CREAT|syscall.O_TRUNC, 0600)
 		if err != nil {
-			return ectx.Err(fmt.Sprintf("open %s", l.Path), err)
+			return errors.Wrapf(err, "open %s", l.Path)
 		}
 	}
 
 	if err := syscall.Flock(int(l.File.Fd()), l.lockMode(blocking)); err != nil {
-		return ectx.Err(fmt.Sprintf("flock %s", l.Path), err)
+		return errors.Wrapf(err, "flock %s", l.Path)
 	}
 	l.File.WriteString(strconv.Itoa(os.Getpid()) + "\n")
 	return nil

@@ -13,20 +13,26 @@ import (
 	"github.com/crawl/go-sequell/crawl/ctime"
 	"github.com/crawl/go-sequell/crawl/db"
 	"github.com/crawl/go-sequell/crawl/xlogtools"
-	"github.com/crawl/go-sequell/ectx"
 	"github.com/crawl/go-sequell/pg"
 	"github.com/crawl/go-sequell/sources"
 	"github.com/crawl/go-sequell/xlog"
 	"github.com/lib/pq"
+	"github.com/pkg/errors"
 )
 
 const loadBufferSize = 50000
+
+var (
+	// ErrDuplicateRow means the loader found an xlogfile row exactly identical
+	// to a previously inserted row
+	ErrDuplicateRow = errors.New("duplicate xlog row")
+)
 
 // A Loader loads game and milestone records into Sequell's database. Loaders
 // must be configured with a set of servers, a database connection, and the
 // sequell database schema.
 type Loader struct {
-	*sources.Servers
+	sources.Servers
 	DB               pg.DB
 	Schema           *db.CrawlSchema
 	Readers          []*Reader
@@ -54,7 +60,7 @@ type Reader struct {
 // New creates a new loader given a database connection, server and schema
 // configs, an xlog normalizer and the set of game type mappings of Crawl
 // game types to their table prefixes.
-func New(db pg.DB, srv *sources.Servers, sch *db.CrawlSchema, norm *xlogtools.Normalizer, gameTypePrefixes map[string]string) *Loader {
+func New(db pg.DB, srv sources.Servers, sch *db.CrawlSchema, norm *xlogtools.Normalizer, gameTypePrefixes map[string]string) *Loader {
 	l := &Loader{
 		Servers:          srv,
 		DB:               db,
@@ -75,7 +81,7 @@ func (l *Loader) init() {
 	l.Readers = make([]*Reader, len(xlogs))
 	for i, x := range xlogs {
 		l.Readers[i] = &Reader{
-			Reader:  xlog.NewReader(x.TargetPath, x.TargetRelPath),
+			Reader:  xlog.NewReader(x.Server.Name, x.TargetPath, x.TargetRelPath),
 			XlogSrc: x,
 			Table:   l.TableName(x),
 		}
@@ -213,7 +219,7 @@ func (l *Loader) Load() error {
 // file handles will be closed at the end of this.
 func (l *Loader) LoadCommit() error {
 	if err := l.Load(); err != nil {
-		return ectx.Err("Loader.Load", err)
+		return errors.Wrap(err, "Loader.Load")
 	}
 	return l.Commit()
 }
@@ -223,7 +229,7 @@ func (l *Loader) LoadCommit() error {
 func (l *Loader) LoadReaderLogs(reader *Reader) error {
 	seekPos, err := l.QuerySeekOffset(reader.Filename, reader.Table)
 	if err != nil {
-		return ectx.Err("QuerySeekOffset", err)
+		return errors.Wrap(err, "QuerySeekOffset")
 	}
 	if seekPos != -1 {
 		if err = reader.SeekNext(seekPos); err != nil {
@@ -235,34 +241,34 @@ func (l *Loader) LoadReaderLogs(reader *Reader) error {
 			if err == io.EOF {
 				help = " (did the file shrink?)"
 			}
-			return ectx.Err(fmt.Sprintf("SeekNext:%s:%d%s", reader.Filename, seekPos, help), err)
+			return errors.Wrapf(err, "SeekNext:%s:%d%s", reader.Filename, seekPos, help)
 		}
 	}
 
 	first := true
 	offset := reader.Offset
 	for {
-		xl, err := reader.Next()
+		xlogEntry, err := reader.Next()
 		if err == xlog.ErrNoFile {
 			log.Printf("Ignoring missing file: %s\n", reader.Filename)
 			return nil
 		}
-		if first && (xl != nil || err != nil) {
+		if first && (xlogEntry != nil || err != nil) {
 			log.Printf("LoadLogs: %s offset=%d", reader.Filename, offset)
 			first = false
 		}
 		if err != nil {
-			return ectx.Err("reader.Next", err)
+			return errors.Wrap(err, "reader.Next")
 		}
-		if xl == nil {
+		if xlogEntry == nil {
 			return nil
 		}
-		if !xlogtools.ValidXlog(xl) {
+		if !xlogtools.ValidXlog(xlogEntry) {
 			log.Printf("LoadLogs: %s offset=%s skipping bad xlog: %#v\n",
-				reader.Filename, xl[":offset"], xl)
+				reader.Filename, xlogEntry[":offset"], xlogEntry)
 			continue
 		}
-		if err = l.Add(reader, xl); err != nil {
+		if err = l.Add(reader, xlogEntry); err != nil {
 			return err
 		}
 	}
@@ -296,7 +302,7 @@ func (l *Loader) NormalizeLog(x xlog.Xlog, reader *Reader) error {
 	normTime("time")
 
 	if err != nil {
-		return ectx.Err(fmt.Sprintf("NormalizeLog(%#v)", x), err)
+		return errors.Wrapf(err, "NormalizeLog(%#v)", x)
 	}
 	return nil
 }
@@ -343,58 +349,95 @@ func (l *Loader) loadTableLogs(table string, logs []xlog.Xlog) error {
 
 	lookups := l.tableLookups[logs[0]["base_table"]]
 
-	txn, err := l.DB.Begin()
+	tx, err := l.DB.Begin()
 	if err != nil {
 		return nil
 	}
 	fail := func(err error) error {
-		txn.Rollback()
+		tx.Rollback()
 		return err
 	}
-	l.queueLookups(lookups, logs)
-	if err = l.resolveLookups(txn, lookups); err != nil {
-		return fail(ectx.Err("resolveLookups", err))
+
+	deduplicatedLogs, err := l.resolveLookupFieldIds(tx, table, lookups, logs)
+	if err != nil {
+		return fail(errors.Wrap(err, "resolvelookups"))
 	}
-	if err := l.applyLookups(lookups, logs); err != nil {
-		return fail(ectx.Err("applyLookups", err))
+
+	if err = l.insertTableLogs(tx, table, deduplicatedLogs); err != nil {
+		return fail(errors.Wrap(err, "insertTableLogs"))
 	}
-	if err := l.insertTableLogs(txn, table, logs); err != nil {
-		return fail(ectx.Err("insertTableLogs", err))
+
+	deduplicatedLogCount := len(deduplicatedLogs)
+	if deduplicatedLogCount < nlogs {
+		log.Printf("%s: Skipped %d/%d duplicate rows", table, nlogs-deduplicatedLogCount, nlogs)
 	}
-	if err := txn.Commit(); err != nil {
-		return ectx.Err("loadTableLogs.Commit", err)
+
+	if deduplicatedLogCount == 0 {
+		tx.Rollback()
+		return nil
 	}
-	l.RowCount += int64(nlogs)
-	log.Printf("%s: Committed %d (total: %d)\n", table, nlogs, l.RowCount)
+
+	if err := tx.Commit(); err != nil {
+		return errors.Wrap(err, "loadTableLogs.Commit")
+	}
+	l.RowCount += int64(deduplicatedLogCount)
+	log.Printf("%s: Committed %d (total: %d)\n", table, deduplicatedLogCount, l.RowCount)
 	return nil
 }
 
-func (l *Loader) queueLookups(lookups []*TableLookup, logs []xlog.Xlog) {
-	for _, x := range logs {
-		for _, lookup := range lookups {
-			lookup.Add(x)
-		}
+func (l *Loader) resolveLookupFieldIds(tx *sql.Tx, destinationTable string, lookups []*TableLookup, logs []xlog.Xlog) (deduplicatedLogs []xlog.Xlog, err error) {
+	if err = l.resolveLookups(tx, lookups, logs); err != nil {
+		return nil, errors.Wrap(err, "resolveLookups")
 	}
+
+	deduplicatedLogs, err = l.applyLookups(lookups, logs)
+	if err != nil {
+		return nil, errors.Wrap(err, "resolveLookupFieldIds")
+	}
+
+	return deduplicatedLogs, nil
 }
 
-func (l *Loader) resolveLookups(tx *sql.Tx, lookups []*TableLookup) error {
+func (l *Loader) resolveLookups(tx *sql.Tx, lookups []*TableLookup, logs []xlog.Xlog) error {
 	for _, l := range lookups {
-		if err := l.ResolveAll(tx); err != nil {
+		if err := l.ResolveAll(tx, logs); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (l *Loader) applyLookups(lookups []*TableLookup, logs []xlog.Xlog) error {
-	for _, x := range logs {
+func removeXlogLinesAtIndexes(logs []xlog.Xlog, duplicateIndexes map[int]bool) (deduplicatedLogs []xlog.Xlog) {
+	if len(duplicateIndexes) == 0 {
+		return logs
+	}
+
+	deduplicatedLogs = make([]xlog.Xlog, 0, len(logs)-len(duplicateIndexes))
+	for i, log := range logs {
+		if !duplicateIndexes[i] {
+			deduplicatedLogs = append(deduplicatedLogs, log)
+		}
+	}
+	return deduplicatedLogs
+}
+
+func (l *Loader) applyLookups(lookups []*TableLookup, logs []xlog.Xlog) (deduplicatedLogs []xlog.Xlog, err error) {
+	duplicateIndexes := map[int]bool{}
+
+	for index, x := range logs {
 		for _, lookup := range lookups {
-			if err := lookup.SetIds(x); err != nil {
-				return err
+			if err := lookup.SetIDs(x); err != nil {
+				if errors.Cause(err) == ErrDuplicateRow {
+					duplicateIndexes[index] = true
+					continue
+				}
+
+				return nil, err
 			}
 		}
 	}
-	return nil
+
+	return removeXlogLinesAtIndexes(logs, duplicateIndexes), nil
 }
 
 func (l *Loader) insertTableLogs(tx *sql.Tx, table string, logs []xlog.Xlog) error {
@@ -407,7 +450,7 @@ func (l *Loader) insertTableLogs(tx *sql.Tx, table string, logs []xlog.Xlog) err
 	defaults := l.tableInsertDefaults[baseTable]
 	st, err := tx.Prepare(l.tableCopyStatements[table])
 	if err != nil {
-		return ectx.Err("Loader.insertTableLogs.Prepare", err)
+		return errors.Wrap(err, "Loader.insertTableLogs.Prepare")
 	}
 
 	row := make([]interface{}, len(keys))
@@ -416,22 +459,21 @@ func (l *Loader) insertTableLogs(tx *sql.Tx, table string, logs []xlog.Xlog) err
 	for _, x := range logs {
 		loadXlogRow(row, keys, defaults, x)
 		if _, err := st.Exec(row...); err != nil {
-			return ectx.Err(
-				fmt.Sprintf("Loader.insertTableLogs.Exec(%#v)", x), err)
+			return errors.Wrapf(err, "Loader.insertTableLogs.Exec(%#v)", x)
 		}
 		fileOffsets[x["file"]] = x["offset"]
 	}
 
 	if _, err = st.Exec(); err != nil {
-		return ectx.Err("Loader.insertTableLogs.Exec()", err)
+		return errors.Wrap(err, "Loader.insertTableLogs.Exec()")
 	}
 
 	if err = st.Close(); err != nil {
-		return ectx.Err("Loader.insertTableLogs.Close()", err)
+		return errors.Wrap(err, "Loader.insertTableLogs.Close()")
 	}
 
 	if err = l.updateFileOffsets(tx, fileOffsets); err != nil {
-		return ectx.Err("Loader.updateFileOffsets", err)
+		return errors.Wrap(err, "Loader.updateFileOffsets")
 	}
 
 	return nil
@@ -461,7 +503,7 @@ func (l *Loader) updateFileOffsets(tx *sql.Tx, offsets map[string]string) error 
 func (l *Loader) updateFileOffsetSQL(noffset int) string {
 	var buf bytes.Buffer
 	buf.WriteString(`update l_file f set file_offset = c.file_offset
-                              from (values `)
+							  from (values `)
 	index := 0
 	for i := 0; i < noffset; i++ {
 		if i > 0 {

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/crawl/go-sequell/text"
 )
 
 // An Xlog is a mapping of xlog keys to values, where both keys and values are
@@ -51,16 +53,19 @@ func IsKeyHidden(key string) bool {
 }
 
 // Parse parses the given xlog line into an Xlog object.
-func Parse(line string) (Xlog, error) {
+func Parse(line, sourceKey string) (Xlog, error) {
 	line = strings.TrimSpace(line)
-	res := make(Xlog)
+
+	parsedXlog := Xlog{
+		"hash": text.Hash(sourceKey + ": " + line),
+	}
 
 	startIndex := 0
 	lineByteLen := len(line)
 	for startIndex < lineByteLen {
 		keyValueSeparator := strings.IndexRune(line[startIndex:], '=')
 		if keyValueSeparator == -1 {
-			return res, &ParseError{
+			return parsedXlog, &ParseError{
 				Line:         line,
 				Cause:        "trailing characters",
 				ErrByteIndex: startIndex,
@@ -80,7 +85,7 @@ func Parse(line string) (Xlog, error) {
 		}
 
 		value := line[startIndex:fieldEndIndex]
-		res[key] = UnquoteValue(value)
+		parsedXlog[key] = UnquoteValue(value)
 
 		if nextSeparator != -1 {
 			startIndex += nextSeparator + 1
@@ -88,7 +93,7 @@ func Parse(line string) (Xlog, error) {
 			startIndex = lineByteLen
 		}
 	}
-	return res, nil
+	return parsedXlog, nil
 }
 
 // FindSeparator finds the first non-escaped occurrence of the xlog separator
