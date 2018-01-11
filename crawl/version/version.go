@@ -14,9 +14,9 @@ var fullVersionRegex = regexp.MustCompile(`^(\d+\.\d+)($|[^\d.])`)
 var vnumCache = map[string]uint64{}
 var vnumCacheLock = sync.Mutex{}
 
-// If the vnum cache exceeds this, dump the entire cache. This is a
-// protection against bad inputs flooding the cache, and it should
-// never happen for real version numbers.
+// VnumCacheDumpThreshold is the number of cached vnums beyond which the cache
+// will be flushed. This is a protection against bad inputs flooding the cache,
+// and it should never happen for real version numbers.
 const VnumCacheDumpThreshold = 1000
 
 var rVCSPrefix = regexp.MustCompile(`^.*?:+`)
@@ -52,6 +52,14 @@ func Major(ver string) string {
 		return ver
 	}
 	return cv
+}
+
+var versionLikeRegex = regexp.MustCompile(`^\d+\.\d+`)
+
+// IsVersionLike returns true if the given string resembles a short or full
+// version
+func IsVersionLike(ver string) bool {
+	return versionLikeRegex.FindString(ver) != ""
 }
 
 // Full expands a short version in the form X.Y to X.Y.0

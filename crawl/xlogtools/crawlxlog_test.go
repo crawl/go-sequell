@@ -281,8 +281,9 @@ var norm = MustBuildNormalizer(data.CrawlData().YAML)
 func TestNormalizeLog(t *testing.T) {
 	for _, test := range normXlogTest {
 		inputXlog, expectedXlog := test.xinput, test.xoutput
-		normalizedXlog, err := norm.NormalizeLog(xlog.Xlog(inputXlog).Clone())
-		if err != nil {
+
+		normalizedXlog := xlog.Xlog(inputXlog).Clone()
+		if err := norm.NormalizeLog(normalizedXlog); err != nil {
 			t.Errorf("NormalizeLog(%v) failed: %v\n", inputXlog, err)
 			continue
 		}

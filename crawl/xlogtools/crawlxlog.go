@@ -124,7 +124,7 @@ func BuildNormalizer(crawlData qyaml.YAML) (*Normalizer, error) {
 
 // NormalizeLog normalizes an xlog record, cleaning up fields and generating
 // fields that Sequell wants.
-func (n *Normalizer) NormalizeLog(log xlog.Xlog) (xlog.Xlog, error) {
+func (n *Normalizer) NormalizeLog(log xlog.Xlog) error {
 	n.CanonicalizeFields(log)
 
 	log["v"] = version.Full(log["v"])
@@ -159,7 +159,7 @@ func (n *Normalizer) NormalizeLog(log xlog.Xlog) (xlog.Xlog, error) {
 	if banisher, ok := log["banisher"]; ok {
 		var err error
 		if banisher, err = n.KillerArticle.Normalize(banisher); err != nil {
-			return nil, err
+			return err
 		}
 		log["banisher"] = banisher
 		log["cbanisher"] = n.knorm.NormalizeKiller(cv, banisher, banisher, "")
@@ -189,7 +189,7 @@ func (n *Normalizer) NormalizeLog(log xlog.Xlog) (xlog.Xlog, error) {
 	}
 	sanitizeGold(log)
 
-	return log, nil
+	return nil
 }
 
 // NormalizeMapName cleans up a map field, converting ","-separated map names

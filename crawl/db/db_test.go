@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -99,19 +100,34 @@ var fieldParseCases = []struct {
 		Multivalued:      true,
 		Indexed:          false,
 	}},
+
+	{"hash?^[uuid]", Field{
+		Name:             "hash",
+		Type:             "TEXT",
+		Features:         "?^",
+		SQLName:          "hash",
+		SQLType:          "citext",
+		SQLRefType:       "int",
+		DefaultString:    "",
+		UUID:             true,
+		Summarizable:     true,
+		ForeignKeyLookup: true,
+		Indexed:          true,
+	}},
 }
 
 func TestParseField(t *testing.T) {
 	p := NewFieldParser(data.CrawlSchema().YAML)
 	for _, testCase := range fieldParseCases {
-		field, err := p.ParseField(testCase.spec)
-		if err != nil {
-			t.Errorf("Error parsing %#v: %v", field, err)
-			continue
-		}
-		if !reflect.DeepEqual(&testCase.field, field) {
-			t.Errorf("Expected %#v to parse as %#v, but got %#v",
-				testCase.spec, &testCase.field, field)
-		}
+		t.Run(fmt.Sprintf("ParseField(%#v)", testCase.spec), func(t *testing.T) {
+			field, err := p.ParseField(testCase.spec)
+			if err != nil {
+				t.Fatalf("Error parsing %#v: %v", field, err)
+			}
+			if !reflect.DeepEqual(&testCase.field, field) {
+				t.Errorf("Expected %#v to parse as %#v, but got %#v",
+					testCase.spec, &testCase.field, field)
+			}
+		})
 	}
 }

@@ -1,9 +1,28 @@
 package version
 
 import (
+	"fmt"
 	"strconv"
 	"testing"
 )
+
+func TestIsVersionLike(t *testing.T) {
+	for _, test := range []struct {
+		text        string
+		versionLike bool
+	}{
+		{"0.15.0-9-g1a96a59", true},
+		{"0.15", true},
+		{"0.3.2", true},
+		{"cannonball", false},
+	} {
+		t.Run(fmt.Sprintf("IsVersionLike(%#v)==%#v", test.text, test.versionLike), func(t *testing.T) {
+			if versionLike := IsVersionLike(test.text); versionLike != test.versionLike {
+				t.Errorf("IsVersionLike(%#v) = %#v", test.text, versionLike)
+			}
+		})
+	}
+}
 
 func TestVnumOrder(t *testing.T) {
 	var vnumOrderTests = [][]string{

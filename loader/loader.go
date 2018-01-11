@@ -8,9 +8,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
-	"time"
 
-	"github.com/crawl/go-sequell/crawl/ctime"
 	"github.com/crawl/go-sequell/crawl/db"
 	"github.com/crawl/go-sequell/crawl/xlogtools"
 	"github.com/crawl/go-sequell/pg"
@@ -274,43 +272,10 @@ func (l *Loader) LoadReaderLogs(reader *Reader) error {
 	}
 }
 
-// NormalizeLog normalizes x and adds reader metadata to it.
-func (l *Loader) NormalizeLog(x xlog.Xlog, reader *Reader) error {
-	x["file"] = reader.Filename
-	x["table"] = reader.Table
-	x["base_table"] = reader.Type.BaseTable()
-	x["src"] = reader.Server.Name
-	x["offset"] = x[":offset"]
-	delete(x, ":offset")
-
-	var err error
-	_, err = l.LogNorm.NormalizeLog(x)
-	if err != nil {
-		return err
-	}
-
-	normTime := func(field string) {
-		if timeStr, ok := x[field]; ok {
-			var t time.Time
-			if t, err = reader.Server.ParseLogTime(timeStr); err == nil {
-				x[field] = t.Format(ctime.LayoutDBTime)
-			}
-		}
-	}
-	normTime("start")
-	normTime("end")
-	normTime("time")
-
-	if err != nil {
-		return errors.Wrapf(err, "NormalizeLog(%#v)", x)
-	}
-	return nil
-}
-
 // Add normalizes the xlog and adds it to the buffer of xlogs to be
 // saved to the database.
 func (l *Loader) Add(reader *Reader, x xlog.Xlog) error {
-	if err := l.NormalizeLog(x, reader); err != nil {
+	if err := ReaderNormalizedLog(reader, l.LogNorm, x); err != nil {
 		return err
 	}
 

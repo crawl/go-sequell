@@ -190,13 +190,13 @@ func NewFieldParser(spec qyaml.YAML) *FieldParser {
 	}
 }
 
-var rFieldSpec = regexp.MustCompile(`^([a-z_]+)([A-Z]*)([^\w]*)((?:\[uuid\])?)$`)
+var rFieldSpec = regexp.MustCompile(`^([a-z_]+)([A-Z]*)([^\w]*?)((?:\[uuid\])?)$`)
 
 // ParseField parses a field spec
 func (f *FieldParser) ParseField(spec string) (*Field, error) {
 	match := rFieldSpec.FindStringSubmatch(strings.TrimSpace(spec))
 	if match == nil {
-		return nil, fmt.Errorf("malformed field spec \"%s\"", spec)
+		return nil, fmt.Errorf("malformed field spec %#v", spec)
 	}
 
 	field := &Field{Name: match[1], Type: match[2], Features: match[3], UUID: match[4] != ""}
