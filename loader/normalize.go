@@ -56,8 +56,5 @@ func ReaderNormalizedLog(reader *Reader, normalizer LogNormalizer, x xlog.Xlog) 
 	normTime("end")
 	normTime("time")
 
-	if err != nil {
-		return errors.Wrapf(err, "NormalizeLog(%#v)", x)
-	}
-	return nil
+	return errors.Wrapf(err, "NormalizeLog(%#v)", x)
 }

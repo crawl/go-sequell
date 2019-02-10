@@ -279,6 +279,12 @@ func (l *Loader) Add(reader *Reader, x xlog.Xlog) error {
 		return err
 	}
 
+	return l.addNormalizedLog(x)
+}
+
+// addNormalizedLog adds a normalized xlog x to the buffer, committing the
+// buffer to the DB if full.
+func (l *Loader) addNormalizedLog(x xlog.Xlog) error {
 	if l.buffer.IsFull() {
 		if err := l.Commit(); err != nil {
 			return err
@@ -306,6 +312,10 @@ func (l *Loader) saveBufferedLogs() error {
 	return nil
 }
 
+// loadTableLogs loads the given logs into the target table (such as
+// "logrecord" or "milestone"), inserting reference rows into lookup tables
+// (such as "l_god"), with all inserts performed in a single database
+// transaction.
 func (l *Loader) loadTableLogs(table string, logs []xlog.Xlog) error {
 	nlogs := len(logs)
 	if nlogs == 0 {
@@ -316,7 +326,7 @@ func (l *Loader) loadTableLogs(table string, logs []xlog.Xlog) error {
 
 	tx, err := l.DB.Begin()
 	if err != nil {
-		return nil
+		return errors.Wrapf(err, "loadTableLogs(%#v, ...)", table)
 	}
 	fail := func(err error) error {
 		tx.Rollback()
@@ -350,6 +360,9 @@ func (l *Loader) loadTableLogs(table string, logs []xlog.Xlog) error {
 	return nil
 }
 
+// resolveLookupFieldIds deduplicates the given logs and resolves foreign-key
+// references in the given set of xlogs, where all xlogs are for a single
+// destinationTable (such as "logrecord")
 func (l *Loader) resolveLookupFieldIds(tx *sql.Tx, destinationTable string, lookups []*TableLookup, logs []xlog.Xlog) (deduplicatedLogs []xlog.Xlog, err error) {
 	if err = l.resolveLookups(tx, lookups, logs); err != nil {
 		return nil, errors.Wrap(err, "resolveLookups")
@@ -363,6 +376,9 @@ func (l *Loader) resolveLookupFieldIds(tx *sql.Tx, destinationTable string, look
 	return deduplicatedLogs, nil
 }
 
+// resolveLookups creates lookup table rows for fields in logs that aren't
+// stored in the main logrecord/milestone table, such as the player name field
+// (which is stored in l_name) or the god field (l_god)
 func (l *Loader) resolveLookups(tx *sql.Tx, lookups []*TableLookup, logs []xlog.Xlog) error {
 	for _, l := range lookups {
 		if err := l.ResolveAll(tx, logs); err != nil {
@@ -386,6 +402,12 @@ func removeXlogLinesAtIndexes(logs []xlog.Xlog, duplicateIndexes map[int]bool) (
 	return deduplicatedLogs
 }
 
+// applyLookups translates lookup fields in the xlogs logs from text values
+// such as god=Okawaru to the database ID for the corresponding lookup table
+// row.
+//
+// A pre-condition to l.applyLookups is that l.resolveLookups has been called
+// to load the lookup values from the database.
 func (l *Loader) applyLookups(lookups []*TableLookup, logs []xlog.Xlog) (deduplicatedLogs []xlog.Xlog, err error) {
 	duplicateIndexes := map[int]bool{}
 
