@@ -71,34 +71,38 @@ func TestDuplicateXlogRejection(t *testing.T) {
 			return
 		}
 
-		err := hashLookup.ResolveAll(tx, []xlog.Xlog{
-			{"hash": "abc"},
-			{"hash": "def"},
-			{"hash": "abc"},
-			{"hash": "xyz"},
-		})
-
-		if err != nil {
-			t.Errorf("hash resolve failed: %s", err)
-			return
-		}
-
-		for i, testCase := range []struct {
-			hash           string
-			rejectedAsDupe bool
-		}{
-			{"abc", false},
-			{"def", false},
-			{"abc", true},
-			{"xyz", false},
-		} {
-			t.Run(fmt.Sprintf("%s.%d", testCase.hash, i), func(t *testing.T) {
-				_, err := hashLookup.ID(testCase.hash)
-				rejectedAsDupe := errors.Cause(err) == ErrDuplicateRow
-				if rejectedAsDupe != testCase.rejectedAsDupe {
-					t.Errorf("hashlookup.ID(%#v) == dupe:%t, want dupe:%t", testCase.hash, rejectedAsDupe, testCase.rejectedAsDupe)
-				}
+		// The second iteration should declare everything duplicated,
+		// because all the values are loaded into the ID cache.
+		for i := 0; i < 2; i++ {
+			err := hashLookup.ResolveAll(tx, []xlog.Xlog{
+				{"hash": "abc"},
+				{"hash": "def"},
+				{"hash": "abc"},
+				{"hash": "xyz"},
 			})
+
+			if err != nil {
+				t.Errorf("hash resolve failed: %s", err)
+				return
+			}
+
+			for i, testCase := range []struct {
+				hash           string
+				rejectedAsDupe bool
+			}{
+				{hash: "abc", rejectedAsDupe: i == 1},
+				{hash: "def", rejectedAsDupe: i == 1},
+				{hash: "abc", rejectedAsDupe: true},
+				{hash: "xyz", rejectedAsDupe: i == 1},
+			} {
+				t.Run(fmt.Sprintf("%s.%d", testCase.hash, i), func(t *testing.T) {
+					_, err := hashLookup.ID(testCase.hash)
+					rejectedAsDupe := errors.Cause(err) == ErrDuplicateRow
+					if rejectedAsDupe != testCase.rejectedAsDupe {
+						t.Errorf("hashlookup.ID(%#v) == dupe:%t, want dupe:%t", testCase.hash, rejectedAsDupe, testCase.rejectedAsDupe)
+					}
+				})
+			}
 		}
 	})
 }

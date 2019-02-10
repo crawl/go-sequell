@@ -171,10 +171,10 @@ func (t *TableLookup) String() string {
 // xlog to the list of values to be resolved/inserted to the lookup table.
 func (t *TableLookup) Add(x xlog.Xlog) {
 	var derivedFieldValues []string
-	if t.derivedFieldNames != nil {
+	if len(t.derivedFieldNames) > 0 {
 		derivedFieldValues = make([]string, len(t.derivedFieldNames))
-		for i, n := range t.derivedFieldNames {
-			derivedFieldValues[i] = x[n]
+		for i, fieldName := range t.derivedFieldNames {
+			derivedFieldValues[i] = x[fieldName]
 		}
 	}
 	for _, f := range t.fieldNames {
@@ -209,6 +209,9 @@ func (t *TableLookup) lookupKey(lookup string) string {
 func (t *TableLookup) AddLookup(lookup string, derivedValues []string) {
 	key := t.lookupKey(lookup)
 	if _, ok := t.idCache.Get(key); ok {
+		if t.globallyUnique {
+			t.duplicateGlobalLookupIDs[key] = true
+		}
 		return
 	}
 	if t.IsFull() {
@@ -291,6 +294,8 @@ func (t *TableLookup) resolveRows(rows *sql.Rows, lookupResult fieldValueLookup)
 func (t *TableLookup) resolveSingleLookup(id int, lookup string, lookupResult fieldValueLookup) {
 	key := t.lookupKey(lookup)
 
+	// A globally-unique lookup field (like the logfile hash) shouldn't have an
+	// existing value.
 	if t.globallyUnique && lookupResult == fieldValueLookupExisting {
 		t.duplicateGlobalLookupIDs[key] = true
 	} else {
