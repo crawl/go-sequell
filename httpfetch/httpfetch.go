@@ -43,14 +43,14 @@ func New() *Fetcher {
 
 var (
 	// DefaultConnectTimeout is how long to wait for a connection to timeout.
-	DefaultConnectTimeout = 10 * time.Second
+	DefaultConnectTimeout = 3 * time.Second
 
 	// DefaultReadTimeout is how long to wait for a HTTP read to timeout.
 	DefaultReadTimeout = 20 * time.Second
 
 	// DefaultHTTPTransport is the default transport to use for HTTP requests
 	DefaultHTTPTransport = http.Transport{
-		Dial: dialer(DefaultConnectTimeout, DefaultReadTimeout),
+		Dial:                  dialer(DefaultConnectTimeout, DefaultReadTimeout),
 		ResponseHeaderTimeout: DefaultConnectTimeout,
 	}
 
