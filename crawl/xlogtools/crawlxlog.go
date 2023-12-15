@@ -255,6 +255,10 @@ func (n *Normalizer) NormalizeMilestoneFields(log xlog.Xlog) {
 		noun = place.StripPlaceDepth(log["oplace"])
 	case "rune":
 		noun = foundRuneName(noun)
+	case "gem.found":
+		noun = foundGemName(noun)
+	case "gem.lost":
+		noun = lostGemName(noun)
 	case "orb":
 		noun = "orb"
 	case "god.ecumenical":
@@ -295,6 +299,8 @@ func qualifyVerbAction(verb string, actionWord string) string {
 }
 
 var rFoundRune = regexp.MustCompile(`found an? (\S+) rune`)
+var rFoundGem = regexp.MustCompile(`found an? (\S+) gem`)
+var rLostGem = regexp.MustCompile(`lost the (\S+) gem`)
 
 func textReSubmatch(text string, reg *regexp.Regexp, submatch int) string {
 	m := reg.FindStringSubmatch(text)
@@ -306,6 +312,14 @@ func textReSubmatch(text string, reg *regexp.Regexp, submatch int) string {
 
 func foundRuneName(found string) string {
 	return textReSubmatch(found, rFoundRune, 1)
+}
+
+func foundGemName(found string) string {
+	return textReSubmatch(found, rFoundGem, 1)
+}
+
+func lostGemName(lost string) string {
+	return textReSubmatch(lost, rLostGem, 1)
 }
 
 var rMollifiedGod = regexp.MustCompile(`^(?:partially )?mollified (.*)[.]$`)
