@@ -202,7 +202,7 @@ var rActionWord = regexp.MustCompile(`(\w+) (.*?)\.?$`)
 var rGhostWord = regexp.MustCompile(`(\w+) the ghost of (\S+)`)
 var rAbyssCause = regexp.MustCompile(`\((.*?)\)$`)
 var rSacrificedThing = regexp.MustCompile(`sacrificed (?:an? )?(\w+)`)
-var rAncestorType = regexp.MustCompile(`.* as a (.+)[.]$`)
+var rAncestorType = regexp.MustCompile(`.* as an? (.+)[.]$`)
 var rAncestorSpecial = regexp.MustCompile(`.*(?:casting|wielding an?) (.+)[.]$`)
 
 // NormalizeMilestoneFields normalizes a milestone record, cleaning up fields
